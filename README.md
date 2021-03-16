@@ -63,11 +63,11 @@ jocular --log debug
 
 This will output useful diagnostic information which might help to identify the problem.
 
-### Known issues
+###  Known issues
 
-There is currently an intermittent and hard to trace bug that appears to freeze the GUI. This occurs on one run in 20 or so. In fact, the GUI is not frozen but responds to double-clicks! However, this rapidly gets tedious so the solution is to quit and start again. Since this bug only ever occurs at startup this workaround is adequate for now.
+There is currently an intermittent bug that appears to freeze the GUI. This occurs on one run in 20 or so. In fact, the GUI is not frozen but responds to double-clicks! However, this rapidly gets tedious so the solution is to quit and start again. Since this bug only ever occurs at startup this workaround is adequate for now.
 
-## In the pipeline ##
+##  In the pipeline ##
 
 Jocular is under active development (and use) so expect to see some additional functionality added in the coming months. Two hot areas are
 
