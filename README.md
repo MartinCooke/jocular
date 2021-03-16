@@ -9,11 +9,17 @@ Jocular is a cross-platform application. It has been used extensively on OSX and
 
 This is the first public release although the application has been in use for some time. Further documentation will be added over the coming days.
 
-## Requirements
+### Requirements
  
-Jocular requires a recent Python 3 system. Please visit 
+Jocular requires a recent Python 3 system. To check whether you already have a suitable system, open a command window (Windows) or terminal (OSX/Linux) and type
 
-## Installation
+	python --version
+
+If the version is 3.4 or later you are all ready. If not, visit <python.org> to download a version appropriate for your operating system.
+
+
+
+### Installation
 
 In your command or terminal window, type:
 
