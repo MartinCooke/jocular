@@ -9,7 +9,7 @@ enables the reloading of previously-captured images.
 
 Jocular is a cross-platform application and has been used extensively on OSX and Windows but ought to work on Linux variants too. 
 
-To see some of Jocular's capabilities, visit the EEVA section of http://stargazerslounge.org, an amateur astronomy forum.
+To see some of Jocular's capabilities, visit the EEVA section of https://stargazerslounge.org, an amateur astronomy forum.
 
 ### Installation
 
@@ -19,7 +19,7 @@ Jocular requires a recent Python 3 system. To check whether you already have a s
 python --version
 ```
 
-If the version is 3.4 or later you are all ready to install Jocular. If not, visit <a href="python.org">python.org</a> to download a version appropriate for your operating system.
+If the version is 3.4 or later you are all ready to install Jocular. If not, visit https://python.org to download a version appropriate for your operating system.
 
 Once you have Python installed, type the following in the terminal:
 
@@ -47,7 +47,7 @@ where `<PATH>` is the location of your datadir. There is no need to supply the d
 
 Jocular's first-time startup is slow due to script compilation. It may take 10-30s to see a window like the one above, then another 10-30s to complete the loading. Subsequent runs are much faster (1-2 seconds). To see this, once Jocular has finished loading, close the window and type `jocular` again.
 
-### Additional data files
+### Additional data files ###
 
 In order to make best use of Jocular, you should download a set of DSO catalogues which collectively contain over 40000 objects of potential interest. Download this <a href="./assets/zips/catalogues.zip">zip file (<1M)</a>, unzip it and move the resulting directory called `catalogues` to your jocular data directory. When you next start Jocular, clicking on the `DSOS` icon will bring up the DSO database browser.
 
@@ -67,7 +67,7 @@ This will output useful diagnostic information which might help to identify the 
 
 There is currently an intermittent and hard to trace bug that appears to freeze the GUI. This occurs on one run in 20 or so. In fact, the GUI is not frozen but responds to double-clicks! However, this rapidly gets tedious so the solution is to quit and start again. Since this bug only ever occurs at startup this workaround is adequate for now.
 
-### In the pipeline
+## In the pipeline ##
 
 Jocular is under active development (and use) so expect to see some additional functionality added in the coming months. Two hot areas are
 
