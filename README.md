@@ -15,13 +15,17 @@ This is the first public release although the application has been in use for so
 
 Jocular requires a recent Python 3 system. To check whether you already have a suitable system, open a command window (Windows) or terminal (OSX/Linux) and type
 
+```sh
 	python --version
+```
 
-If the version is 3.4 or later you are all ready. If not, visit <a href="python.org">python.org</a> to download a version appropriate for your operating system.
+If the version is 3.4 or later you are all ready to install Jocular. If not, visit <a href="python.org">python.org</a> to download a version appropriate for your operating system.
 
-Once you have you Python system installed, in your command or terminal window type:
+Once you have Python installed, type the following in the terminal:
 
+```sh
 	pip install jocular
+```
 
 This will install Jocular and its dependencies. The process may take a minute or more.
 
@@ -29,16 +33,19 @@ This will install Jocular and its dependencies. The process may take a minute or
 
 To test whether you can run Jocular, simply type
 
+```sh
 	jocular
+```
 
 The first time Jocular runs it will ask you to supply a *data directory*. This is the place where Jocular will store all your captures, calibration files, observing lists and the like. The directory must exist so go ahead and create a directory wherever you like, named however you wish e.g. `joculardata`. Then run 
 
+```sh
 	jocular --datadir <PATH>
+```
 
 where `<PATH>` is the location of your datadir. There is no need to supply the datadir on subsequent runs unless you change the location of your data directory.
 
 Jocular's first-time startup is slow due to script compilation. It may take 10-30s to see a window like the one above, then another 10-30s to complete the loading. Subsequent runs are much faster (1-2 seconds). To see this, once Jocular has finished loading, close the window and type `jocular` again.
-
 
 ### Additional data files
 
@@ -50,7 +57,9 @@ If you come across a problem and Jocular is still running, click on the status t
 
 If this doesn't help, quit Jocular and re-run with the debug option:
 
+```sh
 	jocular --log debug
+```
 
 This will output useful diagnostic information which might help to identify the problem.
 
