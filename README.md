@@ -39,7 +39,7 @@ where `<PATH>` is the location of your datadir.
 
 The first time Jocular runs it will take about 30-60s to compile all its necessary scripts. Eventually a window like this will appear:
 
-![Jocular starting screen](/images/startup_screen.jpg)
+![Jocular starting screen](./images/startup_screen.jpg)
 
 
 
