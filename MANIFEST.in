@@ -1,0 +1,5 @@
+# include the necessary data files
+recursive-include jocular *.json *.ttf *.dll
+
+# don't include any compiled versions
+recursive-exclude __pycache__ *

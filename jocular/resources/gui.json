@@ -1,0 +1,694 @@
+{
+	"Annotator": {
+		"mag_limit": {
+			"angle": [33, 60],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [-10, 26],
+			"radial": true,
+			"text": "M",
+			"font_size": "15sp",
+			"initial": -10
+		}
+	},
+	"PlateSolver": {
+		"solve": {
+			"angle": 34.4,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "solve",
+			"text": "loc",
+			"highlight": false,
+			"save": false,
+			"action": "solve"
+		}
+	},
+	"View": {
+		"zoom": {
+			"angle": [1, 34],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [0, 1],
+			"radial": true,
+			"text": "Z",
+			"save": false,
+			"initial": 0
+		},
+		"show_reticle": {
+			"angle": 29.3,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"icon": "reticle",
+			"text": "ret",
+			"save": false,
+			"initial": false
+		},
+		"fit": {
+			"angle": 44.6,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "fit",
+			"text": "fit",
+			"action": "fit_to_window"
+		},
+		"brightness": {
+			"angle": [328, 334],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [0.15, 1],
+			"radial": true,
+			"text": "--dim",
+			"font_size": "12sp",
+			"initial": 0.5,
+			"save": false
+		},
+		"transparency": {
+			"angle": [336, 342],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [-0.1, 1],
+			"radial": true,
+			"text": "--ring",
+			"font_size": "12sp",
+			"initial": 0
+		},
+		"quit": {
+			"angle": 19,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "quit",
+			"text": "quit",
+			"action": "confirm_close"
+		},
+		"settings": {
+			"angle": 24.1,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "settings",
+			"text": "conf",
+			"action": "open_settings"
+		}
+	},
+	"Calibrator": {
+		"apply_dark": {
+			"angle": 336,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "dark",
+			"save": true,
+			"initial": true
+		},
+		"apply_flat": {
+			"angle": 331,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "flat",
+			"save": true,
+			"initial": false
+		},
+		"apply_bias": {
+			"angle": 326,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "bias",
+			"save": true,
+			"initial": false
+		},
+		"open_calibration": {
+			"angle": 332,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": "library",
+			"action": "show_calibration_table"
+		}
+	},
+	"MultiSpectral": {
+		"saturation": {
+			"angle": [282, 298],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0, 0.6],
+			"major": {"-": 0, "sat": 0.3, "+": 0.6},
+			"groove": true,
+			"radial": false,
+			"initial": 0
+		},
+		"colour_stretch": {
+			"angle": [288, 322],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [0.1, 0.5],
+			"text": "S",
+			"radial": true,
+			"initial": 0.5
+		},
+		"redgreen": {
+			"angle": [302, 309],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [-2, 2],
+			"major": {"G": -1.9, "o": 0 ,"R": 1.7},
+			"groove": true,
+			"radial": false,
+			"initial": 0
+		},
+		"yellowblue": {
+			"angle": [313, 320],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [-2, 2],
+			"major": {"B": -1.8, "o": 0, "Y": 1.6},
+			"groove": true,
+			"radial": false,
+			"initial": 0
+		}
+	},
+	"Monochrome": {
+		"gradient": {
+			"angle": [249, 259],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0, 300],
+			"major": {"grad": 100},
+			"groove": true,
+			"initial": 100,
+			"radial": false
+		},
+		"lift": {
+			"angle": [221, 231],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0, 10],
+			"radial": false,
+			"groove": true,
+			"initial": 0.0,
+			"major": {"-": 0, "bg": 5, "+": 10}
+		},
+		"noise_reduction": {
+			"angle": [235, 245],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [-5, 100],
+			"radial": false,
+			"groove": true,
+			"initial": 0.0,
+			"major": {"-": 0, "nr": 50, "+": 100}
+		},
+		"black": {
+			"angle": [217, 143],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0, 1],
+			"groove": true,
+			"radial": true,
+			"initial": 0.1,
+			"text": "B",
+			"save": false
+		},
+		"white": {
+			"angle": [217, 143],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0, 1],
+			"radial": true,
+			"initial": 0.9,
+			"text": "W"
+		},
+		"p1": {
+			"angle": [217, 143],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [0, 1],
+			"radial": true,
+			"text": "S",
+			"initial": 0.65
+		},
+		"fine": {
+			"angle": [217, 143],
+			"location": "fine_control",
+			"control_type": "JLever",
+			"values": [-0.0001, 0.0001],
+			"radial": true,
+			"initial": 0,
+			"text": "fine",
+			"font_size": "14sp",
+			"springy": true,
+			"save": false 
+		},
+		"autoblack": {
+			"angle": 215,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "auto",
+			"initial": 1
+		},
+		"linear": {
+			"angle": 178,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "linear",
+			"group": "stretch",
+			"initial": 0
+		},
+		"log": {
+			"angle": 171,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "log",
+			"group": "stretch",
+			"initial": 0
+		},
+		"asinh": {
+			"angle": 163,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "asinh",
+			"group": "stretch",
+			"initial": 1
+		},
+		"gamma": {
+			"angle": 153,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "gamma",
+			"group": "stretch",
+			"initial": 0
+		},
+		"hyper": {
+			"angle": 144,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "hyper",
+			"group": "stretch",
+			"initial": 0
+		},
+		"show_image_stats": {
+			"angle": 257,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "imstats",
+			"save": false,
+			"initial": 0
+		}
+	},
+	"DSO": {
+		"show_DSO": {
+			"angle": 223,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "obj",
+			"initial": true
+		}
+	},
+	"Notes": {
+		"show_notes": {
+			"angle": 230,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "notes",
+			"initial": false
+		}
+	},
+	"Session": {
+		"show_session": {
+			"angle": 240,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "session",
+			"initial": false
+		}
+	},
+	"Status": {
+		"show_status": {
+			"angle": 249,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"text": "status",
+			"initial": true
+		}
+	},
+	"ObjectIO": {
+		"new_DSO": {
+			"angle": 60,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "new",
+			"text": "save",
+			"action": "confirm_new_object"
+		}
+	},
+	"Observations": {
+		"load_previous": {
+			"angle": 54.9,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "prev",
+			"text": "prev",
+			"action": "show_observations"
+		}
+	},
+	"ObservingList": {
+		"show_list": {
+			"angle": 49.8,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "list",
+			"text": "dso",
+			"action": "show"
+		}
+	},
+	"Capture": {
+		"capturing": {
+			"angle": 0,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"icon": "camera",
+			"font_size": 24,
+			"color": [0.5, 0, 0, 1],
+			"radial": true,
+			"save": false
+		}
+	},
+	"CaptureScript":{
+		"exposure_button": {
+			"angle": 356,
+			"location": "mid_ring",
+			"control_type": "JButton",
+			"text": "10 s",
+			"action": "show_exposure_panel",
+			"radial": true
+		},
+		"filter_button": {
+			"angle": 4,
+			"location": "mid_ring",
+			"control_type": "JButton",
+			"text": "L",
+			"action": "show_filter_panel",
+			"radial": true
+		},
+		"frame_script": {
+			"angle": 9,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "frame",
+			"radial": true,
+			"group": "current_script",
+			"initial": 1
+		},
+		"light_script": {
+			"angle": 11.5,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "light",
+			"radial": true,
+			"group": "current_script"
+		},
+		"seq_script": {
+			"angle": 14,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "seq",
+			"radial": true,
+			"group": "current_script"
+		},
+		"dark_script": {
+			"angle": 350.8,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "dark",
+			"radial": true,
+			"group": "current_script"
+		},
+		"flat_script": {
+			"angle": 348.3,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "flat",
+			"radial": true,
+			"group": "current_script"
+		},
+		"bias_script": {
+			"angle": 345.8,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"text": "bias",
+			"radial": true,
+			"group": "current_script"
+		}
+	},
+	"Snapshotter": {
+		"snapshot": {
+			"angle": 270,
+			"location": "outer_ring",
+			"control_type": "JIconButton",
+			"icon": "snapshotter",
+			"tooltip": "take snapshot",
+			"highlight": false,
+			"action": "snap"
+		},
+		"style": {
+			"angle": 270,
+			"location": "inner_ring",
+			"control_type": "JMulti",
+			"values": ["landscape", "eyepiece"],
+			"initial": "eyepiece"
+		},
+		"annotation": {
+			"angle": 266,
+			"location": "outer_ring",
+			"control_type": "JMulti",
+			"values": ["plain", "name", "full"],
+			"initial": "full"
+		},
+		"save_format": {
+			"angle": 274,
+			"location": "outer_ring",
+			"control_type": "JMulti",
+			"values": ["png", "jpg", "fit"],
+			"initial": "png"
+		}
+	},
+	"Stacker": {
+		"sub_or_stack": {
+			"angle": 90,
+			"location": "inner_ring",
+			"control_type": "JMulti",
+			"values": ["sub", "stack"],
+			"initial": "sub",
+			"save": false
+		},
+		"speed": {
+			"angle": [67, 72],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0.3, 7],
+			"major": {"+": 7.0, "-": 0.3},
+			"groove": true,
+			"radial": false,
+			"initial": 2,
+			"save": false
+		},
+		"mean": {
+			"angle": 129,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"text": "mean",
+			"group": "combine",
+			"initial": 1
+		},
+		"90": {
+			"angle": 123,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"text": "90",
+			"group": "combine"
+		},
+		"80": {
+			"angle": 119,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"text": "80",
+			"group": "combine"
+		},
+		"70": {
+			"angle": 115,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"text": "70",
+			"group": "combine"
+		},
+		"median": {
+			"angle": 109,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"text": "median",
+			"group": "combine"
+		},
+		"mono": {
+			"angle": 287,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "mono",
+			"initial": false,
+			"group": "spectral_mode",
+			"initial": 1
+		},
+		"LRGB": {
+			"angle": 294,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "LRGB",
+			"initial": false,
+			"group": "spectral_mode"
+		},
+		"L+": {
+			"angle": 301,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"radial": false,
+			"text": "L+",
+			"initial": false,
+			"group": "spectral_mode"
+		},
+		"L_plus_other": {
+			"angle": 304,
+			"location": "inner_ring",
+			"control_type": "JMulti",
+			"values": ["Ha", "OIII", "SII"],
+			"initial": "Ha"
+		},
+		"animating": {
+			"angle": 72,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"icon": "play",
+			"initial": false,
+			"save": false
+		},
+		"gif": {
+			"angle": 68,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"text": "gif",
+			"initial": false,
+			"save": false,
+			"action": "make_animated_gif"
+		},
+		"clear_stack": {
+			"angle": 126,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "clear",
+			"tooltip": "clear stack",
+			"action": "clear"
+		},
+		"recompute": {
+			"angle": 119,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "redo",
+			"tooltip": "recompute stack",
+			"action": "recompute"
+		},
+		"realign": {
+			"angle": 112,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "stack",
+			"tooltip": "realign stack",
+			"action": "realign"
+		},
+		"sub_m2": {
+			"angle": 98,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": " ",
+			"font_size": "11sp",
+			"save": false
+		},
+		"sub_m1": {
+			"angle": 94,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": " ",
+			"font_size": "13sp",
+			"save": false
+		},
+		"sub_0": {
+			"angle": 90,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": " ",
+			"font_size": "20sp",
+			"background_color": [0.1, 0.1, 0.1, 1],
+			"save": false,
+			"action": "toggle_selected_sub"
+		},
+		"sub_p1": {
+			"angle": 86,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": " ",
+			"font_size": "13sp",
+			"save": false
+		},
+		"sub_p2": {
+			"angle": 82,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"text": " ",
+			"font_size": "11sp",
+			"save": false
+		},
+		"delete_sub": {
+			"angle": 78,
+			"location": "outer_ring",
+			"control_type": "JIconButton",
+			"icon": "clear",
+			"action": "delete_sub",
+			"save": false
+		},
+		"first_sub": {
+			"angle": 97,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "first_sub",
+			"font_size": "20",
+			"highlight": false,
+			"action": "first_sub"
+		},
+		"last_sub": {
+			"angle": 83,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "last_sub",
+			"font_size": "20",
+			"highlight": false,
+			"action": "last_sub"
+		},
+		"prev_sub": {
+			"angle": 94,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "prev_sub",
+			"font_size": "20",
+			"highlight": false,
+			"action": "previous_sub"
+		},
+		"next_sub": {
+			"angle": 86,
+			"location": "inner_ring",
+			"control_type": "JIconButton",
+			"icon": "next_sub",
+			"font_size": "20",
+			"highlight": false,
+			"action": "next_sub"
+		}
+	}
+}

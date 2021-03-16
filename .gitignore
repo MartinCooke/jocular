@@ -1,0 +1,12 @@
+# ignore all pdfs in doc and any subdirectory
+doc/**/*.pdf
+
+# ignore all *.pyc
+*.pyc
+
+# and .DS_Store
+.DS_Store
+
+# virtual environment
+venv/
+
