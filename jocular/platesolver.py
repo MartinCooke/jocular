@@ -146,16 +146,19 @@ class PlateSolver(Component):
 
     def on_new_object(self):
         self.cart2pix = None
-        self.info('ready')
+        # check if we have stellar database loaded
+        self.has_database = os.path.exists(self.app.get_path('star_db'))
+        if self.has_database:
+            self.info('ready')
+        else:
+            self.info('no database')
 
     def match(self):
         # runs in separate thread
-        # average timings: read 11ms, sex 99, db lookup 50, match 58
-        # params 80 stars, 10 matches, magrange 5, thresh 0.0004 give 95% correct
-        # arcsec 10' = 89%, 12' 92, 14' 94 15-20 = 95%  25 96 30 97
 
         try:
             self.h, self.w = self.im.shape
+            # degrees per pixel
             dpp = (
                 self.binning
                 * (self.pixel_height * 1e-6 / (self.focal_length / 1000))
@@ -260,6 +263,10 @@ class PlateSolver(Component):
         # called when user presses loc icon
 
         self.cart2pix = None
+
+        # check if we have any stars
+        if not self.has_database:
+            return
 
         self.ra0, self.dec0 = Component.get('DSO').current_object_coordinates()
         if self.ra0 is None:

@@ -299,26 +299,30 @@ class DSOPopup(BoxLayout):
 
     def display(self, info=None, title_color=None):
 
-        self.clear_widgets()
-        # populate popup
-        nm = '{:} ({:})'.format(info.get('Name', ''), info.get('OT'))
-        tb = TitleBar(Name=nm)
-        if title_color is not None:
-            tb.title_color = title_color
-        self.add_widget(tb)
+        # there is a subtle bug here which this is going to catch one day
+        try:
+            self.clear_widgets()
+            # populate popup
+            nm = '{:} ({:})'.format(info.get('Name', ''), info.get('OT'))
+            tb = TitleBar(Name=nm)
+            if title_color is not None:
+                tb.title_color = title_color
+            self.add_widget(tb)
 
-        for k, v in info.items():
-            if str(v) != 'nan' and k not in {'Name', 'Cat', 'RA', 'Dec'}:
-                if type(v) == float:
-                    pv = PropVal(param=k, value='{:.3f}'.format(v))
-                else:
-                    pv = PropVal(param=k, value=str(v))
-                self.add_widget(pv)
+            for k, v in info.items():
+                if str(v) != 'nan' and k not in {'Name', 'Cat', 'RA', 'Dec'}:
+                    if type(v) == float:
+                        pv = PropVal(param=k, value='{:.3f}'.format(v))
+                    else:
+                        pv = PropVal(param=k, value=str(v))
+                    self.add_widget(pv)
 
-        # position to popup info; not yet working in terms of limiting it to screen
-        pos = Window.mouse_pos
-        self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
-        self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
+            # position to popup info; not yet working in terms of limiting it to screen
+            pos = Window.mouse_pos
+            self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
+            self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
+        except Exception as e:
+            Logger.debug('Annotator: DSOPopup.display ({:})'.format(e))
 
     def hide(self):
         self.x = 10 * Window.width
@@ -356,7 +360,7 @@ class Annotator(Component):
     def on_new_object(self):
         self.clear_annotations()
         self.on_mag_limit()
-        self.info('ready')
+        self.has_annotation_database = os.path.exists(self.app.get_path('dso_db'))
 
     def clear_annotations(self):
         # remove previous annotations
@@ -397,6 +401,9 @@ class Annotator(Component):
 
     def annotate(self):
         # called by platesolver when finished a platesolve
+
+        if not self.has_annotation_database:
+            return
 
         self.clear_annotations()
         solver = Component.get('PlateSolver')

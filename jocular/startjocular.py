@@ -50,9 +50,8 @@ def startjocular(datadir, log):
         print()
         sys.exit()
 
-    # esnure we are using absolute paths so that user can start from any place
+    # ensure we are using absolute paths so that user can start from any place
     datadir = os.path.abspath(datadir)
-    print('datadir is', datadir)
 
     # store absolute path to datadir in .jocular
     try:
