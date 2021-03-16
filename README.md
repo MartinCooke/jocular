@@ -2,21 +2,21 @@
 
 # Jocular
 
-Jocular is a tool for *Electronically-Assisted Astronomy* (EEA).
+Jocular is a tool for **Electronically-Assisted Visual Astronomy** (EEVA).
 
 Jocular supports the observation of astronomical objects in near real-time by connecting up a camera to a telescope or suitable lens. It also supports session-planning through extensive deep sky object (DSO) databases, helps to manage your captures, and
 enables the reloading of previously-captured images.
 
-Jocular is a cross-platform application. It has been used extensively on OSX and Windows but ought to work on Linux variants too. 
+Jocular is a cross-platform application and has been used extensively on OSX and Windows but ought to work on Linux variants too. 
 
-This is the first public release although the application has been in use for some time. Further documentation will be added over the coming days.
+To see some of Jocular's capabilities, visit the EEVA section of http://stargazerslounge.org, an amateur astronomy forum.
 
 ### Installation
 
 Jocular requires a recent Python 3 system. To check whether you already have a suitable system, open a command window (Windows) or terminal (OSX/Linux) and type
 
 ```sh
-	python --version
+python --version
 ```
 
 If the version is 3.4 or later you are all ready to install Jocular. If not, visit <a href="python.org">python.org</a> to download a version appropriate for your operating system.
@@ -24,7 +24,7 @@ If the version is 3.4 or later you are all ready to install Jocular. If not, vis
 Once you have Python installed, type the following in the terminal:
 
 ```sh
-	pip install jocular
+pip install jocular
 ```
 
 This will install Jocular and its dependencies. The process may take a minute or more.
@@ -34,13 +34,13 @@ This will install Jocular and its dependencies. The process may take a minute or
 To test whether you can run Jocular, simply type
 
 ```sh
-	jocular
+jocular
 ```
 
 The first time Jocular runs it will ask you to supply a *data directory*. This is the place where Jocular will store all your captures, calibration files, observing lists and the like. The directory must exist so go ahead and create a directory wherever you like, named however you wish e.g. `joculardata`. Then run 
 
 ```sh
-	jocular --datadir <PATH>
+jocular --datadir <PATH>
 ```
 
 where `<PATH>` is the location of your datadir. There is no need to supply the datadir on subsequent runs unless you change the location of your data directory.
@@ -58,7 +58,7 @@ If you come across a problem and Jocular is still running, click on the status t
 If this doesn't help, quit Jocular and re-run with the debug option:
 
 ```sh
-	jocular --log debug
+jocular --log debug
 ```
 
 This will output useful diagnostic information which might help to identify the problem.
@@ -71,9 +71,10 @@ There is currently an intermittent and hard to trace bug that appears to freeze 
 
 Jocular is under active development (and use) so expect to see some additional functionality added in the coming months. Two hot areas are
 
-1. integration with INDI and perhaps ASCOM
-2. direct control of the mount (goto object button)
-
+- [ ] integration with INDI and perhaps ASCOM
+- [ ] direct control of the mount (goto object button)
+- [ ] asteroid identification
+- [ ] simple photometry 
 
 
 
