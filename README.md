@@ -1,3 +1,5 @@
+![Jocular](./assets/images/jocular.png)
+
 # Jocular
 
 Jocular is a tool for *Electronically-Assisted Astronomy* (EEA).
@@ -15,7 +17,7 @@ Jocular requires a recent Python 3 system. To check whether you already have a s
 
 	python --version
 
-If the version is 3.4 or later you are all ready. If not, visit <python.org> to download a version appropriate for your operating system.  
+If the version is 3.4 or later you are all ready. If not, visit <a href="python.org"></a> to download a version appropriate for your operating system.
 
 ### Installation
 
@@ -37,9 +39,7 @@ The first time Jocular runs it will ask you to run again, supplying a *data dire
 
 where `<PATH>` is the location of your datadir. There is no need to supply the datadir on subsequent runs unless you change the location of your data directory.
 
-The first time Jocular runs it will take about 30-60s to compile all its necessary scripts. Eventually a window like this will appear:
-
-![Jocular starting screen](./assets/images/startup_screen.png)
+The first time Jocular runs it will take about 30-60s to compile all its necessary scripts. Eventually a window like the one above will appear (without the image!).
 
 Close the window and type
 
@@ -47,16 +47,16 @@ Close the window and type
 
 This time the window should appear in a couple of seconds.
 
+
 ### Additional data files
 
 In order to make best use of Jocular, you should download a set of DSO catalogues which collectively contain over 40000 objects of potential interest. Download this <a href="./assets/zips/catalogues.zip">zip file (<1M)</a>, unzip it and move the resulting directory called `catalogues` to your jocular data directory. When you next start Jocular, clicking on the `DSOS` icon will bring up the DSO database browser.
 
 
 
-
 ### If things go wrong
 
-If you come across a problem and Jocular is till running, click on the status toggle at about 7 o'clock on the ring. This will bring up a panel in the lower right corner showing some information about each of the main components.
+If you come across a problem and Jocular is still running, click on the status toggle at about 7 o'clock on the ring. This will bring up a panel in the lower right corner showing some information about each of the main components.
 
 If this doesn't help, quit Jocular and re-run with the debug option:
 
