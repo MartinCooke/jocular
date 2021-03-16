@@ -31,15 +31,15 @@ To test whether you can run Jocular, simply type
 
 	jocular
 
-The first time Jocular runs it will ask you to run again, supplying a *data directory*. This is the place where Jocular will store all your captures, calibration files, observing lists and the like. The directory must exist so go ahead and create a directory wherever you like, named however you wish e.g. `joculardata'. Then run 
+The first time Jocular runs it will ask you to run again, supplying a *data directory*. This is the place where Jocular will store all your captures, calibration files, observing lists and the like. The directory must exist so go ahead and create a directory wherever you like, named however you wish e.g. `joculardata`. Then run 
 
 	jocular --datadir <PATH>
 
-where `<PATH>' is the location of your datadir.
+where `<PATH>` is the location of your datadir.
 
-The first time Jocular runs it will take about 30-60s to compile all its necessary scripts. This is normal. Eventually a window that looks like this will appear:
+The first time Jocular runs it will take about 30-60s to compile all its necessary scripts. Eventually a window like this will appear:
 
-![Jocular starting screen](images/startup_screen.jpg)
+![Jocular starting screen](/images/startup_screen.jpg)
 
 
 
