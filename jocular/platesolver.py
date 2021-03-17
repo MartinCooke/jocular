@@ -179,7 +179,7 @@ class PlateSolver(Component):
             #  convert flux to relative magnitude
             mags = -2.5 * np.log10(flux / np.max(flux))
 
-            # select N-brightest (need to make N a parameter)
+            # select N-brightest
             inds = np.argsort(mags)[: self.n_stars_in_image]
             x_im, y_im = x[inds], y[inds]
 

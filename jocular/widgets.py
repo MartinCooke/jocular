@@ -12,7 +12,13 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
 from kivy.lang import Builder
 from kivy.uix.label import Label
-from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, StringProperty, ListProperty
+from kivy.properties import (
+    NumericProperty,
+    ObjectProperty,
+    BooleanProperty,
+    StringProperty,
+    ListProperty,
+)
 from kivy.uix.button import Button
 from kivy.uix.bubble import Bubble, BubbleButton
 from kivy.uix.togglebutton import ToggleButton
@@ -24,7 +30,8 @@ from kivy.metrics import dp
 from jocular.utils import angle360
 from jocular.metrics import Metrics
 
-Builder.load_string('''
+Builder.load_string(
+    '''
 
 #:import Clipboard kivy.core.clipboard.Clipboard
 
@@ -116,7 +123,8 @@ Builder.load_string('''
         width: dp(220)
         text: '{:}'.format(root.value)
 
-''')
+'''
+)
 
 
 class ParamValue(BoxLayout):
@@ -128,8 +136,8 @@ class ParamValue(BoxLayout):
     def null_action(self, *args):
         pass
 
-class Polar:
 
+class Polar:
     def __init__(self, origin=[0, 0], angle=0, radius=0):
         self.origin = origin
         self.angle = angle
@@ -137,11 +145,14 @@ class Polar:
 
     def to_pos(self):
         ang = self.angle * math.pi / 180
-        return self.origin[0] + self.radius * math.cos(ang), \
-                self.origin[1] + self.radius * math.sin(ang)
+        return (
+            self.origin[0] + self.radius * math.cos(ang),
+            self.origin[1] + self.radius * math.sin(ang),
+        )
 
     def dist_to(self, pos):
         return Vector(self.to_pos()).distance(pos)
+
 
 class Rotatable(Widget, Polar):
 
@@ -150,11 +161,15 @@ class Rotatable(Widget, Polar):
     inv = ObjectProperty(Matrix())
 
     deltas = {
-        (1, True): 0, (1, False): -90,
-        (2, True): -180, (2, False): -90,
-        (3, True): -180, (3, False): 90,
-        (4, True): 0, (4, False): 90
-        }
+        (1, True): 0,
+        (1, False): -90,
+        (2, True): -180,
+        (2, False): -90,
+        (3, True): -180,
+        (3, False): 90,
+        (4, True): 0,
+        (4, False): 90,
+    }
 
     def __init__(self, radial=False, **kwargs):
         super().__init__(**kwargs)
@@ -176,10 +191,14 @@ class Rotatable(Widget, Polar):
     def relocate(self, origin=None, radius=None):
         self.origin = origin
         self.radius = radius
-        #self.pos = self.to_pos() # is this causing issues on Windows?
+        # self.pos = self.to_pos() # is this causing issues on Windows?
         ang = self.angle * math.pi / 180
-        self.x = self.origin[0] + self.radius * math.cos(ang) # is this causing issues on Windows?
-        self.y = self.origin[1] + self.radius * math.sin(ang) # is this causing issues on Windows?
+        self.x = self.origin[0] + self.radius * math.cos(
+            ang
+        )  #  is this causing issues on Windows?
+        self.y = self.origin[1] + self.radius * math.sin(
+            ang
+        )  #  is this causing issues on Windows?
         self.generate_inverse()
 
     def generate_inverse(self, *args):
@@ -189,7 +208,7 @@ class Rotatable(Widget, Polar):
         # correct w/h info is not available on init!
 
         ang = radians(self.rotangle) if self.rotated else 0
-        t = Matrix().translate(-self.width/2 - self.x, -self.height/2 - self.y, 0)
+        t = Matrix().translate(-self.width / 2 - self.x, -self.height / 2 - self.y, 0)
         t = Matrix().rotate(ang, 0, 0, 1).multiply(t)
         t = Matrix().translate(self.x, self.y, 0).multiply(t)
         self.inv = t.inverse()
@@ -199,23 +218,44 @@ class Rotatable(Widget, Polar):
         # takes about 150 microseconds
 
         xt, yt, _ = self.inv.transform_point(x, y, 0)
-        return (self.x < xt < (self.x + self.width)) and (self.y < yt < (self.y + self.height))
+        return (self.x < xt < (self.x + self.width)) and (
+            self.y < yt < (self.y + self.height)
+        )
 
-class JWidget(Widget): pass
-class JRotWidget(JWidget, Rotatable): pass
-class JLabel(JRotWidget, Label): pass
-class JToggleButton(ToggleButton, JRotWidget): pass
-class JButton(Button, JRotWidget): pass
-class JIconTextButton(JButton, JRotWidget): pass
+
+class JWidget(Widget):
+    pass
+
+
+class JRotWidget(JWidget, Rotatable):
+    pass
+
+
+class JLabel(JRotWidget, Label):
+    pass
+
+
+class JToggleButton(ToggleButton, JRotWidget):
+    pass
+
+
+class JButton(Button, JRotWidget):
+    pass
+
+
+class JIconTextButton(JButton, JRotWidget):
+    pass
+
 
 class JFilterButton(Rotatable, Button):
-    filter_color = ListProperty([.2, .2, .2, 1])
+    filter_color = ListProperty([0.2, 0.2, 0.2, 1])
 
-class JIconButton(JButton, JRotWidget): 
+
+class JIconButton(JButton, JRotWidget):
     icon = StringProperty('')
 
-class JMulti(JButton):
 
+class JMulti(JButton):
     def __init__(self, values=None, **kwargs):
         super().__init__(**kwargs)
         self.register_event_type('on_press')
@@ -224,11 +264,11 @@ class JMulti(JButton):
         else:
             self.values = values
         if self.text not in self.values:
-            self.values.append(self.text)  # default is a single state button
+            self.values.append(self.text)  #  default is a single state button
 
     def on_touch_down(self, touch):
         if super().collide_point(*touch.pos):
-            # find location of self.text in self.values
+            #  find location of self.text in self.values
             if len(self.values) > 1:
                 loc = [i for i, x in enumerate(self.values) if x == self.text][0] + 1
                 if loc == len(self.values):
@@ -241,23 +281,27 @@ class JMulti(JButton):
     def on_press(self):
         pass
 
+
 def angle_diff(t1, t2):
     # anticlockwise angle between 2 positions relative to 0 = positive x-axis
     return angle360(math.atan2(t2[1] - t1[1], t2[0] - t1[0]) / (math.pi / 180))
+
 
 class JLever(JRotWidget, Label):
 
     value = NumericProperty(0.0)
     disabled = BooleanProperty(False)
 
-    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, springy=None, **kwargs):
+    def __init__(
+        self, value=0, values=[0, 1], angles=[0, 1], radial=True, springy=None, **kwargs
+    ):
 
         super().__init__(radial=radial, **kwargs)
         self.min_angle, self.max_angle = angles[0], angles[1]
         self.min_value, self.max_value = values[0], values[1]
         self.font_size = '18sp'
         self.springy = springy if springy else None
-        self.value =  value
+        self.value = value
         self.selected = False
         self._k = (self.max_angle - self.min_angle) / (self.max_value - self.min_value)
         self.rotangle = self.value_to_angle(self.value)
@@ -304,7 +348,7 @@ class JLever(JRotWidget, Label):
     def update(self, angle, update_value=True):
         if update_value:
             mina, maxa = self.min_angle, self.max_angle
-        
+
             # return if angle outside range
             if (angle < min(mina, maxa)) or (angle > max(mina, maxa)):
                 return
@@ -318,30 +362,42 @@ class JLever(JRotWidget, Label):
         self.on_angle()
 
 
-class ELabel(Label): pass
+class ELabel(Label):
+    pass
+
 
 class JPopup(Popup):
-
-    def __init__(self, posn=None, message=None, actions=None, show_for=None, cancel_label=None, show_title=True, **args):
+    def __init__(
+        self,
+        posn=None,
+        message=None,
+        actions=None,
+        show_for=None,
+        cancel_label=None,
+        show_title=True,
+        **args
+    ):
 
         if 'size' not in args:
             self.size = dp(300), dp(400)
 
         # user has provided no explicit content, so build it up from message or actions
         if 'content' not in args:
-            args['content'] = hl = BoxLayout(size_hint=(1, None), height=dp(32), spacing = 10)
+            args['content'] = hl = BoxLayout(
+                size_hint=(1, None), height=dp(32), spacing=10
+            )
 
             # use a simple label
             if message is not None:
                 hl.add_widget(ELabel(text=message))
-                #self.size = dp(300), dp(200)
+                # self.size = dp(300), dp(200)
 
             elif actions is not None:
                 for msg, action in actions.items():
-                    b = Button(text=msg) 
+                    b = Button(text=msg)
                     b.bind(on_press=partial(self.do_action, action))
                     hl.add_widget(b)
-            
+
             self.size = dp(300), dp(150)
 
             # add cancel if not provided
@@ -361,7 +417,9 @@ class JPopup(Popup):
             separator_height='2dp' if show_title else '0dp',
             size_hint=(None, None),
             auto_dismiss=False,
-            separator_color = App.get_running_app().highlight_color, **args)
+            separator_color=App.get_running_app().highlight_color,
+            **args
+        )
 
         if 'size' not in args:
             if content_width < 200:
@@ -375,18 +433,21 @@ class JPopup(Popup):
 
         if 'pos_hint' not in args:
             if posn is None:
-                self.pos_hint = {'center_x': .5, 'center_y': .5}
+                self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
             elif type(posn) == str:
                 if posn == 'bottom-left':
                     self.pos_hint = {'x': 0, 'y': 0}
                 elif posn == 'bottom-middle':
-                    self.pos_hint = {'center_x': .5, 'y': 0}
+                    self.pos_hint = {'center_x': 0.5, 'y': 0}
                 elif posn == 'top-right':
                     self.pos_hint = {'right': 1, 'top': 1}
                 elif posn == 'top-left':
                     self.pos_hint = {'x': 0, 'top': 1}
             else:
-                self.pos_hint = {'centre_x': posn[0] / Window.width, 'center_y': posn[1] / Window.height}
+                self.pos_hint = {
+                    'centre_x': posn[0] / Window.width,
+                    'center_y': posn[1] / Window.height,
+                }
 
         if show_for is not None:
             Clock.schedule_once(self.dismiss, show_for)
@@ -395,22 +456,24 @@ class JPopup(Popup):
         action()
         self.dismiss()
 
-class JBubble(Widget):
 
-    def __init__(self, message=None, actions=None, show_for=2, loc='right', show_cancel=True):
+class JBubble(Widget):
+    def __init__(
+        self, message=None, actions=None, show_for=2, loc='right', show_cancel=True
+    ):
         super().__init__()
 
         self.hide_bubble(0)
 
         self.bubble = Bubble(
-            size_hint=(None, None), 
+            size_hint=(None, None),
             orientation='vertical',
-            background_color=(.2, .2, .2, 1),
-            background_image='' 
+            background_color=(0.2, 0.2, 0.2, 1),
+            background_image='',
         )
         self.message = message
         self.loc = loc
-        self.show_for = show_for 
+        self.show_for = show_for
 
         if message is None:
             if show_cancel and 'Cancel' not in actions:
@@ -422,22 +485,22 @@ class JBubble(Widget):
                 bb.bind(on_press=partial(self.hide_bubble_and_respond, callback))
         else:
             self.bubble.add_widget(BubbleButton(text=message))
-            self.bubble.size = dp(10*len(message)), dp(35)
+            self.bubble.size = dp(10 * len(message)), dp(35)
 
         cx, cy = Metrics.get('origin')
         if loc == 'right':
             self.bubble.center_y = cy
             self.bubble.x = cx + Metrics.get('radius')
-            self.bubble.arrow_pos='left_mid'
+            self.bubble.arrow_pos = 'left_mid'
         elif loc == 'bottom':
             self.bubble.center_x = cx
-            self.bubble.y =  dp(60)
+            self.bubble.y = dp(60)
             self.bubble.arrow_pos = 'bottom_mid'
         elif loc == 'mouse':
             x, y = Window.mouse_pos
             self.bubble.x = x + dp(10)
             self.bubble.center_y = y
-            self.bubble.arrow_pos='left_mid'
+            self.bubble.arrow_pos = 'left_mid'
         elif loc == 'center':
             self.bubble.center_x = cx
             self.bubble.center_y = cy
@@ -475,16 +538,17 @@ joc_icons = {
     'prev': 'F',
     'list': 'w',
     'lever': '1',
-    'redo': 'h', # was '4'
+    'redo': 'h',  # was '4'
     'new': 'i',
     'warn': '!',
     'error': 'W',
     'solve': 'T',
-    'info': '}'
-    }
+    'slew': 'H',
+    'info': '}',
+}
+
 
 def jicon(nm, font_size=None):
     fs = '{:}sp'.format(font_size) if font_size else '16sp'
     icon = joc_icons.get(nm, 'm')
     return "[font=Jocular][size={:}]{:}[/size][/font]".format(fs, icon)
-

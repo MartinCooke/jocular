@@ -84,6 +84,9 @@ class Capture(Component):
         self.gui.set('capturing', False, update_property=True)
         self.gui.enable(self.scripts + ['exposure_button', 'filter_button'])
 
+    def slew(self, *args):
+        Logger.info('Capture: slew not implemented yet (but coming soon!)')
+
     def camera_disconnected(self):
         self.stop_capture()
         self.gui.disable(['capturing'])

@@ -371,6 +371,17 @@
 			"color": [0.5, 0, 0, 1],
 			"radial": true,
 			"save": false
+		},
+		"slew": {
+			"angle": 39.5,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "slew",
+			"text": "goto",
+			"font_size": 20,
+			"highlight": false,
+			"save": false,
+			"action": "slew"
 		}
 	},
 	"CaptureScript":{

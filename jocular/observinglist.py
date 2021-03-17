@@ -220,11 +220,13 @@ class ObservingList(Component):
     def load_objects(self):
 
         # load shipped catalogues
+        Logger.info('ObservingList: loading standard catalogues')
         self.objects = {}
         for f in glob.glob(os.path.join(self.app.get_path('dsos'), '*.csv')):
             self._load_objects(f)
 
         # load user object catalogues
+        Logger.info('ObservingList: loading user catalogues')
         for f in glob.glob(os.path.join(self.app.get_path('catalogues'), '*.csv')):
             self._load_objects(f)
 
@@ -418,8 +420,7 @@ class ObservingList(Component):
         self.update_status()
 
     def new_from_list(self, row, *args):
-        # User selects a row in the observing list table. This simply updates the DSO field.
-
+        # User selects a row in the observing list table
         name = row.fields['Name'].text + '/' + row.fields['OT'].text
         self.table.hide()
         Component.get('DSO').on_new_object(self.lookup_name(name))

@@ -8,13 +8,19 @@ from kivy.logger import Logger
 from jocular.image import fits_in_dir
 from jocular.component import Component
 
+
 def remove_empties(d):
-    return {k: v for k, v in d.items() if not ((v == '') or (v is None) or (v == {}) or (v == []))}
+    return {
+        k: v
+        for k, v in d.items()
+        if not ((v == '') or (v is None) or (v == {}) or (v == []))
+    }
+
 
 def get_metadata(path):
     # Read metadata from path, constructing if necessary
-    # supports info.json (v1/2 of Jocular) and info3.json (v3)
-    # main difference is that info3 is simpler; will always read info3 in pref if both exist
+    #  supports info.json (v1/2 of Jocular) and info3.json (v3)
+    #  main difference is that info3 is simpler; will always read info3 in pref if both exist
 
     v1 = False
     try:
@@ -23,13 +29,27 @@ def get_metadata(path):
             md = json.load(f)
     except:
         try:
-            # if pre v3 metadata exists, load it
+            #  if pre v3 metadata exists, load it
             with open(os.path.join(path, 'info.json'), 'r') as f:
                 md = json.load(f)
-            # convert 
+            # convert
             newmd = {}
-            for p in ['Name', 'Con', 'OT', 'Notes', 'session_notes', 'SQM', 'temperature', 'rejected', 
-                'seeing', 'transparency', 'telescope', 'camera', 'exposure', 'sub_type']:
+            for p in [
+                'Name',
+                'Con',
+                'OT',
+                'Notes',
+                'session_notes',
+                'SQM',
+                'temperature',
+                'rejected',
+                'seeing',
+                'transparency',
+                'telescope',
+                'camera',
+                'exposure',
+                'sub_type',
+            ]:
                 if p in md:
                     newmd[p] = md[p]
             if 'scope' in md and 'orientation' in md['scope']:
@@ -40,7 +60,7 @@ def get_metadata(path):
             # cannot find any metadata, so set to empty
             md = {}
 
-    # if no name, use name of directory contaiining FITs
+    #  if no name, use name of directory contaiining FITs
     if 'Name' not in md:
         md['Name'] = os.path.basename(path)
 
@@ -54,17 +74,18 @@ def get_metadata(path):
         except:
             pass
 
-    # compute session date/time and number of subs dynamically
+    #  compute session date/time and number of subs dynamically
     fits = fits_in_dir(path)
     md['nsubs'] = len(fits)
     if len(fits) > 0:
-        md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime('%d %b %y %H:%M')
+        md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime(
+            '%d %b %y %H:%M'
+        )
 
     return md
 
 
 class Metadata(Component):
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.reset()
@@ -93,12 +114,14 @@ class Metadata(Component):
             with open(os.path.join(path, 'info3.json'), 'w') as f:
                 json.dump(self.md, f, indent=1)
         except Exception as e:
-            Logger.warn('Metadata: Problem saving info3.json to {:} ({:})'.format(path, e))
-       
+            Logger.warn(
+                'Metadata: Problem saving info3.json to {:} ({:})'.format(path, e)
+            )
+
     def set(self, field, value=None):
         # set one or more fields of metadata
         if value is None and type(field) == dict:
-            for f ,v in field.items():
+            for f, v in field.items():
                 self.md[f] = v
         else:
             self.md[field] = value

@@ -1,4 +1,4 @@
-''' Represents DSO name and other details.
+''' Represents DSO name and handles object panel.
 '''
 
 import os
@@ -19,7 +19,8 @@ from jocular.component import Component
 from jocular.widgets import JWidget, JPopup
 from jocular.RA_and_Dec import RA, Dec
 
-Builder.load_string('''
+Builder.load_string(
+    '''
 
 <MatchButton>:
     size_hint: 1, None
@@ -303,11 +304,17 @@ Builder.load_string('''
         text: root.message
         halign: 'center'
 
-''')
+'''
+)
 
 
-class MyBoxLayout(BoxLayout): pass
-class MatchButton(Button, JWidget): pass
+class MyBoxLayout(BoxLayout):
+    pass
+
+
+class MatchButton(Button, JWidget):
+    pass
+
 
 class DSOInfo(BoxLayout):
 
@@ -337,14 +344,16 @@ class DSOInfo(BoxLayout):
 
         # deal with RA/Dec
         try:
-            self.RA_h, self.RA_m, self.RA_s = dso.RA.replace('h',''). split()
-            self.Dec_d, self.Dec_m, self.Dec_s = dso.Dec.replace('\u00b0','').split()
+            self.RA_h, self.RA_m, self.RA_s = dso.RA.replace('h', '').split()
+            self.Dec_d, self.Dec_m, self.Dec_s = dso.Dec.replace('\u00b0', '').split()
         except:
             pass
- 
+
         super().__init__(**kwargs)
         self.max_matches = 12
-        self.match_buttons = [MatchButton(on_press=self.choose_dso) for i in range(self.max_matches)]
+        self.match_buttons = [
+            MatchButton(on_press=self.choose_dso) for i in range(self.max_matches)
+        ]
         for b in self.match_buttons:
             self.matches.add_widget(b)
 
@@ -439,23 +448,29 @@ class DSOInfo(BoxLayout):
         for p in ['OT', 'Con', 'Diam', 'Mag', 'Other']:
             value = getattr(self, p)
             if self.check_value(p, value) is None:
-                props[p] = value 
+                props[p] = value
             else:
                 props[p] = ''
 
         props['Name'] = self.Name
 
-        if self.check_value('RA_h', self.RA_h) is None and  \
-            self.check_value('RA_m', self.RA_m) is None and \
-            self.check_value('RA_s', self.RA_s) is None:
+        if (
+            self.check_value('RA_h', self.RA_h) is None
+            and self.check_value('RA_m', self.RA_m) is None
+            and self.check_value('RA_s', self.RA_s) is None
+        ):
             props['RA'] = '{:2s}h {:2s} {:2s}'.format(self.RA_h, self.RA_m, self.RA_s)
         else:
             props['RA'] = ''
 
-        if self.check_value('Dec_d', self.Dec_d) is None and  \
-            self.check_value('Dec_m', self.Dec_m) is None and \
-            self.check_value('Dec_s', self.Dec_s) is None:
-            props['Dec'] = '{:s}\u00b0 {:2s} {:2s}'.format(self.Dec_d, self.Dec_m, self.Dec_s)
+        if (
+            self.check_value('Dec_d', self.Dec_d) is None
+            and self.check_value('Dec_m', self.Dec_m) is None
+            and self.check_value('Dec_s', self.Dec_s) is None
+        ):
+            props['Dec'] = '{:s}\u00b0 {:2s} {:2s}'.format(
+                self.Dec_d, self.Dec_m, self.Dec_s
+            )
         else:
             props['Dec'] = ''
 
@@ -471,7 +486,9 @@ class DSOInfo(BoxLayout):
 
     def show_DSO(self, name, ot):
         self.Name = name
-        details = Component.get('ObservingList').lookup_details('{:}/{:}'.format(name, ot))
+        details = Component.get('ObservingList').lookup_details(
+            '{:}/{:}'.format(name, ot)
+        )
         self.OT = details.get('OT', '')
         self.Con = details.get('Con', '')
         self.Mag = str(details.get('Mag', ''))
@@ -486,6 +503,8 @@ class DSOInfo(BoxLayout):
         self.Dec_m = dec2.strip()
         self.Dec_s = dec3.strip()
 
+
+
     def clear_DSO(self):
         for p in ['Name', 'OT', 'Con', 'RA_h', 'RA_m', 'RA_s', 'Dec_d', 'Dec_m', 'Dec_s', 'Mag', 'Diam', 'Other']:
             setattr(self, p, '')
@@ -493,7 +512,20 @@ class DSOInfo(BoxLayout):
     def add_to_catalogue(self):
 
         # check that data is all valid
-        for p in ['Name', 'OT', 'Con', 'RA_h', 'RA_m', 'RA_s', 'Dec_d', 'Dec_m', 'Dec_s', 'Mag', 'Diam', 'Other']:
+        for p in [
+            'Name',
+            'OT',
+            'Con',
+            'RA_h',
+            'RA_m',
+            'RA_s',
+            'Dec_d',
+            'Dec_m',
+            'Dec_s',
+            'Mag',
+            'Diam',
+            'Other',
+        ]:
             resp = self.check_value(p, getattr(self, p))
             if resp is not None:
                 self.message = resp
@@ -513,11 +545,19 @@ class DSOInfo(BoxLayout):
             return
 
         try:
-            ra = 15 * float(self.RA_h) + float(self.RA_m) / 4 + float(self.RA_s) / 240 
-            if float(self.Dec_d) < 0: 
-                dec = float(self.Dec_d) - float(self.Dec_m)/60 - float(self.Dec_s)/3600
+            ra = 15 * float(self.RA_h) + float(self.RA_m) / 4 + float(self.RA_s) / 240
+            if float(self.Dec_d) < 0:
+                dec = (
+                    float(self.Dec_d)
+                    - float(self.Dec_m) / 60
+                    - float(self.Dec_s) / 3600
+                )
             else:
-                dec = float(self.Dec_d) + float(self.Dec_m)/60 + float(self.Dec_s)/3600
+                dec = (
+                    float(self.Dec_d)
+                    + float(self.Dec_m) / 60
+                    + float(self.Dec_s) / 3600
+                )
         except Exception as e:
             self.message = 'Problem converting RA or Dec'
             Logger.error('DSO: coverting RA or Dec ({:})'.format(e))
@@ -535,8 +575,11 @@ class DSOInfo(BoxLayout):
                 Diam = math.nan
             Other = self.Other.strip().replace(',', ';')
             with open(obj_file, 'a') as f:
-                f.write('{:},{:.6f},{:.6f},{:},{:},{:},{:},{:}\n'.format(
-                    Name, ra, dec, Con, OT, Mag, Diam, Other))
+                f.write(
+                    '{:},{:.6f},{:.6f},{:},{:},{:},{:},{:}\n'.format(
+                        Name, ra, dec, Con, OT, Mag, Diam, Other
+                    )
+                )
         except Exception as e:
             self.message = 'Problem writing to user objects file'
             Logger.error('DSO: writing to user objects file ({:})'.format(e))
@@ -547,8 +590,8 @@ class DSOInfo(BoxLayout):
         try:
             ol.objects['{:}/{:}'.format(Name, OT)] = {
                 'Name': Name,
-                'RA': ra, 
-                'Dec': dec, 
+                'RA': ra,
+                'Dec': dec,
                 'Con': Con,
                 'OT': OT,
                 'Obs': 0,
@@ -557,8 +600,8 @@ class DSOInfo(BoxLayout):
                 'Other': Other,
                 'Notes': '',
                 'Mag': float(Mag),
-                'Diam': float(Diam)
-                }
+                'Diam': float(Diam),
+            }
             ol.compute_transits()
             ol.update_status()
 
@@ -568,17 +611,20 @@ class DSOInfo(BoxLayout):
             return
 
         self.message = 'Written to catalogue!'
- 
+
     def lookup_dso(self, name):
-        '''User has changed name field so look it up
-        '''
+        """User has changed name field so look it up"""
 
         self.clear_DSO()
         for b in self.match_buttons:
             b.text = ''
         name = name.strip()
         if name:
-            matches = sorted(Component.get('ObservingList').lookup(name, max_matches=self.max_matches))
+            matches = sorted(
+                Component.get('ObservingList').lookup(
+                    name, max_matches=self.max_matches
+                )
+            )
             if len(matches) == 1:
                 name, ot = matches[0].split('/')
                 self.show_DSO(name.strip(), ot.strip())
@@ -586,6 +632,7 @@ class DSOInfo(BoxLayout):
                 for i, m in enumerate(matches):
                     nm, ot = m.split('/')
                     self.match_buttons[i].text = '{:}: {:}'.format(ot, nm)
+
 
 class DSO(BoxLayout, Component):
 
@@ -604,7 +651,9 @@ class DSO(BoxLayout, Component):
 
     def __init__(self, **kwargs):
         try:
-            with open(App.get_running_app().get_path('object_type_names.json'), 'r') as f:
+            with open(
+                App.get_running_app().get_path('object_type_names.json'), 'r'
+            ) as f:
                 self.otypes = json.load(f)
         except Exception as e:
             Logger.warn('DSO: cannot read oject_type_names.json ({:})'.format(e))
@@ -616,6 +665,7 @@ class DSO(BoxLayout, Component):
     def on_Mag(self, *args):
         if self.Mag == 'nan':
             self.Mag = ''
+
     def on_Diam(self, *args):
         if self.Diam == 'nan':
             self.Diam = ''
@@ -626,32 +676,70 @@ class DSO(BoxLayout, Component):
                 self.Diam = ''
 
     def on_new_object(self, settings=None):
+        ''' Called at start and whenever user selects new object. Also called
+            when user selects a row from the DSO table.
+        '''
         if settings is None:
-            settings = Component.get('Metadata').get({'Name', 'OT'})
+            self.settings = Component.get('Metadata').get({'Name', 'OT'})
+            self._new_object()
         else:
-            # coming from observing list
-            self.changed = not Component.get('Stacker').is_empty()
+            ''' Ask user for confirmation that they wish to rename the object
+            '''
+            self.settings = settings
+            if self.Name:
+                self.popup = JPopup(
+                    title='Change name to {:}?'.format(settings['Name']),
+                    actions={
+                        'Cancel': self.cancel_name_change,
+                        'Yes': self.confirmed_name_change,
+                    },
+                )
+                self.popup.open()
+            else:
+                self.confirmed_name_change()
+
+    def confirmed_name_change(self, *args):
+        self.changed = not Component.get('Stacker').is_empty()
+        self._new_object()
+
+    def cancel_name_change(self, *args):
+        pass
+
+    def _new_object(self, *args):
+        ''' Helper method called after normal new object selection or confirmation
+            of change of name
+        '''
+        settings = self.settings
+
         if 'Name' in settings and 'OT' in settings:
-            # translate a few cases to new OTs
+            #  translate a few cases to new OTs
             nm = settings['Name']
             ot = settings['OT'].upper()
             # deal with some legacies from v1
             if ot == 'G+':
                 if nm.startswith('Arp') or nm.startswith('VV') or nm.startswith('AM '):
                     ot = 'PG'
-                elif nm.startswith('Hick') or nm.startswith('PCG') or nm.startswith('SHK'):
+                elif (
+                    nm.startswith('Hick')
+                    or nm.startswith('PCG')
+                    or nm.startswith('SHK')
+                ):
                     ot = 'CG'
-            lookup_settings = Component.get('ObservingList').lookup_name('{:}/{:}'.format(nm, ot))
+            lookup_settings = Component.get('ObservingList').lookup_name(
+                '{:}/{:}'.format(nm, ot)
+            )
             if lookup_settings is not None:
                 settings = lookup_settings
 
-        # now extract all 
+        # now extract all
         for p in self.props:
             setattr(self, p, str(settings.get(p, '')))
         self.saved_props = {p: getattr(self, p) for p in self.props}
 
     def on_save_object(self):
-        Component.get('Metadata').set({'Name': self.Name.strip(), 'OT': self.OT, 'Con': self.Con})
+        Component.get('Metadata').set(
+            {'Name': self.Name.strip(), 'OT': self.OT, 'Con': self.Con}
+        )
 
     def current_object_coordinates(self):
         if self.RA and self.Dec:
@@ -666,7 +754,9 @@ class DSO(BoxLayout, Component):
 
     def edit(self, *args):
         content = DSOInfo(self)
-        self.popup = JPopup(title='Select, add or edit DSO', content=content, posn='top-left')
+        self.popup = JPopup(
+            title='Select, add or edit DSO', content=content, posn='top-left'
+        )
         self.popup.open()
 
     def selected(self, new_props, *args):
@@ -675,12 +765,19 @@ class DSO(BoxLayout, Component):
                 setattr(self, p, new_props[p])
             else:
                 setattr(self, p, '')
-        self.changed = self.saved_props != {p: getattr(self, p) for p in self.props} and not Component.get('Stacker').is_empty()
+        self.changed = (
+            self.saved_props != {p: getattr(self, p) for p in self.props}
+            and not Component.get('Stacker').is_empty()
+        )
         self.popup.dismiss()
 
     # commented this while seeking weird touch down bug
     def on_touch_down(self, touch):
         # print(' TD in DSO')
-        if self.collide_point(*touch.pos) and touch.pos[0] < dp(100) and App.get_running_app().showing == 'main':
+        if (
+            self.collide_point(*touch.pos)
+            and touch.pos[0] < dp(100)
+            and App.get_running_app().showing == 'main'
+        ):
             return super().on_touch_down(touch)
         return False
