@@ -3,4 +3,4 @@ recursive-include jocular *.json *.ttf *.dll *.csv
 
 # don't include any compiled versions
 recursive-exclude __pycache__ *
-recursive-exclude assets *
+recursive-exclude development *

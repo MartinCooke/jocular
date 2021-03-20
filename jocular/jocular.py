@@ -113,7 +113,8 @@ class Jocular(App):
             with open(os.path.join(str(Path.home()), '.jocular'), 'r') as f:
                 self.data_dir = f.read().strip()
         except:
-            print('Cannot find user data directory')
+            Logger.exception('Jocular: problem reading user data dir ({:})'.format(e))
+            sys.exit()
 
         self.use_kivy_settings = False
 

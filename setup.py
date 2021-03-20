@@ -7,7 +7,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-URL = 'https://github.com/MartinCooke/jocular'
+URL = 'https://transpy.eu.pythonanywhere.com/jocular'
 
 setup(
     name='jocular',
@@ -42,7 +42,7 @@ setup(
         jocular=jocular.startjocular:startjocular
         ''',
     project_urls={
-        'Bug Reports': URL + '/issues',
-        'Source': URL,
+        'Bug Reports': 'https://github.com/MartinCooke/jocular/issues',
+        'Source': 'https://github.com/MartinCooke/jocular',
     },
 )

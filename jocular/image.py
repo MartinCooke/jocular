@@ -80,16 +80,11 @@ class Image:
         if int(hdr['NAXIS']) != 2:
             raise Exception('FITS does not contain 2D data')
 
-        #print(repr(hdr))
-
         # extract any relevant information from FITs header
         fits_props = {}
         for k, v in hdr.items():
             if k.lower() in self.hmap:
                 fits_props[self.hmap[k.lower()]] = v
-
-        # print(path)
-        # print(fits_props)
 
         self.shape = hdr['NAXIS1'], hdr['NAXIS2']
         self.shape_str = '{:}x{:}'.format(self.shape[0], self.shape[1])
