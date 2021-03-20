@@ -1,4 +1,4 @@
-''' capture.py Runs the capture scripts using generators. Does a simple start/stop.
+''' Runs the capture scripts using generators.
 '''
 
 import os

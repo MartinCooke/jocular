@@ -1,4 +1,7 @@
-# Components manages all individual components
+''' Manages all individual components, including imports/instantiation,
+    in a uniform way. A bit 'meta' but some advantages of doing it this
+    way.
+'''
 
 import time
 import importlib

@@ -1,4 +1,5 @@
-# basic class to draw reticle
+''' Basic class to draw reticle
+'''
 
 from kivy.properties import NumericProperty, BooleanProperty
 from kivy.lang import Builder

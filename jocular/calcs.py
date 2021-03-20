@@ -1,4 +1,5 @@
-# some astro calcs mainly based on Meuss
+''' Various astro calcs mainly based on Meuss. 
+'''
 
 import numpy as np
 import math

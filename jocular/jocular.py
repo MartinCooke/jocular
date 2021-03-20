@@ -1,4 +1,4 @@
-''' Main app
+''' Main app, called after some checks by startjocular
 '''
 
 import os

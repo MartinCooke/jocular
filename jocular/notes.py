@@ -1,4 +1,4 @@
-''' Observing notes.
+''' Observing notes panel.
 '''
 
 from kivy.clock import Clock

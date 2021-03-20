@@ -378,7 +378,7 @@
 			"control_type": "JIconButton",
 			"icon": "slew",
 			"text": "goto",
-			"font_size": 20,
+			"color": [0.9, 0.9, 0.9],
 			"highlight": false,
 			"save": false,
 			"action": "slew"

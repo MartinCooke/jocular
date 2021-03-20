@@ -1,4 +1,5 @@
-# monochrome (luminance channel) manipulation
+''' Luminance channel manipulations, including B & W, stretch etc
+'''
 
 import numpy as np
 

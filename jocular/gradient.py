@@ -1,3 +1,5 @@
+'''  Fast gradient and background estimation
+'''
 
 import numpy as np
 from numpy.polynomial import polynomial

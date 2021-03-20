@@ -1,4 +1,4 @@
-''' Handle LRGB processing
+''' Handles LRGB and L+narrowband processing
 '''
 
 import warnings

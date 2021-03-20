@@ -1,5 +1,5 @@
-''' Handles the GUI elements of getting info about different capture scripts
-Capturing itself is done with the Capture component
+''' Handles the GUI elements of getting info about different capture scripts.
+    Capturing itself is done with the Capture component
 '''
 
 import json

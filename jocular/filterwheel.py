@@ -1,10 +1,11 @@
-"""Filterwheel: represents collection of filters available as well as providing 
-control of an electronic filter wheel (EFW) where available. All the individual filter 
-information should reside here e.g. on-screen colour representations, transmissibilities 
-if needed for ordering taking multiple flats.
+''' Filterwheel: represents collection of filters available as well 
+    as providing control of an electronic filter wheel (EFW) where 
+    available. All the individual filter information should reside 
+    here e.g. on-screen colour representations, transmissibilities 
+    if needed for ordering taking multiple flats.
 
-Currently supports (hard-coded) the SX USB filter wheel only.
-"""
+    Currently supports (hard-coded) the SX USB filter wheel only.
+'''
 
 # import hid   # human interface device, to allow access to SX EFW
 from kivy.app import App

@@ -1,4 +1,4 @@
-''' calibrator.py does what it says on the tin
+''' Handles calibration library and actual calibration of subs.
 '''
 
 import os.path

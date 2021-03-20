@@ -1,4 +1,4 @@
-''' session.py  Represents session info
+''' Represents session info
 '''
 
 import json

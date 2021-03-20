@@ -1,4 +1,4 @@
-''' watcher.py Watches for any data coming in
+''' Monitors any incoming subs
 '''
 
 import os
@@ -24,7 +24,6 @@ class Watcher(Component):
     def on_close(self):
         self.watching_event.cancel()
         self.flush()    # user has had enough so move any FITs to delete
-
 
     def flush(self):
         # move any FITs that are not masters to a 'unused' folder in watcher

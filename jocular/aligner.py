@@ -1,4 +1,4 @@
-''' aligner.py   star extraction, centroid estimation and alignment
+''' Star extraction, centroid estimation and alignment.
 '''
 
 import warnings
@@ -88,7 +88,6 @@ class Aligner(Component):
 
                 # apply warp, ensuring values outside the range are filled with 
                 # a known value to mitigate edge effects on platesolving
-
                 sub.image = warp(sub.image, self.warp_model, order=3, 
                     preserve_range=True, mode='constant', cval=0.0001)
 
@@ -204,8 +203,6 @@ class Aligner(Component):
                     ptr += 1
 
         return star_data[:ptr, :]
-
-
 
     def compute_centroid(self, imfrag):
         # slightly more sophisticated approach

@@ -1,4 +1,4 @@
-''' Stacker. Manages calibration, alignment and stacking of incoming subs
+''' Manages calibration, alignment and stacking of incoming subs
 '''
 
 import os

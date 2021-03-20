@@ -1,4 +1,5 @@
-''' ObjectIO. Handles new and previous object logic.
+''' Handles new and previous object logic, and associated confirmation
+    dialogues.
 '''
 
 import os

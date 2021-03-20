@@ -1,4 +1,4 @@
-''' badpixelmap.py   maintains and applies bad pixel map that persists between sessions
+''' Maintains and applies bad pixel map that persists between sessions
     new in V0.3: creates a new BPM for each sensor shape encountered to avoid applying
     BPM to the wrong sensor and to enable multiple sensors to be used 
 '''

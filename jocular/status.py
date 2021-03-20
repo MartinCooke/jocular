@@ -1,4 +1,5 @@
-# status.py: shows status of Jocular's components
+''' Manages status panel showing information about a subset of components
+'''
 
 from kivy.app import App
 from kivy.lang import Builder

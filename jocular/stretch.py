@@ -1,3 +1,7 @@
+''' Various stretch functions. Easy to add more. Room for refinement,
+    methinks.
+'''
+
 import numpy as np
 
 def stretch(x, method='linear', param=None, NR=0, background=None):

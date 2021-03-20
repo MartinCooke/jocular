@@ -1,3 +1,5 @@
+''' Saves currently displayed image in various formats.
+'''
 
 import mss
 import os

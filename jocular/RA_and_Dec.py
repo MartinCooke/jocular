@@ -1,4 +1,4 @@
-''' RA_and_Dec.py support for RA/Dec text representations and conversions
+''' Support for RA/Dec text representations and conversions.
 '''
 
 class RA(float):

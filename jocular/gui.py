@@ -1,5 +1,6 @@
-''' Root widget of the application which handles drawing itself (rings) and its
-components
+''' Root widget of the application which handles drawing itself (rings) 
+    and its components. Idea is to separate the main gui out entirely. Most 
+    elements are defined declaratively in gui.json in the resources dir.
 '''
 
 import os

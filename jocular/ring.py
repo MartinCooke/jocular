@@ -1,4 +1,5 @@
-# Class to construct circular parts of the eyepiece
+''' Class to construct circular parts of the eyepiece
+'''
 
 from kivy.uix.widget import Widget
 from kivy.lang import Builder

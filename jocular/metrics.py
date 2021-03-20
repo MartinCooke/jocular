@@ -1,3 +1,5 @@
+''' Convenient place to support ring metrics.
+'''
 
 from kivy.metrics import dp
 from kivy.logger import Logger

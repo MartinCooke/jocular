@@ -1,5 +1,6 @@
-'''General-purpose widgets for Jocular
+''' Special-purpose widgets for Jocular
 '''
+
 import math
 from math import radians
 from functools import partial

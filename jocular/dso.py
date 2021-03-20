@@ -1,4 +1,4 @@
-''' Represents DSO name and handles object panel.
+''' Represents DSO name and object panel (including entry of new DSO info)
 '''
 
 import os

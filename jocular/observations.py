@@ -1,4 +1,4 @@
-''' Observations. Manages previous observations and associated observations table.
+''' Manages previous observations and associated observations table.
 '''
 
 import os

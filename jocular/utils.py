@@ -1,4 +1,5 @@
-# utils.py
+''' Miscellany
+'''
 
 import os
 import numpy as np

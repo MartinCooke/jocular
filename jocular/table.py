@@ -1,4 +1,5 @@
-# Table. Class representing sorteable, selectable table view associated with a json model.
+''' Class representing sorteable, selectable table view associated with a json model.
+'''
 
 import math
 import os

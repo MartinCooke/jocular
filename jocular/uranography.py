@@ -1,18 +1,8 @@
-''' astrometry utilities
+''' Astrometry utilities. Will support future extension to charting.
 '''
 
 import numpy as np
 from scipy.special import cotdg
-
-# move these and the 2 functions into catalogues; not needed here
-# DEC_STEP = 10
-# RA_STEP = 30
-
-# def dec2tile(d):
-#     return int(np.floor(DEC_STEP * np.floor(d / DEC_STEP)))
-
-# def ra2tile(r):
-#     return int(np.floor(RA_STEP * np.floor(r / RA_STEP)))
 
 def to360(v):
     if type(v) == list or type(v) == np.ndarray:
@@ -119,7 +109,8 @@ def make_tile(ra0, dec0, fov=3):
         'polar': polar, 'northern': northern
     }
 
-''' to do: combine these functions with those used in Aligner
+''' to do: combine these functions with those used in Aligner -- not
+    clear any more why they are defined here.
 '''
 
 def compute_centroids(im, stars):

@@ -1,4 +1,5 @@
-'''Handles DSO table and observing list management
+''' Handles DSO table and observing list management, including alt-az/transit
+    computations.
 '''
 
 import json
