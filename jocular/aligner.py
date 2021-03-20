@@ -3,16 +3,11 @@
 
 import warnings
 import numpy as np
-import time
 
 from scipy import signal
 from skimage.measure import ransac
 from skimage.transform import EuclideanTransform, matrix_transform, warp
 from skimage.feature import blob_dog
-from skimage.feature.peak import peak_local_max
-from skimage.util import img_as_float
-from scipy.ndimage import gaussian_filter
-from skimage.segmentation import find_boundaries
 
 from kivy.properties import ConfigParserProperty
 from kivy.logger import Logger
@@ -96,8 +91,6 @@ class Aligner(Component):
 
                 sub.image = warp(sub.image, self.warp_model, order=3, 
                     preserve_range=True, mode='constant', cval=0.0001)
-
-                t0 = time.time()
 
                 # identify unwarped points
                 unwarped = sub.image < .001

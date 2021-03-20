@@ -117,7 +117,7 @@ class GUI(FloatLayout):
 
         t0 = time.time()
 
-        for c in ['Status', 'Metadata', 'DSO', 'Notes', 'Session', 'Watcher', 'Stacker', 
+        for c in ['Status', 'Metadata', 'Catalogues', 'DSO', 'Notes', 'Session', 'Watcher', 'Stacker', 
             'Capture', 'CaptureScript', 'Observations', 'ObservingList', 'Monochrome',
             'MultiSpectral', 'ObjectIO', 'Camera', 'FilterWheel', 'Aligner', 
             'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator']:

@@ -2,33 +2,20 @@
 '''
 
 
-import os
-import time
 import numpy as np
-from scipy.special import cotdg
 from scipy.spatial.distance import cdist
-from itertools import cycle
-from skimage.feature import blob_log, blob_dog
+from skimage.feature import blob_dog
 from skimage.transform import estimate_transform
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import ThreadPoolExecutor
 
 from kivy.app import App
 from kivy.logger import Logger
-from kivy.properties import ConfigParserProperty, NumericProperty
-from kivy.clock import Clock
-from kivy.uix.label import Label
-from kivy.uix.widget import Widget
-from kivy.metrics import dp
-from kivy.lang import Builder
+from kivy.properties import ConfigParserProperty
 
 from jocular.component import Component
 from jocular.RA_and_Dec import RA, Dec
 from jocular.uranography import (
-    DEC_STEP,
-    RA_STEP,
     to360,
-    dec2tile,
-    ra2tile,
     make_tile,
     Eq2Cart,
     Cart2Eq,
@@ -146,12 +133,8 @@ class PlateSolver(Component):
 
     def on_new_object(self):
         self.cart2pix = None
-        # check if we have stellar database loaded
-        self.has_database = os.path.exists(self.app.get_path('star_db'))
-        if self.has_database:
-            self.info('ready')
-        else:
-            self.info('no database')
+        self.can_solve = Component.get('Catalogues').has_platesolving_db()
+        self.info('ready' if self.can_solve else 'no database')
 
     def match(self):
         # runs in separate thread
@@ -159,12 +142,7 @@ class PlateSolver(Component):
         try:
             self.h, self.w = self.im.shape
             # degrees per pixel
-            dpp = (
-                self.binning
-                * (self.pixel_height * 1e-6 / (self.focal_length / 1000))
-                * (206265)
-                / 3600
-            )
+            dpp = self.binning * (self.pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
             fov = self.h * dpp
 
             #  extract image stars
@@ -188,7 +166,7 @@ class PlateSolver(Component):
                 return
 
             # get reference stars for search field (NB larger fov is worse)
-            ras, decs, mags = self.get_stars(
+            ras, decs, mags = Component.get('Catalogues').get_platesolving_stars(
                 make_tile(self.ra0, self.dec0, fov=2 * fov)
             )
 
@@ -212,6 +190,8 @@ class PlateSolver(Component):
             # check if we have a result
             if matches is None:
                 self.warn('failed to match')
+                Logger.warn('Platesolver: no match, {:} im stars, {:} ref stars'.format(
+                    len(x_im), len(ras)))
                 return
 
             self.info('matched {:}'.format(len(matches)))
@@ -246,7 +226,7 @@ class PlateSolver(Component):
                 90 - np.degrees(np.arctan2(yy[1] - yy[0], xx[1] - xx[0]))
             )
 
-            Logger.debug(
+            Logger.info(
                 'PlateSolver: {:5.3f} x {:5.3f}, {:.0f}\u00b0, RA: {:} Dec: {:}'.format(
                     self.FOV_w,
                     self.FOV_h,
@@ -264,8 +244,7 @@ class PlateSolver(Component):
 
         self.cart2pix = None
 
-        # check if we have any stars
-        if not self.has_database:
+        if not self.can_solve:
             return
 
         self.ra0, self.dec0 = Component.get('DSO').current_object_coordinates()
@@ -317,40 +296,41 @@ class PlateSolver(Component):
             return x[0], y[0]
         return x, y
 
-    def get_stars(self, tile):
-        # get stars in tile by reading npys that are spaced at 30 x 10 degrees in RA/Dec
-        star_db = self.app.get_path('star_db')
-        min_ra, max_ra = tile['min_ra'], tile['max_ra']
-        min_dec, max_dec = tile['min_dec'], tile['max_dec']
-        dec_tiles = np.arange(dec2tile(min_dec), dec2tile(max_dec) + DEC_STEP, DEC_STEP)
-        if min_ra < max_ra:
-            ra_tiles = np.arange(ra2tile(min_ra), ra2tile(max_ra) + RA_STEP, RA_STEP)
-        else:
-            ra_tiles = list(range(ra2tile(min_ra), 360, RA_STEP)) + list(
-                range(0, ra2tile(max_ra) + RA_STEP, 30)
-            )
+    # def get_stars(self, tile):
+    #     # get stars in tile by reading npys that are spaced at 30 x 10 degrees in RA/Dec
+    #     # star_db = self.app.get_path('star_db')
+    #     min_ra, max_ra = tile['min_ra'], tile['max_ra']
+    #     min_dec, max_dec = tile['min_dec'], tile['max_dec']
+    #     dec_tiles = np.arange(dec2tile(min_dec), dec2tile(max_dec) + DEC_STEP, DEC_STEP)
+    #     if min_ra < max_ra:
+    #         ra_tiles = np.arange(ra2tile(min_ra), ra2tile(max_ra) + RA_STEP, RA_STEP)
+    #     else:
+    #         ra_tiles = list(range(ra2tile(min_ra), 360, RA_STEP)) + list(
+    #             range(0, ra2tile(max_ra) + RA_STEP, 30)
+    #         )
 
-        # here we could cache when implemented as Joc component
-        ras, decs, mags = np.array([]), np.array([]), np.array([])
-        for ra in ra_tiles:
-            for dec in dec_tiles:
-                dat = np.load(os.path.join(star_db, 'r{:}_d{:}.npz'.format(ra, dec)))
-                ras = np.append(ras, dat['ra'])
-                decs = np.append(decs, dat['dec'])
-                mags = np.append(mags, dat['mag'])
+    #     # here we could cache when implemented as Joc component
+    #     ras, decs, mags = np.array([]), np.array([]), np.array([])
+    #     for ra in ra_tiles:
+    #         for dec in dec_tiles:
+    #             #dat = np.load(os.path.join(star_db, 'r{:}_d{:}.npz'.format(ra, dec)))
+    #             quad = 'r{:}_d{:}_'.format(ra, dec)
+    #             ras = np.append(ras, self.db[quad+'ra'])
+    #             decs = np.append(decs, self.db[quad+'dec'])
+    #             mags = np.append(mags, self.db[quad+'mag']/100.) # mags are ints * 100
 
-        # restrict to tile
-        if min_ra < max_ra:
-            locs = (
-                (ras >= min_ra) & (ras < max_ra) & (decs >= min_dec) & (decs < max_dec)
-            )
-        else:
-            locs = (
-                ((ras >= min_ra) | (ras < max_ra))
-                & (decs >= min_dec)
-                & (decs < max_dec)
-            )
-        return ras[locs], decs[locs], mags[locs]
+    #     # restrict to tile
+    #     if min_ra < max_ra:
+    #         locs = (
+    #             (ras >= min_ra) & (ras < max_ra) & (decs >= min_dec) & (decs < max_dec)
+    #         )
+    #     else:
+    #         locs = (
+    #             ((ras >= min_ra) | (ras < max_ra))
+    #             & (decs >= min_dec)
+    #             & (decs < max_dec)
+    #         )
+    #     return ras[locs], decs[locs], mags[locs]
 
     def degrees_per_pixel(self):
         arcsec_pp = (

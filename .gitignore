@@ -10,3 +10,5 @@ doc/**/*.pdf
 # virtual environment
 venv/
 
+# don't include development work
+development/

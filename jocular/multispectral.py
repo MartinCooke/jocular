@@ -1,4 +1,4 @@
-''' Handle all non-mono processing (currenly just LRGB)
+''' Handle LRGB processing
 '''
 
 import warnings
@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import trimboth
 from skimage.color import rgb2lab, lab2rgb
 from skimage.transform import resize, rescale
-from kivy.properties import BooleanProperty, ConfigParserProperty, NumericProperty
+from kivy.properties import ConfigParserProperty, NumericProperty
 from jocular.gradient import estimate_gradient, estimate_background
 from jocular.component import Component
 
@@ -35,9 +35,10 @@ def modify_hue(x, shift):
 
 class MultiSpectral(Component):
 
-    # redrawing = BooleanProperty(False)
-    colour_binning = ConfigParserProperty(1, 'Colour', 'colour_binning', 'app', val_type=int)
-    subtract_colour_gradients = ConfigParserProperty(1, 'Colour', 'subtract_colour_gradients', 'app', val_type=int)
+    colour_binning = ConfigParserProperty(
+        1, 'Colour', 'colour_binning', 'app', val_type=int)
+    subtract_colour_gradients = ConfigParserProperty(
+        1, 'Colour', 'subtract_colour_gradients', 'app', val_type=int)
     
     saturation = NumericProperty(0)
     colour_stretch = NumericProperty(.5)

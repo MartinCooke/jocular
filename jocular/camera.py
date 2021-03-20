@@ -1,4 +1,5 @@
-''' native suport for SX Lodestar camera
+''' Native suport for SX Lodestar camera. This only works reliably on the Mac
+    at present.
 '''
 
 import time

@@ -11,8 +11,12 @@ from kivy.lang import Builder
 from kivy.uix.scatter import Scatter
 from kivy.graphics.texture import Texture
 from kivy.graphics.transformation import Matrix
-from kivy.properties import (BooleanProperty, NumericProperty, 
-    BoundedNumericProperty, ConfigParserProperty, OptionProperty)
+from kivy.properties import (
+    BooleanProperty, 
+    NumericProperty, 
+    BoundedNumericProperty, 
+    ConfigParserProperty
+)
 from kivy.core.window import Window
 from kivy.base import stopTouchApp
 

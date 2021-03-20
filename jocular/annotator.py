@@ -1,47 +1,37 @@
-''' Annotator. Very simple for now.
+''' Supports annotation browsing functionality.
 '''
 
-
-import os
-import time
-import json
 import numpy as np
 
 from kivy.app import App
 from kivy.logger import Logger
 from kivy.properties import (
-    ConfigParserProperty,
     NumericProperty,
     StringProperty,
     BooleanProperty,
     ListProperty,
     DictProperty,
-    ObjectProperty,
 )
-from kivy.clock import Clock
 from kivy.uix.label import Label
-from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.metrics import dp
 from kivy.lang import Builder
 from kivy.core.window import Window
 
-from jocular.widgets import ParamValue
 from jocular.hoverable import HoverBehavior
 from jocular.metrics import Metrics
 from jocular.component import Component
-from jocular.uranography import make_tile, DEC_STEP, RA_STEP, to360, dec2tile, ra2tile
-
+from jocular.uranography import make_tile
 
 Builder.load_string(
-    '''
+'''
 
 #:import np numpy
 
 <PropVal>:
     canvas.before:
         Color:
-            rgba: .3, .3, .3, .3
+            rgba: .3, .3, .3, .7
         Rectangle:
             pos: self.pos
             size: self.size
@@ -87,7 +77,6 @@ Builder.load_string(
         shorten_from: 'right'
         valign: 'middle'
         text_size: self.size
-        #color: app.lowlight_color
         color: root.title_color
         font_size: str(int(app.info_font_size[:-2]) + 4) + 'sp'
         width: dp(350)
@@ -151,6 +140,7 @@ class Annotation(Label, HoverBehavior):
     sx = NumericProperty(0)  # screen pixel centre
     sy = NumericProperty(0)
 
+    ot = StringProperty('')
     ang = NumericProperty(45)
     visible = BooleanProperty(False)  # in eyepiece and within mag limit
     display = BooleanProperty(False)  # within mag limit
@@ -189,12 +179,16 @@ class Annotation(Label, HoverBehavior):
         if not self.pinned:
             lab = self.info['Name']
             self.font_size = '15sp'
-            try:
-                if self.info['OT'] == 'Quasar':
-                    lab = '{:4.1f} z {:3.1f}'.format(self.info['Mag'], self.info['z'])
-                    self.font_size = '14sp'
-            except:
-                pass
+            # for quasars, label with mag + redshift
+            if self.ot == 'QS':
+                lab = '{:4.1f}'.format(self.info['Mag'])
+                z = self.info.get('z', '?')
+                if not np.isnan(z):
+                    lab += ' z {:3.1f}'.format(z)
+                self.font_size = '14sp'
+            # for members, use member number
+            elif self.ot == 'ME':
+                lab = self.info['Mem']
             self.text = str(lab)
             self.pinned = True
             self.close_DSOInfo()
@@ -202,7 +196,10 @@ class Annotation(Label, HoverBehavior):
 
     def unpin(self, dt=None):
         if self.pinned:
-            self.text = 'o'
+            if self.ot == 'QS':
+                self.text = ' '
+            else:
+                self.text = '¤'
             self.pinned = False
             self.display_DSOInfo()
             self.update()
@@ -234,15 +231,11 @@ class Annotation(Label, HoverBehavior):
             if self.pinned:
                 self.radius = ((self.sx - bx) ** 2 + (self.sy - by) ** 2) ** 0.5
                 ang_r = np.radians(self.ang)
-                x = float(self.sx + self.radius * np.cos(ang_r))
-                y = float(self.sy + self.radius * np.sin(ang_r))
-                self.lab_x = x
-                self.lab_y = y
-                # self.font_size = '16sp'
+                self.lab_x = float(self.sx + self.radius * np.cos(ang_r))
+                self.lab_y = float(self.sy + self.radius * np.sin(ang_r))
             else:
                 self.lab_x = self.sx
                 self.lab_y = self.sy
-                # self.font_size = '16sp'
 
 
 class AnnotCluster(Annotation):
@@ -272,7 +265,7 @@ class AnnotFOV(Annotation):
         self.sy = 200
         self.lab_x = self.sx
         self.lab_y = self.sy + 20
-        self.visible = True
+        self.visible = self.display
 
     def on_enter(self, *args):
         pass
@@ -299,18 +292,18 @@ class DSOPopup(BoxLayout):
 
     def display(self, info=None, title_color=None):
 
+        # ideally, exclude some of these in Catalogue
+        exclude = {'OT', 'Name', 'RA', 'Dec', 'List', 'Con', 'Obs', 'List', 'Added', 'MaxAlt', 'Transit'}
         # there is a subtle bug here which this is going to catch one day
         try:
             self.clear_widgets()
-            # populate popup
-            nm = '{:} ({:})'.format(info.get('Name', ''), info.get('OT'))
-            tb = TitleBar(Name=nm)
+            tb = TitleBar(Name=info.get('Name', ''))
             if title_color is not None:
                 tb.title_color = title_color
             self.add_widget(tb)
 
             for k, v in info.items():
-                if str(v) != 'nan' and k not in {'Name', 'Cat', 'RA', 'Dec'}:
+                if str(v) and str(v) != 'nan' and k not in exclude:
                     if type(v) == float:
                         pv = PropVal(param=k, value='{:.3f}'.format(v))
                     else:
@@ -327,30 +320,12 @@ class DSOPopup(BoxLayout):
     def hide(self):
         self.x = 10 * Window.width
 
-
 # ensures that there is only one ie singleton popup
 dsopopup = DSOPopup()
-
 
 class Annotator(Component):
 
     mag_limit = NumericProperty(0)
-    qso_prob = ConfigParserProperty(95, 'Annotator', 'qso_prob', 'app', val_type=float)
-    show_variables = ConfigParserProperty(
-        False, 'Annotator', 'show_variables', 'app', val_type=int
-    )
-    show_doubles = ConfigParserProperty(
-        False, 'Annotator', 'show_doubles', 'app', val_type=int
-    )
-    show_spectral = ConfigParserProperty(
-        True, 'Annotator', 'show_spectral', 'app', val_type=int
-    )
-    show_quasars = ConfigParserProperty(
-        True, 'Annotator', 'show_quasars', 'app', val_type=int
-    )
-    # show_members = ConfigParserProperty(False, 'Annotator', 'show_members', 'app', val_type=int)
-    # show_members = BooleanProperty(False)
-    AnnotColour = ListProperty([0.5, 0.5, 0.5])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -360,7 +335,6 @@ class Annotator(Component):
     def on_new_object(self):
         self.clear_annotations()
         self.on_mag_limit()
-        self.has_annotation_database = os.path.exists(self.app.get_path('dso_db'))
 
     def clear_annotations(self):
         # remove previous annotations
@@ -376,8 +350,6 @@ class Annotator(Component):
     def on_mag_limit(self, *args):
         # modify what is visible
         ml = self.mag_limit
-
-        # self.show_members = ml > 24
 
         # if limit is below -5, turn off all annotations
         if ml <= -5:
@@ -399,15 +371,27 @@ class Annotator(Component):
 
         self.update()
 
-    def annotate(self):
-        # called by platesolver when finished a platesolve
+    def get_diam(self, ot, info):
+        if 'Diam' in info:
+            d = info['Diam']
+        elif 'diam' in info:
+            d = info['diam']
+        elif 'Major' in info:
+            d = info['Major']
+        else:
+            d = .2
+        if np.isnan(d):
+            d = .2 
+        return d
 
-        if not self.has_annotation_database:
-            return
+
+    def annotate(self):
+        ''' called by platesolver when finished a platesolve
+        '''
 
         self.clear_annotations()
         solver = Component.get('PlateSolver')
-        clusters = {'OC', 'G+', 'GG', 'CG'}
+        cats = Component.get('Catalogues')
 
         # rotate view to north
         Component.get('View').orientation = solver.north
@@ -415,36 +399,11 @@ class Annotator(Component):
         # find objects in FOV from tile large enough to encompass sensor
         w, h = solver.w, solver.h
         deg_per_pixel = float(solver.FOV_h / h)
-        tile = make_tile(
-            solver.tile_ra0, solver.tile_dec0, fov=1.5 * max(solver.FOV_w, solver.FOV_h)
-        )
+        fov = 1.5 * max(solver.FOV_w, solver.FOV_h)
+        tile = make_tile(solver.tile_ra0, solver.tile_dec0, fov=fov)
 
-        ras, decs, infos, otypes = self.get_dsos(tile)
+        dsos = cats.get_annotation_dsos(tile=tile)
 
-        # colours from https://www.rapidtables.com/web/color/RGB_Color.html
-        colours = {
-            # groups and members in green shades
-            'CompactGroup': [124, 252, 0],  # lawn green
-            'GalaxyGroup': [173, 255, 47],  # green yellow
-            'Member': [152, 251, 152],  # pale green
-            # galaxies and quasar in yellow shades
-            'Galaxy': [240, 230, 140],  # khaki
-            'Peculiar': [255, 215, 0],  # gold
-            'Quasar': [255, 165, 0],  # orange
-            # stars in shades of blue
-            'Stellar': [72, 209, 204],  # medium turquoise
-            'Variable': [127, 255, 212],  # aquamarine
-            'Multiple': [0, 191, 255],  # dep sky blue
-            # clusters in reddish hues
-            'OpenCluster': [139, 0, 139],  # dark magenta
-            'Globular': [138, 43, 226],  # blue violet
-            # nebulae in browns/greys
-            'Planetary': [160, 82, 45],  # sienna
-            'DarkNebula': [176, 196, 222],  #  light steel blue
-            'Nebula': [188, 143, 143],  # rosy brown
-        }
-
-        colours = {k: [v[0] / 255, v[1] / 255, v[2] / 255] for k, v in colours.items()}
         target = Component.get('DSO').Name
 
         # add FOV annotator
@@ -460,96 +419,62 @@ class Annotator(Component):
             )
         ]
 
-        for r, d, info, ot in zip(ras, decs, infos, otypes):
-            info['OT'] = ot
-            px, py = solver.ra_dec_to_pixels(r, d)
+        # object type properties and defaults
+        OT_props = cats.get_object_types()
+        default_props = {'name': '?', 'col': [0, 0, 0], 'text': '¤', 'mag': 0}
+
+        ''' dsos is a dict of names and properties
+        '''
+        for nm, info in dsos.items():
+            px, py = solver.ra_dec_to_pixels(info['RA'], info['Dec'])
             px, py = float(px[0]), float(py[0])
             #  check it is actually within the image dimensions
             if (px >= 0) & (py >= 0) & (px < w) & (py < h):
+                # replace OT acronym in info by full OT name
+                ot = info['OT']
+                props = OT_props.get(ot, default_props)
+                # fill in missing props
+                for k, v in default_props.items():
+                    if k not in props:
+                        props[k] = v
+                info['Object type'] = props['name']
                 # try to get a diameter value in case we need it
-                try:
-                    diam = float(info['Diam'])
-                except:
-                    diam = 0
-                #  ang = np.random.uniform(10, 80)
+                diam = self.get_diam(ot, info)
                 ang = 45
-                if ot in {
-                    'OpenCluster',
-                    'Globular',
-                    'CompactGroup',
-                    'GalaxyGroup',
-                    'Peculiar',
-                }:
-                    pixel_rad = 1.2 * ((diam / (2 * 60.0)) / deg_per_pixel)
-                    annot = AnnotCluster(
-                        text='o',
-                        px=px,
-                        py=py,
-                        info=info,
-                        ang=ang,
-                        center=False,
-                        mag=info.get('Mag', 0),
-                        marker_color=colours.get(ot, [1, 0.5, 0.5]),
-                        bx=px + pixel_rad / 2 ** 0.5,
-                        by=py + pixel_rad / 2 ** 0.5,
-                    )
-
-                elif ot == 'Quasar':
-                    annot = AnnotQuasar(
-                        text=' ',
-                        px=px,
-                        py=py,
-                        info=info,
-                        mag=info.get('Mag', 20),
-                        bx=px,
-                        by=py,
-                        marker_color=colours.get(ot, [1, 0.5, 0.5]),
-                    )
-
-                elif ot in {'Galaxy'}:
-                    pixel_rad = (diam / (4 * 60.0)) / deg_per_pixel
-                    annot = Annotation(
-                        text='o',
-                        px=px,
-                        py=py,
-                        info=info,
-                        ang=ang,
-                        mag=info.get('Mag', 0),
-                        center=True,
-                        marker_color=colours.get(ot, [1, 0.5, 0.5]),
-                        bx=px + pixel_rad / 2 ** 0.5,
-                        by=py + pixel_rad / 2 ** 0.5,
-                    )
-                elif ot in {'Member'}:
-                    annot = Annotation(
-                        text='.',
-                        px=px,
-                        py=py,
-                        info=info,
-                        bx=px,
-                        by=py,
-                        mag=info.get('Mag', 24),
-                        ang=ang,
-                        center=True,
-                        marker_color=colours.get(ot, [1, 0.5, 0.5]),
-                    )
+                center = True
+                if ot in {'OC', 'GC', 'CG', 'GG', 'G+', 'PG'}:
+                    cls = AnnotCluster
+                    diam *= 1.3  # make circle slightly larger
+                    center = False
+                elif ot in {'QS', 'BQ', 'DQ'}:
+                    cls = AnnotQuasar
                 else:
-                    annot = Annotation(
-                        text='o',
-                        px=px,
+                    cls = Annotation
+                    if ot in {'ME'}:
+                        diam = .15   # put labels closer
+                        ang = 0
+                    elif ot in {'PN'}:
+                        diam *= 1.5
+
+                # diam is in arcmin
+                # print('Obj: {:} OT {:} diam: {:}'.format(info['Name'], ot, diam))
+                pixel_rad = (((diam / (2 * 60.0)) / deg_per_pixel)) / 2**.5
+
+                self.annotations += [cls(
+                        ot=ot,
+                        text=props['text'],
+                        px=px, 
                         py=py,
                         info=info,
-                        bx=px,
-                        by=py,
-                        mag=info.get('Mag', 0),
                         ang=ang,
-                        center=True,
-                        marker_color=colours.get(ot, [1, 0.5, 0.5]),
-                    )
+                        center=center,
+                        mag=info.get('Mag', props['mag']),
+                        marker_color=props['col'],
+                        bx=px + pixel_rad, 
+                        by=py + pixel_rad)
+                ]
 
-                self.annotations += [annot]
-
-        # create annotations (this will change when we add different types)
+        # create annotation labels
         mapping = Component.get('View').to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2
@@ -563,6 +488,7 @@ class Annotator(Component):
         self.on_mag_limit()
 
     def update(self):
+
         # called whenever a redraw is required e.g. View or maglimit changes
         if not self.has_annotations():
             return
@@ -573,102 +499,3 @@ class Annotator(Component):
         for annot in self.annotations:
             annot.update(mapping=mapping, xc=xc, yc=yc, r2=r2)
 
-    def show_object_type(self, md):
-        ot = md['object_type']
-        if ot == 'Variable':
-            return self.show_variables
-        if ot == 'Quasar':
-            return self.show_quasars
-        if ot == 'Multiple':
-            return self.show_doubles
-        # if ot == 'Member':
-        #     return self.show_members
-        if md['catalogue'] == 'SkiffSpectralType':
-            return self.show_spectral
-        return True
-
-    def get_dsos(self, tile):
-        # get dsos by reading tiles that are spaced at 30 x 10 degrees in RA/Dec
-
-        def mergetile(tile, cat, data, min_ra, max_ra, min_dec, max_dec):
-            # incorporate data e.g. 'RA': [ras], 'Dec': [decs] into cat on tile
-            # restrict to current tile
-            r, d = data['RA'], data['Dec']
-            if min_ra < max_ra:
-                locs = (r >= min_ra) & (r < max_ra) & (d >= min_dec) & (d < max_dec)
-            else:
-                locs = ((r >= min_ra) | (r < max_ra)) & (d >= min_dec) & (d < max_dec)
-            if len(r[locs]) > 0:
-                if cat not in tile:
-                    tile[cat] = {}
-                for col, arr in data.items():
-                    if col not in tile[cat]:
-                        tile[cat][col] = arr[locs]
-                    else:
-                        tile[cat][col] = np.append(tile[cat][col], arr[locs])
-            return tile
-
-        def make_info(data, use_cols=None):
-            cols = data.keys()
-            if use_cols is not None:
-                cols = use_cols
-            dicts = []
-            for i in range(len(data['RA'])):
-                d = {c: data[c][i] for c in cols if data[c][i]}
-                d = {c: v for c, v in d.items() if str(v).strip()}
-                dicts += [d]
-            return np.array(dicts)
-
-        def nullvalue(x):
-            if type(x) == str:
-                return x.strip() == 'nan' or len(x.strip()) == 0
-            else:
-                return x == np.nan
-
-        dso_db = self.app.get_path('dso_db')
-
-        # load column definitions
-        with open(os.path.join(dso_db, 'metadata.json'), 'r') as f:
-            metadata = json.load(f)
-
-        min_ra, max_ra = tile['min_ra'], tile['max_ra']
-        min_dec, max_dec = tile['min_dec'], tile['max_dec']
-        dec_tiles = np.arange(dec2tile(min_dec), dec2tile(max_dec) + DEC_STEP, DEC_STEP)
-        if min_ra < max_ra:
-            ra_tiles = np.arange(ra2tile(min_ra), ra2tile(max_ra) + RA_STEP, RA_STEP)
-        else:
-            ra_tiles = list(range(ra2tile(min_ra), 360, RA_STEP)) + list(
-                range(0, ra2tile(max_ra) + RA_STEP, 30)
-            )
-
-        # load one or more tiles containing the current FOV
-        dsos = {}
-        for ra in ra_tiles:
-            for dec in dec_tiles:
-                dat = np.load(
-                    os.path.join(dso_db, 'r{:}_d{:}.npz'.format(ra, dec)),
-                    allow_pickle=True,
-                )
-                # extract catalogues & restrict to FOV
-                for catname, md in metadata.items():
-                    if self.show_object_type(md):
-                        cat = dat[catname]
-                        cols = md['columns']
-                        contents = {c: cat[i] for i, c in enumerate(cols)}
-                        dsos = mergetile(
-                            dsos, catname, contents, min_ra, max_ra, min_dec, max_dec
-                        )
-
-        # simple format for now
-        ras = np.array([])
-        decs = np.array([])
-        info = np.array([])
-        otype = np.array([])
-        for k, v in dsos.items():
-            ot = [metadata[k]['object_type']]
-            ras = np.append(ras, v['RA'])
-            decs = np.append(decs, v['Dec'])
-            info = np.append(info, make_info(v))
-            otype = np.append(otype, np.array(len(v['RA']) * ot))
-
-        return ras, decs, info, otype

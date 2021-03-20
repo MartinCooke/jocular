@@ -4,14 +4,15 @@
 import numpy as np
 from scipy.special import cotdg
 
-DEC_STEP = 10
-RA_STEP = 30
+# move these and the 2 functions into catalogues; not needed here
+# DEC_STEP = 10
+# RA_STEP = 30
 
-def dec2tile(d):
-    return int(np.floor(DEC_STEP * np.floor(d / DEC_STEP)))
+# def dec2tile(d):
+#     return int(np.floor(DEC_STEP * np.floor(d / DEC_STEP)))
 
-def ra2tile(r):
-    return int(np.floor(RA_STEP * np.floor(r / RA_STEP)))
+# def ra2tile(r):
+#     return int(np.floor(RA_STEP * np.floor(r / RA_STEP)))
 
 def to360(v):
     if type(v) == list or type(v) == np.ndarray:
@@ -95,6 +96,9 @@ def Cart2Eq(x, y, ra0, dec0):
 
 
 def make_tile(ra0, dec0, fov=3):
+    ''' A tile represents all pertinent information about a field
+        centred on ra0, dec0 with given fov
+    '''
     rads = np.pi / 180.
     fov2 = fov / 2
     polar = ((dec0 + fov2) >= 90) | ((dec0 - fov2) <= -90)
@@ -115,10 +119,12 @@ def make_tile(ra0, dec0, fov=3):
         'polar': polar, 'northern': northern
     }
 
+''' to do: combine these functions with those used in Aligner
+'''
 
 def compute_centroids(im, stars):
     # extract info from all candidate stars and return centroids
-    centroid_radius = r = 8
+    r = 8  # centroid patch radius
     patch_size = 2 * r + 1
     grid_x, grid_y = np.meshgrid(np.arange(patch_size), np.arange(patch_size))
     mask = np.sqrt((r - grid_x)**2 + (r - grid_y)**2) <= r

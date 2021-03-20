@@ -1,14 +1,14 @@
+''' Main app
+'''
+
 import os
 import json
 import sys
 from pathlib import Path
-from functools import partial
 
-import kivy
 from kivy.app import App
 from kivy.logger import Logger
 from kivy.properties import (
-    BooleanProperty,
     ListProperty,
     NumericProperty,
     ConfigParserProperty,
@@ -17,13 +17,10 @@ from kivy.properties import (
 )
 from kivy.uix.settings import SettingsWithSidebar
 from kivy.clock import Clock
-from kivy.config import Config
 from kivy.core.window import Window
-from kivy.metrics import dp
 
 from jocular.component import Component
 from jocular.gui import GUI
-from jocular.widgets import JBubble
 
 
 class Jocular(App):
@@ -92,7 +89,7 @@ class Jocular(App):
         elif name == 'libusb':
             return os.path.join(self.directory, 'resources', 'libusb-1.0.dll')
         elif name == 'star_db':
-            return os.path.join(self.data_dir, 'platesolving', 'star_tiles')
+            return os.path.join(self.data_dir, 'platesolving', 'star_tiles.npz')
         elif name == 'dso_db':
             return os.path.join(self.data_dir, 'platesolving', 'dso_tiles')
         else:

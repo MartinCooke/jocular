@@ -1,11 +1,10 @@
-''' image.py Represents a sub or a master calibration image; handles all FITs reading/writing and 
-metadata from FITs header and/or filename parsing
+''' Represents a sub or a master calibration image; handles all 
+    FITs reading/writing and metadata from FITs header and/or filename parsing
 '''
 
 import os
 import time
 import glob
-import numpy as np
 from datetime import datetime
 from astropy.io import fits
 from kivy.logger import Logger

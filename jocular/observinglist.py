@@ -1,12 +1,9 @@
-'''Handles DSO database and observing list management
+'''Handles DSO table and observing list management
 '''
 
-import os
 import json
 import time
 import math
-import glob
-import csv
 import numpy as np
 from datetime import datetime, timedelta
 from collections import Counter
@@ -169,72 +166,12 @@ class ObservingList(Component):
             )
         )
 
-    def _load_objects(self, f):
-        t0 = time.time()
-        user_catalogue = f.endswith('user_objects.csv')
-        nobs = 0
-        with open(f, newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
-            hdr = next(reader)
-            if {'Name', 'RA', 'Dec', 'OT', 'Con'} <= set(hdr):
-                cnames = ['Name', 'RA', 'Dec', 'Con', 'OT', 'Mag', 'Diam', 'Other']
-                nums = {'RA', 'Dec', 'Mag', 'Diam'}
-                cols = {c: (hdr.index(c) if c in hdr else None) for c in cnames}
-                cols = {c: i for c, i in cols.items() if i is not None}
-                # nobs = 0
-                for row in reader:
-                    try:
-                        dd = {
-                            c: (float(row[i]) if c in nums else row[i])
-                            for c, i in cols.items()
-                        }
-                        name = '{:}/{:}'.format(dd['Name'], dd['OT'])
-
-                        # if already exists and not in user catalogue then ignore
-                        if name in self.objects and not user_catalogue:
-                            Logger.trace(
-                                'ObservingList: duplicate {:}; ignoring'.format(name)
-                            )
-                        else:
-                            self.objects[name] = dd
-                            nobs += 1
-                    except:
-                        if len(row) > 0:
-                            Logger.warn(
-                                'ObservingList: error in catalogue {:}, {:}'.format(
-                                    f, row
-                                )
-                            )
-            else:
-                Logger.warn(
-                    'ObservingList: cannot process {:}; lacks one of Name/RA/Dec/OT/Con'.format(
-                        f
-                    )
-                )
-        Logger.info(
-            'ObservingList: loaded {:} objects from {:} in {:.0f} ms'.format(
-                nobs, os.path.basename(f)[:-4], 1000 * (time.time() - t0)
-            )
-        )
-
-    def load_objects(self):
-
-        # load shipped catalogues
-        Logger.info('ObservingList: loading standard catalogues')
-        self.objects = {}
-        for f in glob.glob(os.path.join(self.app.get_path('dsos'), '*.csv')):
-            self._load_objects(f)
-
-        # load user object catalogues
-        Logger.info('ObservingList: loading user catalogues')
-        for f in glob.glob(os.path.join(self.app.get_path('catalogues'), '*.csv')):
-            self._load_objects(f)
 
     def load(self, dt):
 
         # DSOs
         try:
-            self.load_objects()
+            self.objects = Component.get('Catalogues').get_basic_dsos()
         except Exception as e:
             Logger.exception('ObservingList: problem loading DSOs ({:})'.format(e))
             self.warn('problem loading DSOs')
@@ -500,24 +437,24 @@ class ObservingList(Component):
         all_matches = priors + nonpriors
         return all_matches[:max_matches]
 
-    def get_objects_in_tile(self, tile):
-        # return all DSOs from database within specified tile
-        min_ra, max_ra = tile['min_ra'], tile['max_ra']
-        min_dec, max_dec = tile['min_dec'], tile['max_dec']
+    # def get_objects_in_tile(self, tile):
+    #     # return all DSOs from database within specified tile
+    #     min_ra, max_ra = tile['min_ra'], tile['max_ra']
+    #     min_dec, max_dec = tile['min_dec'], tile['max_dec']
 
-        decs = {
-            k: v
-            for k, v in self.objects.items()
-            if (v['Dec'] >= min_dec) & (v['Dec'] <= max_dec)
-        }
+    #     decs = {
+    #         k: v
+    #         for k, v in self.objects.items()
+    #         if (v['Dec'] >= min_dec) & (v['Dec'] <= max_dec)
+    #     }
 
-        if min_ra < max_ra:
-            return {
-                k: v
-                for k, v in decs.items()
-                if (v['RA'] >= min_ra) & (v['RA'] <= max_ra)
-            }
+    #     if min_ra < max_ra:
+    #         return {
+    #             k: v
+    #             for k, v in decs.items()
+    #             if (v['RA'] >= min_ra) & (v['RA'] <= max_ra)
+    #         }
 
-        return {
-            k: v for k, v in decs.items() if (v['RA'] >= min_ra) | (v['RA'] <= max_ra)
-        }
+    #     return {
+    #         k: v for k, v in decs.items() if (v['RA'] >= min_ra) | (v['RA'] <= max_ra)
+    #     }

@@ -1,15 +1,11 @@
 ''' Stacker. Manages calibration, alignment and stacking of incoming subs
 '''
 
-import mss
 import os
 import glob
-import time
 import numpy as np
 from datetime import datetime
-from PIL import Image as PILImage
 
-from kivy.metrics import Metrics as KivyMetrics
 from kivy.app import App
 from kivy.logger import Logger
 from kivy.properties import (BooleanProperty, NumericProperty, OptionProperty, 

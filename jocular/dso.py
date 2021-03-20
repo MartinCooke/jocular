@@ -3,10 +3,9 @@
 
 import os
 import math
-import json
 
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty, ObjectProperty
+from kivy.properties import StringProperty, BooleanProperty, ObjectProperty, DictProperty
 from kivy.lang import Builder
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
@@ -644,21 +643,16 @@ class DSO(BoxLayout, Component):
     Mag = StringProperty('')
     Diam = StringProperty('')
     Other = StringProperty('')
+    otypes = DictProperty({})
 
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
     show_DSO = BooleanProperty(False)
 
     def __init__(self, **kwargs):
-        try:
-            with open(
-                App.get_running_app().get_path('object_type_names.json'), 'r'
-            ) as f:
-                self.otypes = json.load(f)
-        except Exception as e:
-            Logger.warn('DSO: cannot read oject_type_names.json ({:})'.format(e))
-            self.otypes = {}
         super().__init__(**kwargs)
+        otypes = Component.get('Catalogues').get_object_types()
+        self.otypes = {k: v['name'] for k, v in otypes.items()}
         App.get_running_app().gui.add_widget(self, index=8)
         Logger.info('DSO: initialised')
 
