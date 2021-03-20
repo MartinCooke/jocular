@@ -156,24 +156,8 @@ class Camera(Component):
             params = array.array(
                 'B',
                 [
-                    0x40,
-                    cmd,
-                    rowcode[rows],
-                    0,
-                    0,
-                    0,
-                    10,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    self.lswidth,
-                    self.mswidth,
-                    self.lsheight,
-                    self.msheight,
-                    1,
-                    1,
+                    0x40, cmd, rowcode[rows], 0, 0, 0, 10, 0, 0, 0, 0, 0,
+                    self.lswidth, self.mswidth, self.lsheight, self.msheight, 1, 1
                 ],
             )
             if exposure is not None:

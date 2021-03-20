@@ -386,6 +386,9 @@ class Stacker(Component):
 
 
     def get_image_for_platesolving(self):
+        ''' Currently gets displayed image on stack, but what if we 
+            are framing etc?
+        '''
         try:
             if self.sub_or_stack == 'sub':
                 im = self.subs[self.selected_sub].get_image()
