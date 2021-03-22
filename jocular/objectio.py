@@ -12,7 +12,7 @@ from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
 
 from jocular.component import Component
-from jocular.utils import add_if_not_exists, generate_observation_name, unique_member
+from jocular.utils import add_if_not_exists, generate_observation_name, unique_member, move_to_dir
 from jocular.widgets import JPopup
 
 Builder.load_string('''
@@ -266,4 +266,17 @@ class ObjectIO(Component):
             self.app.gui.enable(['exposure_button', '{:}_script'.format(sub_type)])
 
             Component.get('CaptureScript').set_external_details(sub_type=sub_type)
+
+
+    def new_aliensub_from_watcher(self, path):
+        ''' Move non-Jocular sub to current object subdirectory in case user
+            wants to use them elsewhere. Non-Jocular subs are any that have been
+            used to create Jocular subs e.g. as a result of debayering or 
+            binning on input. Path specifies existing location of sub (in watched folder)
+        '''
+        if self.current_object_dir is None:
+            self.current_object_dir = os.path.join(self.session_dir, 
+                generate_observation_name(self.session_dir, prefix=Component.get('DSO').Name))
+            add_if_not_exists(self.current_object_dir)
+        move_to_dir(path, os.path.join(self.current_object_dir, 'originals'))
 

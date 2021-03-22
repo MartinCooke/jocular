@@ -179,7 +179,7 @@ class Camera(Component):
         try:
             self.lodestar.ctrl_transfer(0x40, SX_RESET, 0, 0, 0)
             self.lodestar.ctrl_transfer(0x40, SX_CLEAR_PIXELS, 0, 0, 0)
-            Logger.debug('Camera: started external exposure')
+            Logger.trace('Camera: started external exposure')
         except Exception as e:
             self.handle_failure('problem in start_external_exposure {:}'.format(e))
 
@@ -248,6 +248,10 @@ class Camera(Component):
         """
 
         if self.camera_connected:
+            return
+
+        if os.name == 'nt':
+            self.info('not supported')
             return
 
         # os.environ['PYUSB_DEBUG'] = 'debug'

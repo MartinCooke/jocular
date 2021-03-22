@@ -326,14 +326,6 @@ class Stacker(Component):
         else:
             self.selected_sub += 1
 
-    def on_animating(self, *args):
-        if self.is_empty():
-             return
-        if self.animating:
-            self.play_event = Clock.schedule_interval(self.increment_sub, 1/self.speed)
-        else:
-            if hasattr(self, 'play_event'):
-                Clock.unschedule(self.play_event)
 
     def get_screen(self, dt=None):
         im = Component.get('Snapshotter').snap(return_image=True).copy()

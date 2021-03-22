@@ -9,6 +9,7 @@ from datetime import datetime
 from astropy.io import fits
 from kivy.logger import Logger
 
+
 def is_fit(f):
     return f.lower().endswith('.fit') or f.lower().endswith('.fits')
 
@@ -57,7 +58,8 @@ class Image:
     filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 'blue': 'B', 'dark': 'dark',  
         'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII', 'spect': 'spec', 'l': 'L', 'lum': 'L'}
 
-    def __init__(self, path=None, verbose=False):
+
+    def __init__(self, path=None, verbose=False, check_image_data=False):
         ''' Generate Image instance from path. Throw ImageNotReadyException in cases where re-reading
             on next event cycle might be successful.
         '''
@@ -72,7 +74,11 @@ class Image:
             with fits.open(path) as hdu1:
                 hdu1.verify('silentfix')
                 hdr = hdu1[0].header
-                self.image = hdu1[0].data
+                # we check that the image is readable if necessary
+                if check_image_data:
+                    self.image = hdu1[0].data
+                else:
+                    self.image = None
         except Exception:
             self.image = None
             raise ImageNotReadyException('Cannot read fits header for {:}'.format(path))
@@ -81,10 +87,13 @@ class Image:
             raise Exception('FITS does not contain 2D data')
 
         # extract any relevant information from FITs header
+
         fits_props = {}
         for k, v in hdr.items():
             if k.lower() in self.hmap:
                 fits_props[self.hmap[k.lower()]] = v
+
+        self.created_by_jocular = 'CREATOR' in hdr and hdr['CREATOR'].startswith('Jocular')
 
         self.shape = hdr['NAXIS1'], hdr['NAXIS2']
         self.shape_str = '{:}x{:}'.format(self.shape[0], self.shape[1])
@@ -106,6 +115,7 @@ class Image:
 
         # fits properties override filename properties
         props = {**filename_props, **fits_props}
+
 
         #----------- validate and normalise property values
 
@@ -178,18 +188,21 @@ class Image:
         self.arrival_time = int(time.time())
         self.keyframe = False
         self.calibrations = {'dark': False, 'flat': False, 'bias': False}
-        self.image = None
+
+        # force reload; is this necessary?
+        # self.image = None
+
         # if verbose:
         #     self.describe()
-        # self.describe()
+        self.describe()
 
     def describe(self):
         # for debugging
         if self.is_master:
-            print('Master: {:}'.format(self.name))
+            Logger.info('Image: Master {:}'.format(self.name))
         else:
-            print('Sub: {:}'.format(self.name))
-        print('{:9s} {:14s} ({:} days) {:5s} {:}s {:} {:} {:} {:}'.format(
+            Logger.info('Image: Sub {:}'.format(self.name))
+        Logger.info('Image:    {:9s} {:14s} ({:} days) {:5s} {:}s {:} {:} {:} {:}'.format(
             self.shape_str, 
             self.create_time.strftime('%d %b %y %H:%M'),
             self.age,
@@ -266,7 +279,6 @@ class Image:
                 Logger.error('Image: cannot read image data from {:} ({:})'.format(self.path, e))
         return self.image
 
-
     def get_master_data(self):
         # we don't rescale masters (at least not Jocular ones; not sure about the rest)
         if self.image is None:
@@ -279,16 +291,4 @@ class Image:
             except Exception as e:
                 Logger.error('Image: cannot read image data from {:} ({:})'.format(self.path, e))
         return self.image
-
-
-
-# if __name__ == '__main__':
-
-#     for f in os.listdir('testfits'):
-#         print('-------------')
-#         try:
-#             s = Image(os.path.join('testfits', f), verbose=True)
-#         except Exception as e:
-#             print('  Exception: {:}'.format(e))
-
 

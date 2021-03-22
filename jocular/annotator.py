@@ -31,7 +31,7 @@ Builder.load_string(
 <PropVal>:
     canvas.before:
         Color:
-            rgba: .3, .3, .3, .7
+            rgba: .3, .3, .3, .9
         Rectangle:
             pos: self.pos
             size: self.size

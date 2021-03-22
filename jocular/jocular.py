@@ -112,7 +112,7 @@ class Jocular(App):
         try:
             with open(os.path.join(str(Path.home()), '.jocular'), 'r') as f:
                 self.data_dir = f.read().strip()
-        except:
+        except Exception as e:
             Logger.exception('Jocular: problem reading user data dir ({:})'.format(e))
             sys.exit()
 

@@ -25,7 +25,7 @@ class Snapshotter(Component):
     annotation = OptionProperty('full', options=['plain', 'name', 'full'])
     save_format = OptionProperty('.png', options=['png', 'jpg', 'fit'])
     dark_surround = ConfigParserProperty(1, 'Snapshotter', 'dark_surround', 'app', val_type=int)
-    framewidth = ConfigParserProperty(15, 'Snapshotter', 'framewidth', 'app', val_type=int)
+    framewidth = ConfigParserProperty(1, 'Snapshotter', 'framewidth', 'app', val_type=int)
     imreduction = ConfigParserProperty(1, 'Snapshotter', 'imreduction', 'app', val_type=float)
 
     def __init__(self, **kwargs):
@@ -248,7 +248,9 @@ class Snapshotter(Component):
     def landscape_view(self):
 
         # to do: better scaling of fonts based on image size
-        nm = '_tmp.png'
+
+        # v0.5: ensure tmp is in snapshots dir now that user can start from anywhere
+        nm = os.path.join(self.app.get_path('snapshots'), '_tmp.png')
         im = Component.get('View').last_image.copy()
         try:
             imsave(nm, im[::-1])

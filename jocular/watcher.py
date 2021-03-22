@@ -2,16 +2,60 @@
 '''
 
 import os
+import numpy as np
 
 from kivy.logger import Logger
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.properties import ConfigParserProperty
+
+from skimage.transform import rescale
+
+# v0.5
+from colour_demosaicing import (
+    demosaicing_CFA_Bayer_bilinear,
+    demosaicing_CFA_Bayer_Malvar2004,
+    demosaicing_CFA_Bayer_Menon2007
+)
 
 from jocular.component import Component
 from jocular.utils import move_to_dir
-from jocular.image import Image, ImageNotReadyException, is_fit
+from jocular.image import Image, ImageNotReadyException, is_fit, save_image
+
+def debayer(im, pattern=None, method=None):
+    meths = {
+        'bilinear': demosaicing_CFA_Bayer_bilinear,
+        'Malvar2004': demosaicing_CFA_Bayer_Malvar2004,
+        'Menon2007': demosaicing_CFA_Bayer_Menon2007,
+    }
+    deb = meths[method](im, pattern=pattern)
+
+    # rescale to original intensity range
+    cfa_min, cfa_max = np.min(im), np.max(im)
+    deb_min, deb_max = np.min(deb), np.max(deb)
+    deb = cfa_min + (cfa_max - cfa_min) * (deb - deb_min) / (deb_max - deb_min)
+
+    ''' might eventually want to support CMYK conversion eg for Lodestar C
+        R = 255 × (1-C) × (1-K)
+        G = 255 × (1-M) × (1-K)
+        B = 255 × (1-Y) × (1-K)
+    '''
+
+    return deb
+
+def binning(im, binfac):
+    if binfac < 2:
+        return im
+    return rescale(im, 1 / int(binfac), anti_aliasing=True, mode='constant', 
+        preserve_range=True, multichannel=False)
+
 
 class Watcher(Component):
+
+    # new in v0.5
+    bayerpattern = ConfigParserProperty('mono', 'Watcher', 'bayerpattern', 'app', val_type=str)
+    bayermethod = ConfigParserProperty('bilinear', 'Watcher', 'bayermethod', 'app', val_type=str)
+    binfac_on_input = ConfigParserProperty(1, 'Watcher', 'binfac_on_input', 'app', val_type=int)
 
     def __init__(self):
         super(Watcher, self).__init__()
@@ -50,18 +94,62 @@ class Watcher(Component):
             path = os.path.join(os.path.join(self.watched_dir, f))
             if is_fit(f):
                 try:
-                    s = Image(path)
-                    if s.is_master:
+                    s = Image(path, check_image_data=True)
+
+                    ''' New in v0.5
+                        Check if this is a jocular sub or not. If not and user
+                        wants to bin or debayer or both, do this, creating new
+                        Jocular FITs, write them to watched dir so they
+                        are loaded, and save original FITs 
+                    '''
+
+                    if not s.created_by_jocular and (self.bayerpattern != 'mono' or self.binfac_on_input > 1):
+                        bn = os.path.basename(path)
+                        im = s.get_image()
+                        if self.bayerpattern != 'mono':
+                            rgb = debayer(im, pattern=self.bayerpattern, method=self.bayermethod)
+                            Logger.info('Watcher: debayered')
+                            for i, chan in enumerate(['R', 'G', 'B']):
+                                self.save_sub_to_watched(s, rgb[:, :, i], bn, filt=chan)
+                        else:
+                            self.save_sub_to_watched(s, im, bn, filt=None)
+
+                        Component.get('ObjectIO').new_aliensub_from_watcher(path)
+
+                    elif s.is_master:
                         Component.get('Calibrator').new_master_from_watcher(s)
+
                     else:
                         Component.get('ObjectIO').new_sub_from_watcher(s)
+
                 except ImageNotReadyException as e:
                     # give it another chance on next event cycle
                     Logger.debug('Watcher: image not ready {:} ({:})'.format(f, e))
                 except Exception as e:
                     # irrecoverable, so move to invalid, adding timestamp
-                    Logger.debug('Watcher: invalid FITs {:} ({:})'.format(f, e))
+                    Logger.debug('Watcher: other issue {:} ({:})'.format(f, e))
                     move_to_dir(path, 'invalid')
+
             elif not os.path.isdir(path):
                 move_to_dir(path, 'ignored')
 
+
+    def save_sub_to_watched(self, sub, im, nm, filt=None):
+        ''' Save debayered or binned image, constructing details from Image instance
+        '''
+
+        if filt is None:
+            filt = sub.filter
+
+        if self.binfac_on_input > 1:
+            im = binning(im, self.binfac_on_input)
+            Logger.info('Watcher: binning by factor {:} down to  {:} x {:}'.format(
+                self.binfac_on_input, im.shape[1], im.shape[0]))
+
+        save_image(data=im.astype(np.uint16), 
+            path=os.path.join(self.watched_dir, '{:}_{:}'.format(filt, nm)),
+            filt=filt,
+            sub_type='light',
+            exposure=sub.exposure,
+            temperature=sub.temperature
+            )

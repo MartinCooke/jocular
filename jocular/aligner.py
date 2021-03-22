@@ -19,6 +19,7 @@ from jocular.gradient import estimate_background, estimate_gradient
 class Aligner(Component):
 
     do_align = ConfigParserProperty(1, 'Aligner', 'do_align', 'app', val_type=int)
+    smooth_edges = ConfigParserProperty(0, 'Aligner', 'smooth_edges', 'app', val_type=int)
     ideal_star_count = ConfigParserProperty(30, 'Aligner', 'ideal_star_count', 'app', val_type=int)
 
     def __init__(self):
@@ -86,29 +87,38 @@ class Aligner(Component):
                 # update warp model
                 self.warp_model = warp_model
 
-                # apply warp, ensuring values outside the range are filled with 
-                # a known value to mitigate edge effects on platesolving
-                sub.image = warp(sub.image, self.warp_model, order=3, 
-                    preserve_range=True, mode='constant', cval=0.0001)
+                # new in v0.4: can sometimes get artefacts that screw up platesolving
+                # this is one way to handle them, but it isn't to all tastes and is slow
+                # so allow use not to do it
 
-                # identify unwarped points
-                unwarped = sub.image < .001
+                if self.smooth_edges:
+                    # apply warp, ensuring values outside the range are filled with 
+                    # a known value to mitigate edge effects on platesolving
+                    sub.image = warp(sub.image, self.warp_model, order=3, 
+                        preserve_range=True, mode='constant', cval=0.0001)
 
-                # grow these points inwards by convolution with block
-                # 76 ms to convolve is quite slow
-                unwarped = signal.convolve2d(unwarped, np.ones((9, 9)), mode='same')
+                    # identify unwarped points
+                    unwarped = sub.image < .001
 
-                # find positive points, but none away from boundary
-                pos = unwarped > 0
-                npix = 100
-                pos[npix:-npix, npix:-npix] = 0
+                    # grow these points inwards by convolution with block
+                    # 76 ms to convolve is quite slow
+                    unwarped = signal.convolve2d(unwarped, np.ones((9, 9)), mode='same')
 
-                # fill these with noise: ~ 14ms
-                bg_mu, bg_std = estimate_background(sub.image)
-                grad = estimate_gradient(sub.image)
-                # 10 ms
-                noi = np.random.normal(bg_mu, bg_std, sub.image.shape) * grad / np.mean(grad)
-                sub.image[pos] = noi[pos]
+                    # find positive points, but none away from boundary
+                    pos = unwarped > 0
+                    npix = 100
+                    pos[npix:-npix, npix:-npix] = 0
+
+                    # fill these with noise: ~ 14ms
+                    bg_mu, bg_std = estimate_background(sub.image)
+                    grad = estimate_gradient(sub.image)
+                    # 10 ms
+                    noi = np.random.normal(bg_mu, bg_std, sub.image.shape) * grad / np.mean(grad)
+                    sub.image[pos] = noi[pos]
+
+                else:
+                    sub.image = warp(sub.image, self.warp_model, order=3, preserve_range=True)
+
 
                 self.align_count += 1
 

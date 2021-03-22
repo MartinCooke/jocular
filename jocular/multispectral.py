@@ -11,6 +11,22 @@ from kivy.properties import ConfigParserProperty, NumericProperty
 from jocular.gradient import estimate_gradient, estimate_background
 from jocular.component import Component
 
+def bin_image(im, binfac=2, rescale_to_orig=True):
+    ''' bin and rescale to original size; 
+        in v0.5 added the preserve range option
+    '''
+    binfac = int(binfac)
+    if binfac == 1:
+        return im
+    if binfac < 1:
+        return im
+    im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', 
+        preserve_range=True, multichannel=False)
+    if rescale_to_orig:
+        return resize(im2, im.shape, anti_aliasing=False, mode='constant',
+            preserve_range=True)
+    return im2
+
 def _percentile_clip(a, perc=80):
     return np.mean(trimboth(np.sort(a, axis=0), (100 - perc)/100, axis=0), axis=0)
 
@@ -156,9 +172,9 @@ class MultiSpectral(Component):
     def create_LAB(self):
         # Initial stage of LAB image creation from RGB stacks
 
-        def bin(im, binfac=2):
-            im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
-            return resize(im2, im.shape, anti_aliasing=False, mode='constant')
+        # def bin_image(im, binfac=2):
+        #     im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
+        #     return resize(im2, im.shape, anti_aliasing=False, mode='constant')
 
         def _limit(im):
             im[im < 0] = 0
@@ -172,7 +188,7 @@ class MultiSpectral(Component):
 
         # binning ~ 70 ms
         if self.colour_binning:
-            ims = [bin(im) for im in ims]
+            ims = [bin_image(im) for im in ims]
 
         # alternative approach to test
         # might also add option to not subtract anything.... just to test

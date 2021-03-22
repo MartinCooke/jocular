@@ -36,6 +36,7 @@ setup(
         'mss>=6.1.0',  #  snapshots
         'pyusb>=1.1.1',  # camera
         'hidapi>=0.10.1',  # filterwheel
+        'colour-demosaicing>=0.1.6' # debayering
     ],
     entry_points='''
         [console_scripts]
