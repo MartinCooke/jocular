@@ -29,7 +29,8 @@ setup(
     include_package_data=True,
     python_requires='>=3.6',
     install_requires=[
-        'scikit-image>=0.18.1',  # numerous image ops (includes NumPy)
+        'numpy>=1.20.1',
+        'scikit-image>=0.18.1',  # numerous image ops
         'Click>=7.1.2',  # command line interface
         'kivy>=2.0.0',  # main GUI framework
         'astropy>=4.2',  # fits etc

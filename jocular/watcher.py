@@ -106,7 +106,7 @@ class Watcher(Component):
                     if not s.created_by_jocular and (self.bayerpattern != 'mono' or self.binfac_on_input > 1):
                         bn = os.path.basename(path)
                         im = s.get_image()
-                        if self.bayerpattern != 'mono':
+                        if self.bayerpattern != 'mono' and not s.is_master:
                             rgb = debayer(im, pattern=self.bayerpattern, method=self.bayermethod)
                             Logger.info('Watcher: debayered')
                             for i, chan in enumerate(['R', 'G', 'B']):
@@ -138,9 +138,6 @@ class Watcher(Component):
         ''' Save debayered or binned image, constructing details from Image instance
         '''
 
-        if filt is None:
-            filt = sub.filter
-
         if self.binfac_on_input > 1:
             im = binning(im, self.binfac_on_input)
             Logger.info('Watcher: binning by factor {:} down to  {:} x {:}'.format(
@@ -148,8 +145,8 @@ class Watcher(Component):
 
         save_image(data=im.astype(np.uint16), 
             path=os.path.join(self.watched_dir, '{:}_{:}'.format(filt, nm)),
-            filt=filt,
-            sub_type='light',
+            filt=sub.filt if filt is None else filt,
+            sub_type=sub.sub_type,
             exposure=sub.exposure,
             temperature=sub.temperature
             )
