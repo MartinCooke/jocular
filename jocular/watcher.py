@@ -9,7 +9,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.properties import ConfigParserProperty
 
-from skimage.transform import rescale
+from skimage.transform import rescale, downscale_local_mean
 
 # v0.5
 from colour_demosaicing import (
@@ -43,11 +43,14 @@ def debayer(im, pattern=None, method=None):
 
     return deb
 
-def binning(im, binfac):
+def binning(im, binfac, binmethod='interpolation'):
+    binfac = int(binfac)
     if binfac < 2:
         return im
-    return rescale(im, 1 / int(binfac), anti_aliasing=True, mode='constant', 
-        preserve_range=True, multichannel=False)
+    if binmethod == 'interpolatation':
+        return rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', 
+            preserve_range=True, multichannel=False)
+    return downscale_local_mean(im, (binfac, binfac))
 
 
 class Watcher(Component):
@@ -56,6 +59,7 @@ class Watcher(Component):
     bayerpattern = ConfigParserProperty('mono', 'Watcher', 'bayerpattern', 'app', val_type=str)
     bayermethod = ConfigParserProperty('bilinear', 'Watcher', 'bayermethod', 'app', val_type=str)
     binfac_on_input = ConfigParserProperty(1, 'Watcher', 'binfac_on_input', 'app', val_type=int)
+    binmethod = ConfigParserProperty('interpolate', 'Watcher', 'binmethod', 'app', val_type=str)
 
     def __init__(self):
         super(Watcher, self).__init__()
@@ -139,13 +143,15 @@ class Watcher(Component):
         '''
 
         if self.binfac_on_input > 1:
-            im = binning(im, self.binfac_on_input)
+            im = binning(im, self.binfac_on_input, binmethod=self.binmethod)
             Logger.info('Watcher: binning by factor {:} down to  {:} x {:}'.format(
                 self.binfac_on_input, im.shape[1], im.shape[0]))
 
+        filt=sub.filter if filt is None else filt
+
         save_image(data=im.astype(np.uint16), 
             path=os.path.join(self.watched_dir, '{:}_{:}'.format(filt, nm)),
-            filt=sub.filt if filt is None else filt,
+            filt=filt,
             sub_type=sub.sub_type,
             exposure=sub.exposure,
             temperature=sub.temperature
