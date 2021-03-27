@@ -7,7 +7,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-URL = 'https://transpy.eu.pythonanywhere.com/jocular'
+URL = 'https://transpy.eu.pythonanywhere.com/jocular/'
 
 setup(
     name='jocular',
