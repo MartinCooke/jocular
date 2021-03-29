@@ -167,8 +167,14 @@ class CaptureScript(Component):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        with open(self.app.get_path('capture_scripts.json'), 'r') as f:
-            self.scripts = json.load(f)
+        try:
+            with open(self.app.get_path('capture_scripts.json'), 'r') as f:
+                self.scripts = json.load(f)
+        except:
+            # no capture scripts in user directory so use shipped version to start with
+            with open(self.app.get_path('shipped_capture_scripts.json'), 'r') as f:
+                self.scripts = json.load(f)
+
         self.on_current_script()
 
     def on_close(self, *args):

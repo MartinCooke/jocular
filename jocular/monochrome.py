@@ -143,6 +143,8 @@ class Monochrome(Component):
 
         im = self.mono
 
+
+
         # this is the point at which to compute image stats
         if self.show_image_stats:
             self.compute_image_stats()
@@ -178,6 +180,7 @@ class Monochrome(Component):
             if self._std_background is None
             else self.lift * self._std_background,
         )
+
         return im
 
     def compute_image_stats(self):

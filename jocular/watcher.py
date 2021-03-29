@@ -11,18 +11,20 @@ from kivy.properties import ConfigParserProperty
 
 from skimage.transform import rescale, downscale_local_mean
 
-# v0.5
-from colour_demosaicing import (
-    demosaicing_CFA_Bayer_bilinear,
-    demosaicing_CFA_Bayer_Malvar2004,
-    demosaicing_CFA_Bayer_Menon2007
-)
-
 from jocular.component import Component
 from jocular.utils import move_to_dir
 from jocular.image import Image, ImageNotReadyException, is_fit, save_image
 
 def debayer(im, pattern=None, method=None):
+    ''' Note that there is a bug in the Linux version of colour_demosaicing or
+        one of its dependencies so we'll import here for now to allow Linux
+        users to at least operate in Mono 
+    '''
+    from colour_demosaicing import (
+        demosaicing_CFA_Bayer_bilinear,
+        demosaicing_CFA_Bayer_Malvar2004,
+        demosaicing_CFA_Bayer_Menon2007
+    )
     meths = {
         'bilinear': demosaicing_CFA_Bayer_bilinear,
         'Malvar2004': demosaicing_CFA_Bayer_Malvar2004,

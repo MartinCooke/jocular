@@ -84,8 +84,11 @@ class Jocular(App):
             'observing_list.json',
             'observing_notes.json',
             'last_session.json',
+            'capture_scripts.json'
         ]:
             return os.path.join(self.data_dir, name)
+        elif name == 'shipped_capture_scripts.json':
+            return os.path.join(self.directory, 'resources', 'capture_scripts.json')
         elif name == 'libusb':
             return os.path.join(self.directory, 'resources', 'libusb-1.0.dll')
         elif name == 'star_db':

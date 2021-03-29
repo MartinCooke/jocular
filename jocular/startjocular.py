@@ -7,6 +7,7 @@ import click
 from datetime import datetime
 from pathlib import Path
 
+from jocular import __version__
 
 def get_datadir():
     try:
@@ -15,6 +16,11 @@ def get_datadir():
     except:
         return None
 
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo('Version {:}'.format(__version__))
+    ctx.exit()
 
 @click.command()
 @click.option(
@@ -30,6 +36,8 @@ def get_datadir():
     type=click.Choice(['error', 'warning', 'debug'], case_sensitive=False),
     default='error',
 )
+@click.option('--version', '-v', is_flag=True, callback=print_version,
+              expose_value=False, is_eager=True)
 def startjocular(datadir, log):
 
     if datadir is None:
