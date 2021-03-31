@@ -62,6 +62,7 @@ class Observations(Component):
         try:
             with open(self.app.get_path('previous_observations.json'), 'w') as f:
                 json.dump(self.observations, f, indent=1)
+            Logger.info('Observations: saved {:}'.format(len(self.observations)))
         except Exception as e:
             Logger.warn('Observations: cannot save previous observations ({:})'.format(e))
 

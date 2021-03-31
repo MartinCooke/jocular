@@ -412,12 +412,12 @@ class GUI(FloatLayout):
     def on_something_has_changed(self, *args):
         # first check if we have an empty stack; if so, nothing has changed
         if self.something_has_changed:
-            self.disable(['load_previous'])
+            self.disable(['load_previous', 'quit'])
             spec = self.gui['new_DSO']
             if spec['widget'].text.endswith('new'):
                 spec['widget'].text = spec['widget'].text[:-3] + 'save'
         else:
-            self.enable(['load_previous'])
+            self.enable(['load_previous', 'quit'])
             spec = self.gui['new_DSO']
             if spec['widget'].text.endswith('save'):
                 spec['widget'].text = spec['widget'].text[:-4] + 'new'

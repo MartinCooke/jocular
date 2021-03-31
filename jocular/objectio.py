@@ -94,7 +94,7 @@ class ObjectIO(Component):
 
     def on_close(self):
         self.closing = True
-        self.confirm_new_object()
+        # self.confirm_new_object(closedown=True)
 
     def confirm_new_object(self, *args):
         # before saving, check for confirmations where required

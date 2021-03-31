@@ -83,6 +83,18 @@ class Watcher(Component):
                 if not f.startswith('master'):
                     move_to_dir(os.path.join(self.watched_dir, f), 'unused')
 
+    def get_possible_fits(self):
+        fits = [os.path.join(self.watched_dir, d) for d in os.listdir(self.watched_dir)]
+        # for ASIlive look deeper
+        asipath = os.path.join(self.watched_dir, 'ASILive_AutoSave', 'SingleFrame')
+        if os.path.exists(asipath):
+            for sdir in os.listdir(asipath):
+                pth = os.path.join(asipath, sdir)
+                if os.path.isdir(pth):
+                    fits += [os.path.join(pth, d) for d in os.listdir(pth)]
+        # print('possible fits', fits)
+        return fits
+
     def watch(self, dt):
         '''Watcher handles two types of event:
 
@@ -96,8 +108,11 @@ class Watcher(Component):
             Non-fits files are moved to 'ignored'
          '''
 
-        for f in os.listdir(self.watched_dir):
-            path = os.path.join(os.path.join(self.watched_dir, f))
+        for path in self.get_possible_fits():
+            f = os.path.basename(path)
+
+        # for f in os.listdir(self.watched_dir):
+        #     path = os.path.join(os.path.join(self.watched_dir, f))
             if is_fit(f):
                 try:
                     s = Image(path, check_image_data=True)
