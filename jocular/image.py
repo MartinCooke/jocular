@@ -194,7 +194,7 @@ class Image:
 
         # if verbose:
         #     self.describe()
-        self.describe()
+        # self.describe()
 
     def describe(self):
         # for debugging

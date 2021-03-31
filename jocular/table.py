@@ -428,8 +428,11 @@ class SearchBar(BoxLayout):
         pass
 
     def combine_results(self):
+        t0 = time.time()
+        # these two lines ~ 10ms
         l = [s.filtered for s in self.filters]
         self.table.search_results = list(set.intersection(*l)) # causes update
+        # this takes ~ 50ms
         self.table.on_search_results()
 
     def reapply_filters(self):
@@ -504,6 +507,11 @@ class SearchFilter(SearchBarTextInput):
         to avoid multiple identical updates.
         '''
 
+        ''' Timing-wise, the search is pretty fast actually about 30ms for 40k rows; takes longer to then
+            intersect the results and redraw; could be worth optimising for large catalogues, but not yet
+        '''
+
+
         value = value.strip()
 
         if not value:
@@ -547,6 +555,7 @@ class SearchFilter(SearchBarTextInput):
                         if value[-1] == '*':
                             value = value[:-1]
                         objs = {k: v for k, v in objs.items() if v.startswith(value)}
+
 
                 elif self.column_type in [float, int]:
 
@@ -598,10 +607,10 @@ class SearchFilter(SearchBarTextInput):
                             elif op == '<':
                                 objs = {k: v for k, v in objs.items() if v <= comp_value}
 
-
             self.filtered = set(objs.keys())
 
             # update search results by intersecting with current search results from other columns
+            # also does the redraw so quite expensive
             self.table.searchbar.combine_results()
 
         except Exception:
@@ -666,23 +675,16 @@ class Table(FloatLayout):
         self.initialising = False  # now allow redraw
         self.size = Window.size
         self.redraw()
+        # the redraw takes the time
         Logger.debug('Table: {:} built in {:.0f} ms'.format(name, 1000*(time.time() - t0)))
 
 
     def redraw(self, *args):
 
-        def make_rows():
-            h = self.height - self.myheader.height - self.footer.height
-            nrows = int(h / self.empty_row.height)
-            spare = h - nrows * self.empty_row.height
-            rows = []
-            for i in range(0, nrows):
-                r = TableRow(self)
-                rows.append(r)
-            return rows, len(rows), spare
-        
         if self.initialising:
             return
+
+        t0 = time.time()
 
         self.redrawing = True
 
@@ -693,16 +695,25 @@ class Table(FloatLayout):
             self.searchbar = SearchBar(self)
             self.myheader.add_widget(self.searchbar)
             self.empty_row = TableRow(self)
-            self.rows, self.n_rows, spare = make_rows()
         else: # remove rows
             for r in self.rows:
                 self.contents.remove_widget(r)
 
-        self.rows, self.n_rows, spare = make_rows()
+        # new in v0.5
+        h = self.height - self.myheader.height - self.footer.height
+        nrows = int(h / self.empty_row.height)
+        spare = h - nrows * self.empty_row.height
+        self.rows = []
+        for i in range(0, nrows):
+            r = TableRow(self)
+            self.rows.append(r)
+        self.n_rows = len(self.rows)
+
         for r in self.rows:
             self.contents.add_widget(r)
         self.spacer.height = spare
 
+        # about 300 ms for DSO table
         self.footer_actions.clear_widgets()
         if self.actions:
             for k, v in self.actions.items():
@@ -713,10 +724,12 @@ class Table(FloatLayout):
  
         self.redrawing = False
 
-        # self.sort_column()
+        # about 100 ms for DSO table
         self.on_search_results()
+
         if self.initial_sort_direction is not None:
             self.sort_column(reverse=self.initial_sort_direction)
+
 
     def on_search_results(self, *args):
 

@@ -2,6 +2,7 @@
 "OC": {"name": "open cluster", "col": [139, 0, 139]},
 "GC": {"name": "globular", "col": [138, 43, 226]},
 "GX": {"name": "galaxy", "col": [240, 230, 140]},
+"OG": {"name": "overlapping galaxies", "col": [240, 190, 120]},
 "PN": {"name": "planetary nebula", "col": [160, 82, 45]},
 "G+": {"name": "galaxy group", "col": [173, 255, 47]},
 "PG": {"name": "peculiar galaxy", "col": [255, 215, 0]},

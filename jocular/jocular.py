@@ -18,6 +18,9 @@ from kivy.properties import (
 from kivy.uix.settings import SettingsWithSidebar
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
+
+from jocular import __version__
 
 from jocular.component import Component
 from jocular.gui import GUI
@@ -84,7 +87,8 @@ class Jocular(App):
             'observing_list.json',
             'observing_notes.json',
             'last_session.json',
-            'capture_scripts.json'
+            'capture_scripts.json',
+            'previous_observations.json'
         ]:
             return os.path.join(self.data_dir, name)
         elif name == 'shipped_capture_scripts.json':
@@ -179,7 +183,8 @@ class Jocular(App):
 
     def build(self):
 
-        from kivy.core.text import LabelBase
+
+        self.title = 'Jocular v{:}'.format(__version__)
 
         LabelBase.register(name='Jocular', fn_regular=self.get_path('jocular4.ttf'))
 

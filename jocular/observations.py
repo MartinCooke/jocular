@@ -6,6 +6,7 @@ import random
 import shutil
 import time
 import glob
+import json
 from datetime import datetime
 
 from kivy.app import App
@@ -41,15 +42,28 @@ class Observations(Component):
         return self.observations
 
     def load_observations(self, dt=None):
-        t0 = time.time()
-        self.observations = {}
-        for sesh in glob.glob(os.path.join(self.app.get_path('captures'), '*')):
-            for dso in glob.glob(os.path.join(sesh, '*')):
-                if os.path.isdir(dso):
-                    self.observations[dso] = simple_metadata(get_metadata(dso))
+        ''' Load json file containing observation details. If this file cannot
+            be found, rebuild. (new in v0.5)
+        '''
+        try:
+            with open(self.app.get_path('previous_observations.json'), 'r') as f:
+                self.observations = json.load(f)
+        except:
+            self.observations = {}
+            for sesh in glob.glob(os.path.join(self.app.get_path('captures'), '*')):
+                for dso in glob.glob(os.path.join(sesh, '*')):
+                    if os.path.isdir(dso):
+                        self.observations[dso] = simple_metadata(get_metadata(dso))
         self.update_status()
-        Logger.info('Observation: Loaded {:} observations in {:}ms'.format(
-            len(self.observations), int(1000*(time.time() - t0))))
+        Logger.info('Observation: Loaded {:} observations'.format(
+            len(self.observations)))
+
+    def save_observations(self):
+        try:
+            with open(self.app.get_path('previous_observations.json'), 'w') as f:
+                json.dump(self.observations, f, indent=1)
+        except Exception as e:
+            Logger.warn('Observations: cannot save previous observations ({:})'.format(e))
 
     def build_observations(self):
         # table construction ~150ms
@@ -90,9 +104,11 @@ class Observations(Component):
         self.observations_table.show()    
 
     def on_close(self, *args):
-        # clean up empty observation and session directories
+        ''' Save observations, clean up any empty observation and session dirs
+        '''
+
+        self.save_observations()
         sesh = Component.get('ObjectIO').session_dir
-        # remove any empty observations
         for dso in glob.glob(os.path.join(sesh, '*')):
             if os.path.isdir(dso):
                 # remove any empty observation directories
@@ -118,7 +134,10 @@ class Observations(Component):
         self.update_status()
 
     def update_status(self):
+        ''' Every time we update the status line we also save the observations
+        '''
         if hasattr(self, 'observations'):
+            self.save_observations()
             self.info('{:}'.format(len(self.observations)))
 
     def _delete(self, path):
