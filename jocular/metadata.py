@@ -3,6 +3,7 @@
 
 import os
 import json
+import platform
 from datetime import datetime
 from kivy.logger import Logger
 from jocular.image import fits_in_dir
@@ -17,7 +18,7 @@ def remove_empties(d):
     }
 
 
-def get_metadata(path):
+def get_metadata(path, simple=False):
     # Read metadata from path, constructing if necessary
     #  supports info.json (v1/2 of Jocular) and info3.json (v3)
     #  main difference is that info3 is simpler; will always read info3 in pref if both exist
@@ -78,12 +79,45 @@ def get_metadata(path):
     fits = fits_in_dir(path)
     md['nsubs'] = len(fits)
     if len(fits) > 0:
-        md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime(
+        # v0.4.5 approach
+        # md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime(
+        #     '%d %b %y %H:%M'
+        md['session'] = datetime.fromtimestamp(creation_date(fits[0])).strftime(
             '%d %b %y %H:%M'
         )
 
+    # much of the time we just want metadata for observing list in
+    # simple format
+    if simple:
+        return { 
+            'Name': md.get('Name', ''),
+            'OT': md.get('OT', ''),
+            'Con': md.get('Con', ''),
+            'Session': md.get('session', ''),
+            'N': md.get('nsubs', 0),
+            'Notes': md.get('Notes', '')
+            }
+
     return md
 
+
+def creation_date(path_to_file):
+    ''' Code from 
+        https://stackoverflow.com/questions/237079/how-to-get-file-creation-modification-date-times-in-python
+        Try to get the date that a file was created, falling back to when it was
+        last modified if that isn't possible.
+        See http://stackoverflow.com/a/39501288/1709587 for explanation.
+    '''
+    if platform.system() == 'Windows':
+        return os.path.getctime(path_to_file)
+    else:
+        stat = os.stat(path_to_file)
+        try:
+            return stat.st_birthtime
+        except AttributeError:
+            # We're probably on Linux. No easy way to get creation dates here,
+            # so we'll settle for when its content was last modified.
+            return stat.st_mtime
 
 class Metadata(Component):
     def __init__(self, **kwargs):

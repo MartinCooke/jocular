@@ -4,6 +4,8 @@
 import os
 import sys
 import click
+import glob
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -38,7 +40,14 @@ def print_version(ctx, param, value):
 )
 @click.option('--version', '-v', is_flag=True, callback=print_version,
               expose_value=False, is_eager=True)
-def startjocular(datadir, log):
+@click.option('--rebuildobservations', '-r', is_flag=True, default=False,
+    show_default=True,
+    expose_value=True, is_eager=True,
+    help='Construct observations file by scanning captures')
+def startjocular(datadir, log, rebuildobservations):
+
+    # stop Kivy from interpreting any args
+    os.environ["KIVY_NO_ARGS"] = "1"
 
     if datadir is None:
         print()
@@ -79,8 +88,47 @@ def startjocular(datadir, log):
     except Exception as e:
         sys.exit('Unable to write to user data directory {:} ({:})'.format(datadir, e))
 
-    # stop Kivy from interpreting any args
-    os.environ["KIVY_NO_ARGS"] = "1"
+    # # rebuild observations by moving observations.json to deleted folder
+    # if rebuildobservations:
+    #     try:
+    #         from jocular.utils import move_to_dir
+    #         from jocular.metadata import get_metadata
+
+    #         pth = os.path.join(datadir, 'previous_observations.json')
+    #         if os.path.exists(pth):
+    #             move_to_dir(pth, os.path.join(datadir, 'deleted'))
+    #     except Exception as e:
+    #         print('exception moving prev obs', e)
+    #         # pass
+
+    # alternative approach that ensures observations are rebuilt
+    # before GUI is launched, preventing possible races
+    obspath = os.path.join(datadir, 'previous_observations.json')
+    if rebuildobservations or not os.path.exists(obspath):
+        try:
+            from jocular.utils import move_to_dir
+            from jocular.metadata import get_metadata
+
+            # move prev to deleted in case user wishes to restore
+            pth = os.path.join(datadir, 'previous_observations.json')
+            if os.path.exists(obspath):
+                move_to_dir(obspath, os.path.join(datadir, 'deleted'))
+
+            # extract all observational data from captures
+            observations = {}
+            for sesh in glob.glob(os.path.join(datadir, 'captures', '*')):
+                for dso in glob.glob(os.path.join(sesh, '*')):
+                    if os.path.isdir(dso):
+                        observations[dso] = get_metadata(dso, simple=True)
+
+            # save
+            with open(obspath, 'w') as f:
+                json.dump(observations, f, indent=1)
+
+
+        except Exception as e:
+            print('Problem rebuilding previous observations ({:})'.format(e))
+            sys.exit()
 
     # write critical kivy preferences
     from kivy.config import Config

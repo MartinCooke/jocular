@@ -13,6 +13,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.togglebutton import ToggleButton
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
 from kivy.metrics import dp
 
 from jocular.component import Component
@@ -65,18 +67,20 @@ Builder.load_string('''
     BoxLayout:
         id: _grid
         size_hint: 1, None
-        height: dp(240)
+        height: dp(280)
 
     BoxLayout:
         id: _subs_box
         size_hint: 1, None
         orientation: 'vertical'
-        height: dp(60) if root.show_subs else dp(0)
+        height: dp(80) if root.show_subs else dp(0)
         opacity: 1 if root.show_subs else 0
         index: 1 if root.show_subs else 100
         disabled: not root.show_subs
 
-        MyLabel:
+        Label:
+            color: .5, .5, .5, 1
+            font_size: '20sp'
             text: '{:} subs per filter'.format(_nsubs.value)
 
         Slider:
@@ -91,14 +95,15 @@ Builder.load_string('''
     BoxLayout:
         id: _temp_box
         size_hint: 1, None
-        height: dp(60) if root.show_temperature else dp(0)
+        height: dp(80) if root.show_temperature else dp(0)
         opacity: 1 if root.show_temperature else 0
         disabled: not root.show_temperature
         orientation: 'vertical'
 
-
-        MyLabel:
+        Label:
             text: 'Temperature {:}\N{DEGREE SIGN}C'.format(_temperature.value) if _temperature.value > -26 else 'Temperature not set'
+            color: .5, .5, .5, 1
+            font_size: '20sp'
         Slider:
             size_hint: 1, None
             height: dp(30)
@@ -160,6 +165,18 @@ def exp_to_str(e):
         return '{:.2f}s'.format(e)
     return '{:.0f}s'.format(e)
 
+def str_to_exp(s):
+    s = s.strip()
+    try:
+        if s.endswith('ms'):
+            return float(s[:-2].strip()) / 1000
+        if s.endswith('s'):
+            return float(s[:-1].strip())
+        return float(s)
+    except:
+        raise Exception
+
+
 class CaptureScript(Component):
 
     current_script = OptionProperty('frame', options=['light', 'frame', 'dark', 'flat', 'seq', 'bias'])    
@@ -202,12 +219,33 @@ class CaptureScript(Component):
         return None
 
     def show_exposure_panel(self):
+        ''' New in v0.4.6: allow user to type exposure as well as presets
+        '''
 
         if self.current_script in {'flat', 'bias'}:
             return
 
+        content = BoxLayout(size_hint=(None, None), size=(dp(240), dp(300)), 
+            orientation='vertical',
+            spacing=(dp(0), dp(20))
+            )
+
         grid = GridLayout(size_hint=(None, None), size=(dp(240), dp(240)), cols=4,
             spacing=(dp(5), dp(0)))
+
+        tinput = TextInput(
+            text=exp_to_str(self.scripts[self.current_script].get('exposure', 0)),
+            size_hint=(1, 1),
+            height=dp(24),
+            multiline=False,
+            font_size='19sp',
+            hint_text='type exposure or select preset',
+            background_color=[.8, .8, .8, 1])
+        tinput.valign = 'top'
+        tinput.bind(on_text_validate=self.exposure_selected_from_text)
+        content.add_widget(tinput)
+        content.add_widget(Label(size_hint=(None, None), size=(dp(240), dp(20))))
+        content.add_widget(grid)
 
         script = self.scripts[self.current_script]
 
@@ -215,17 +253,28 @@ class CaptureScript(Component):
             grid.add_widget(ExposureToggle(
                 text=exp_to_str(e), 
                 state='down' if e == script['exposure'] else 'normal',
-                on_press=partial(self.exposure_selected, e)))
+                on_press=partial(self.exposure_selected, e, tinput)))
 
         if self.current_script == 'dark':
-            content = ChooseMultiple(choice_type='exposure', capture=self, session=Component.get('Session'))
-            content.grid.add_widget(grid)
-            self.popup = JPopup(title='Choose exposure and temperature', content=content)
+            panel_content = ChooseMultiple(choice_type='exposure', capture=self, session=Component.get('Session'))
+            panel_content.grid.add_widget(content)
+            self.popup = JPopup(title='Choose exposure and temperature', content=panel_content)
         else:
-            self.popup = JPopup(title='Choose exposure', content=grid)
+            self.popup = JPopup(title='Choose exposure', content=content)
 
         self.popup.open()
 
+
+    def exposure_selected_from_text(self, textinput):
+        try:
+            expo = str_to_exp(textinput.text)
+            self.app.gui.set('exposure_button', exp_to_str(expo))
+            self.scripts[self.current_script]['exposure'] = expo
+            # don't dismiss popup if dark as user has opportunity to select temperature too
+            if self.current_script != 'dark':
+                self.exposure_done()
+        except Exception as e:
+            textinput.foreground_color[0] = 1
 
     def set_external_details(self, exposure=None, sub_type=None, filt=None):
         self.current_script = sub_type
@@ -236,9 +285,10 @@ class CaptureScript(Component):
         if filt is not None:
             self.app.gui.set('filter_button', filt)
 
-    def exposure_selected(self, expo, expo_toggle):
+    def exposure_selected(self, expo, tinput, expo_toggle=None):
         self.app.gui.set('exposure_button', exp_to_str(expo))
         self.scripts[self.current_script]['exposure'] = expo
+        tinput.text = exp_to_str(expo)
         # don't dismiss popup if dark as user has opportunity to select temperature too
         if self.current_script != 'dark':
             self.exposure_done()
@@ -256,7 +306,7 @@ class CaptureScript(Component):
         self.reset_generator()
         self.popup.dismiss()
 
-    def cancel_multiple(self, typ, *args):
+    def cancel_multiple(self, typ=None, *args):
         self.popup.dismiss()
 
     def show_filter_panel(self):

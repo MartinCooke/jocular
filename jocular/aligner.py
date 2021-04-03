@@ -19,7 +19,7 @@ from jocular.gradient import estimate_background, estimate_gradient
 class Aligner(Component):
 
     do_align = ConfigParserProperty(1, 'Aligner', 'do_align', 'app', val_type=int)
-    smooth_edges = ConfigParserProperty(0, 'Aligner', 'smooth_edges', 'app', val_type=int)
+    smooth_edges = ConfigParserProperty(1, 'Aligner', 'smooth_edges', 'app', val_type=int)
     ideal_star_count = ConfigParserProperty(30, 'Aligner', 'ideal_star_count', 'app', val_type=int)
 
     def __init__(self):

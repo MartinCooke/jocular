@@ -42,7 +42,7 @@ class Stacker(Component):
     spectral_mode = OptionProperty('mono', options=['mono', 'LRGB', 'L+'])
     confirm_on_clear_stack = ConfigParserProperty(0, 'Confirmations', 'confirm_on_clear_stack', 'app', val_type=int)
     reload_rejected = ConfigParserProperty(0, 'rejects', 'reload_rejected', 'app', val_type=int)
-    use_TOA_for_exposure = ConfigParserProperty(0, 'Exposure', 'use_TOA_for_exposure', 'app', val_type=int)
+    use_TOA_for_exposure = ConfigParserProperty(1, 'Exposure', 'use_TOA_for_exposure', 'app', val_type=int)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

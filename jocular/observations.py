@@ -19,22 +19,13 @@ from jocular.table import Table
 from jocular.metadata import get_metadata
 
 
-def simple_metadata(d):
-    return { 
-        'Name': d.get('Name', ''),
-        'OT': d.get('OT', ''),
-        'Con': d.get('Con', ''),
-        'Session': d.get('session', ''),
-        'N': d.get('nsubs', 0),
-        'Notes': d.get('Notes', '')
-    }    
-
 class Observations(Component):
 
     def __init__(self):
         super().__init__()
         self.app = App.get_running_app()
         Clock.schedule_once(self.load_observations, 0)
+        # self.load_observations()
 
     def get_observations(self):
         if not hasattr(self, 'observations'):
@@ -42,21 +33,18 @@ class Observations(Component):
         return self.observations
 
     def load_observations(self, dt=None):
-        ''' Load json file containing observation details. If this file cannot
-            be found, rebuild. (new in v0.5)
+        ''' Load json file containing observation details. If any problem,
+            set observations to empty and continue.
         '''
         try:
             with open(self.app.get_path('previous_observations.json'), 'r') as f:
                 self.observations = json.load(f)
-        except:
+            Logger.info('Observations: Loaded {:} observations'.format(
+                len(self.observations)))
+        except Exception as e:
+            Logger.warn('Observations: none loaded ({:})'.format(e))
             self.observations = {}
-            for sesh in glob.glob(os.path.join(self.app.get_path('captures'), '*')):
-                for dso in glob.glob(os.path.join(sesh, '*')):
-                    if os.path.isdir(dso):
-                        self.observations[dso] = simple_metadata(get_metadata(dso))
-        self.update_status()
-        Logger.info('Observation: Loaded {:} observations'.format(
-            len(self.observations)))
+        self.info('Loaded {:}'.format(len(self.observations)))
 
     def save_observations(self):
         try:
@@ -69,12 +57,9 @@ class Observations(Component):
     def build_observations(self):
         # table construction ~150ms
 
-        if not hasattr(self, 'observations'):
-            self.load_observations()
-
         return Table(
             size=Window.size,
-            data=self.observations,
+            data=self.get_observations(),
             name='Observations',
             description='click on DSO name to load',
             cols={
@@ -92,7 +77,8 @@ class Observations(Component):
             )    
 
     def show_observations(self, *args):
-        '''Called from menu to browse DSOs; open on first use'''
+        '''Called from menu to browse DSOs; open on first use
+        '''
 
         if not hasattr(self, 'observations_table'):
             self.observations_table = self.build_observations()
@@ -132,14 +118,8 @@ class Observations(Component):
                 self._delete(s)
                 del self.observations[s]
         self.observations_table.update()
-        self.update_status()
-
-    def update_status(self):
-        ''' Every time we update the status line we also save the observations
-        '''
-        if hasattr(self, 'observations'):
-            self.save_observations()
-            self.info('{:}'.format(len(self.observations)))
+        self.save_observations()
+        self.info('{:}'.format(len(self.observations)))
 
     def _delete(self, path):
         try:
@@ -152,16 +132,17 @@ class Observations(Component):
             Logger.error('Observations: deleting observations ({:})'.format(e))
             self.error('problem on delete')
 
-    # needs testing
     def update(self, oldpath, newpath):
-        # we have either an existing observation being saved or a new observation
-        # so read it and extra required info to update self.observations
+        ''' We have either an existing observation being saved or a 
+            new observation, so read it and generate extra required info to 
+            update self.observations
+        '''
 
         # if not yet built, no worries because it will be found when next built
         if not hasattr(self, 'observations'):
             return
 
-        self.observations[newpath] = simple_metadata(get_metadata(newpath))
+        self.observations[newpath] = get_metadata(newpath, simple=True)
         # user has changed directory
         if oldpath != newpath:
             if oldpath in self.observations:
@@ -171,7 +152,8 @@ class Observations(Component):
         if hasattr(self, 'observations_table'):
             self.observations_table.update()
 
-        self.update_status()
+        self.save_observations()
+        self.info('{:}'.format(len(self.observations)))
 
     def load_dso(self, row):
         self.observations_table.hide()
