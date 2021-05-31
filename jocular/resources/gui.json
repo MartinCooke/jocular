@@ -51,27 +51,6 @@
 			"text": "fit",
 			"action": "fit_to_window"
 		},
-		"brightness": {
-			"angle": [328, 334],
-			"location": "outside_ring",
-			"control_type": "JLever",
-			"values": [0.15, 1],
-			"radial": true,
-			"text": "--dim",
-			"font_size": "12sp",
-			"initial": 0.5,
-			"save": false
-		},
-		"transparency": {
-			"angle": [336, 342],
-			"location": "outside_ring",
-			"control_type": "JLever",
-			"values": [-0.1, 1],
-			"radial": true,
-			"text": "--ring",
-			"font_size": "12sp",
-			"initial": 0
-		},
 		"quit": {
 			"angle": 19,
 			"location": "mid_ring",
@@ -79,14 +58,16 @@
 			"icon": "quit",
 			"text": "quit",
 			"action": "confirm_close"
-		},
+		}
+	},
+	"SettingsManager": {
 		"settings": {
 			"angle": 24.1,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "settings",
 			"text": "conf",
-			"action": "open_settings"
+			"action": "show"
 		}
 	},
 	"Calibrator": {
@@ -384,71 +365,46 @@
 			"action": "slew"
 		}
 	},
-	"CaptureScript":{
+	"ExposureChooser": {
 		"exposure_button": {
 			"angle": 356,
 			"location": "mid_ring",
 			"control_type": "JButton",
-			"text": "10 s",
-			"action": "show_exposure_panel",
+			"text": "",
+			"action": "toggle",
 			"radial": true
-		},
+		}
+	},
+	"FilterChooser": {
 		"filter_button": {
 			"angle": 4,
 			"location": "mid_ring",
 			"control_type": "JButton",
-			"text": "L",
-			"action": "show_filter_panel",
+			"text": "",
+			"action": "toggle",
 			"radial": true
-		},
-		"frame_script": {
+		}
+	},
+	"CaptureScript": {
+		"script_button": {
 			"angle": 9,
 			"location": "mid_ring",
-			"control_type": "JToggleButton",
+			"control_type": "JButton",
 			"text": "frame",
 			"radial": true,
 			"group": "current_script",
+			"action": "show_menu",
 			"initial": 1
-		},
-		"light_script": {
-			"angle": 11.5,
+		}
+	},
+	"DeviceManager": {
+		"devices": {
+			"angle": 349,
 			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"text": "light",
+			"control_type": "JButton",
+			"text": "kit",
 			"radial": true,
-			"group": "current_script"
-		},
-		"seq_script": {
-			"angle": 14,
-			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"text": "seq",
-			"radial": true,
-			"group": "current_script"
-		},
-		"dark_script": {
-			"angle": 350.8,
-			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"text": "dark",
-			"radial": true,
-			"group": "current_script"
-		},
-		"flat_script": {
-			"angle": 348.3,
-			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"text": "flat",
-			"radial": true,
-			"group": "current_script"
-		},
-		"bias_script": {
-			"angle": 345.8,
-			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"text": "bias",
-			"radial": true,
-			"group": "current_script"
+			"action": "show"
 		}
 	},
 	"Snapshotter": {

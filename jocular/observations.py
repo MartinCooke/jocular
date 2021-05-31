@@ -2,17 +2,14 @@
 '''
 
 import os
-import random
-import shutil
-import time
 import glob
 import json
-from datetime import datetime
+from loguru import logger
 
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.logger import Logger
+from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
 from jocular.table import Table
@@ -25,7 +22,6 @@ class Observations(Component):
         super().__init__()
         self.app = App.get_running_app()
         Clock.schedule_once(self.load_observations, 0)
-        # self.load_observations()
 
     def get_observations(self):
         if not hasattr(self, 'observations'):
@@ -39,20 +35,43 @@ class Observations(Component):
         try:
             with open(self.app.get_path('previous_observations.json'), 'r') as f:
                 self.observations = json.load(f)
-            Logger.info('Observations: Loaded {:} observations'.format(
-                len(self.observations)))
+            logger.info('Loaded {:} observations'.format(len(self.observations)))
         except Exception as e:
-            Logger.warn('Observations: none loaded ({:})'.format(e))
-            self.observations = {}
-        self.info('Loaded {:}'.format(len(self.observations)))
+            logger.warning('none loaded, rescanning captures ({:})'.format(e))
+            self.get_observations_from_captures()
 
     def save_observations(self):
         try:
             with open(self.app.get_path('previous_observations.json'), 'w') as f:
                 json.dump(self.observations, f, indent=1)
-            Logger.info('Observations: saved {:}'.format(len(self.observations)))
+            logger.info('saved {:}'.format(len(self.observations)))
         except Exception as e:
-            Logger.warn('Observations: cannot save previous observations ({:})'.format(e))
+            logger.warning('cannot save previous observations ({:})'.format(e))
+
+    def get_observations_from_captures(self):
+        ''' look in captures and its subdirectories to build observations structure
+        '''
+        self.observations = {}
+        for sesh in glob.glob(os.path.join(self.app.get_path('captures'), '*')):
+            for dso in glob.glob(os.path.join(sesh, '*')):
+                if os.path.isdir(dso):
+                    self.observations[dso] = get_metadata(dso, simple=True)
+        self.save_observations()
+
+    def rebuild_observations(self, *args):
+        ''' rebuild observations from scratch
+        '''
+        try:
+            self.get_observations_from_captures()
+            Clock.schedule_once(self.rebuild_table, .1)
+        except Exception as e:
+            logger.exception(e)
+
+
+    def rebuild_table(self, dt=None):
+        self.observations_table.data = self.get_observations()         
+        self.observations_table.update()
+        toast('rebuilt!')
 
     def build_observations(self):
         # table construction ~150ms
@@ -70,7 +89,9 @@ class Observations(Component):
                 'N': {'w': 40, 'type': int},
                 'Notes': {'w': 1, 'align': 'left'}
                 },
-            actions={'move to delete dir': self.move_to_delete_folder},
+            actions={
+                'move to delete dir': self.move_to_delete_folder,
+                'rebuild observations': self.rebuild_observations},
             on_hide_method=self.app.table_hiding,
             initial_sort_column='Session', 
             initial_sort_direction='reverse'
@@ -103,34 +124,25 @@ class Observations(Component):
                     try:
                         os.rmdir(dso)
                     except Exception as e:
-                        Logger.warn('Observations: cannot remove observation directory {:} ({:})'.format(dso, e))
+                        logger.warning('cannot remove observation directory {:} ({:})'.format(dso, e))
         # remove empty session dirs
         for sesh in glob.glob(os.path.join(self.app.get_path('captures'), '*')):
             if len(os.listdir(sesh)) == 0:
                 try:
                     os.rmdir(sesh)
                 except Exception as e:
-                    Logger.warn('Observations: cannot remove session directory {:} ({:})'.format(sesh, e))
+                    logger.warning('cannot remove session directory {:} ({:})'.format(sesh, e))
 
     def move_to_delete_folder(self, *args):
+        objio = Component.get('ObjectIO')
         for s in self.observations_table.selected:
             if s in self.observations:
-                self._delete(s)
+                objio.delete_file(s)
                 del self.observations[s]
+        logger.info('Deleted {:} observations'.format(len(self.observations_table.selected)))
         self.observations_table.update()
+        # self.observations_table.show()
         self.save_observations()
-        self.info('{:}'.format(len(self.observations)))
-
-    def _delete(self, path):
-        try:
-            dname = os.path.join(self.app.get_path('deleted'),
-                '{:}_{:}_{:d}'.format(os.path.basename(path),
-                datetime.now().strftime('%d_%b_%y_%H_%M'),
-                random.randint(1,9999)))
-            shutil.move(os.path.join(self.app.get_path('captures'), path), dname)
-        except Exception as e:
-            Logger.error('Observations: deleting observations ({:})'.format(e))
-            self.error('problem on delete')
 
     def update(self, oldpath, newpath):
         ''' We have either an existing observation being saved or a 
@@ -143,6 +155,7 @@ class Observations(Component):
             return
 
         self.observations[newpath] = get_metadata(newpath, simple=True)
+        logger.debug('new path {:} = {:}'.format(newpath, self.observations[newpath]))
         # user has changed directory
         if oldpath != newpath:
             if oldpath in self.observations:
@@ -153,7 +166,6 @@ class Observations(Component):
             self.observations_table.update()
 
         self.save_observations()
-        self.info('{:}'.format(len(self.observations)))
 
     def load_dso(self, row):
         self.observations_table.hide()

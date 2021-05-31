@@ -7,33 +7,50 @@ from datetime import datetime
 import numpy as np
 from skimage.io import imsave
 from PIL import Image, ImageDraw, ImageFont
+from loguru import logger
 
-from kivy.logger import Logger
 from kivy.app import App
 from kivy.core.window import Window
-from kivy.properties import OptionProperty, ConfigParserProperty
+from kivy.properties import OptionProperty, BooleanProperty, NumericProperty
 from kivy.metrics import Metrics as KivyMetrics
+from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 from jocular.image import save_image
 from jocular.metrics import Metrics
 from jocular.utils import s_to_minsec, unique_member, purify_name
 
-class Snapshotter(Component):
+class Snapshotter(Component, Settings):
 
+    save_settings= ['style', 'annotation', 'save_format']
+    
     style = OptionProperty('eyepiece', options=['eyepiece', 'landscape'])
     annotation = OptionProperty('full', options=['plain', 'name', 'full'])
     save_format = OptionProperty('.png', options=['png', 'jpg', 'fit'])
-    dark_surround = ConfigParserProperty(1, 'Snapshotter', 'dark_surround', 'app', val_type=int)
-    framewidth = ConfigParserProperty(1, 'Snapshotter', 'framewidth', 'app', val_type=int)
-    imreduction = ConfigParserProperty(1, 'Snapshotter', 'imreduction', 'app', val_type=float)
+
+    imreduction = NumericProperty(1.8)
+    framewidth = NumericProperty(0)
+    dark_surround = BooleanProperty(True)
+
+    configurables = [
+        ('dark_surround', {
+            'name': 'surround is', 
+            'boolean': {'dark': True, 'light': False},
+            'help': 'Shade of the region surrounding the eyepiece view'}),
+        ('imreduction', {
+            'name': 'image size reduction (eyepiece view)', 'float': (.5, 4, .1),
+            'help': 'Reduces image size by this factor (useful on high-density screens)',
+            'fmt': '{:.1f} x smaller'}),
+        ('framewidth', {
+            'name': 'add frame size around image', 'float': (0, 15, 1),
+            'help': 'Adds a frame margin (landscape image only)',
+            'fmt': '{:.0f} pixels'})
+        ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-
-    def on_new_object(self):
-        self.info('ready')
 
     def mss_grabber(self, bbox=None):
         with mss.mss() as sct:
@@ -90,14 +107,14 @@ class Snapshotter(Component):
         im = stacker.get_stack()
         if im is not None:
             im = im * (2**16 - 1)
-            Logger.debug('Snapshotter: min {:} max {:}'.format(np.min(im), np.max(im)))
+            logger.debug('min {:} max {:}'.format(np.min(im), np.max(im)))
             save_image(data=im.astype(np.uint16), path=self.save_path,
                 exposure=stacker.describe().get('total_exposure', None),
                 sub_type=unique_member([s.sub_type for s in stacker.subs]),
                 filt = unique_member([s.filter for s in stacker.subs]))
-            self.info(os.path.basename(self.save_path)[:-4])
+            toast('Saved fits to {:}'.format(os.path.basename(self.save_path)), duration=2.5)
         else:
-            self.warn('no image')
+            toast('no image to save')
 
     # construct annotations
 
@@ -129,13 +146,7 @@ class Snapshotter(Component):
         return [s.telescope, s.camera]
 
     def session_details(self):
-        s = Component.get('Session')
-        return [s.session, 
-            '{:5.2f} SQM'.format(s.SQM) if s.SQM else None,
-            '{:}\N{DEGREE SIGN}C'.format(s.temperature) if s.temperature else None,
-            'seeing {:}'.format(s.seeing) if s.seeing else None, 
-            'transp {:}'.format(s.transparency) if s.transparency else None
-            ]
+        return Component.get('Session').describe()
 
     def processing_details(self):
 
@@ -181,8 +192,8 @@ class Snapshotter(Component):
         try:
             im = self.mss_grabber(bbox=(cx - r, cy - r, cx + r, cy + r))
         except Exception as e:
-            Logger.error('Snapshotter: problem with screen grab ({:})'.format(e))
-            self.error('screengrab issue')
+            logger.exception('problem with screen grab ({:})'.format(e)) 
+            toast('screen grab error ({:})'.format(e))
             return
 
         blur = 17                     # radius of blurred edge in pixels
@@ -212,8 +223,8 @@ class Snapshotter(Component):
                 im = im.convert('RGBA')
             im = Image.alpha_composite(im, grad_im)
         except Exception as e:
-            Logger.error('Snapshotter: problem compositing ({:})'.format(e))
-            self.error('composite error')
+            logger.exception('problem compositing ({:})'.format(e))
+            toast('compositing error ({:})'.format(e))
             return
 
         # annotate Draw object with required level of detail
@@ -256,8 +267,8 @@ class Snapshotter(Component):
             imsave(nm, im[::-1])
             orig_im = Image.open(nm)
         except Exception as e:
-            self.error('load/save error')
-            Logger.error('Snapshotter: load/save problem ({:})'.format(e))
+            logger.exception('load/save problem ({:})'.format(e))
+            toast('load/save error ({:})'.format(e))
             return
 
         w, h = orig_im.size
@@ -341,7 +352,7 @@ class Snapshotter(Component):
                 bg = Image.new('RGB', im.size, (255, 255, 255))
                 bg.paste(im, im)
                 bg.save(self.save_path)
-            self.info(os.path.basename(self.save_path)[:-4])
+            toast('saved to {:}'.format(self.save_path), duration=2)
         except Exception as e:
-            Logger.error('Snapshotter: problem with _save ({:})'.format(e))
-            self.error('save error')
+            logger.exception('problem with _save ({:})'.format(e))
+            toast('error saving ({:})'.format(e), duration=2)

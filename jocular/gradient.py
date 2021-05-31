@@ -3,7 +3,7 @@
 
 import numpy as np
 from numpy.polynomial import polynomial
-from kivy.logger import Logger
+from loguru import logger
 from jocular.utils import percentile_clip
 
 def estimate_background(im):
@@ -53,7 +53,7 @@ def estimate_gradient(im):
             _polyfit2d(x[inds], y[inds], z[inds], deg=[2, 1]))
 
     except Exception as e:
-        Logger.debug('Gradient: gradient estimation failed; returning zeros ({:})'.format(e))
+        logger.warning('gradient estimation failed; returning zeros ({:})'.format(e))
         return np.zeros(im.shape)
 
 

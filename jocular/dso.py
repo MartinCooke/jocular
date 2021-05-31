@@ -1,639 +1,167 @@
-''' Represents DSO name and object panel (including entry of new DSO info)
+''' Handles DSO details including lookup and catalogue entry
 '''
 
-import os
 import math
+from functools import partial
+
+from loguru import logger
 
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty, ObjectProperty, DictProperty
+from kivy.properties import StringProperty, BooleanProperty, DictProperty
 from kivy.lang import Builder
-from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout
-from kivy.logger import Logger
-from kivy.clock import Clock
-from kivy.metrics import dp
-from kivy.core.clipboard import Clipboard
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.stacklayout import MDStackLayout
+from kivymd.uix.button import MDTextButton
 
 from jocular.component import Component
-from jocular.widgets import JWidget, JPopup
 from jocular.RA_and_Dec import RA, Dec
 
-Builder.load_string(
-    '''
+Builder.load_string('''
 
-<MatchButton>:
-    size_hint: 1, None
-    markup: True
-    text_size: self.size
-    padding: dp(10), dp(1)
-    halign: 'left'
-    font_size: '14sp'
-    color: app.lowlight_color
-    height: dp(18)
+<MyTextField>:
+    current_hint_text_color: app.hint_color
+    size_hint: (None, None)
+    height: '28dp'
+    width: '100dp'
+    helper_text_mode: 'on_focus'        
+    color_mode: 'accent'
+    #foreground_color: app.hint_color    
+    #color_mode: 'custom'
+    font_size: app.form_font_size # '20sp'
+    current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text)  else app.hint_color
+    on_text: root.invalid = False
 
-<DSO>:
+
+<DSOBoxLayout@BoxLayout>:
+    size_hint: (1, None)
+    height: '36dp'
+
+<DSO_panel>:
+    name_field: _name
+    padding: '10dp'
+    adaptive_height: True
+    #adaptive_width: True
+    pos_hint: {'top': .99, 'x': 0} if root.dso.show_DSO else {'top': .99, 'right': -1000} 
     size_hint: None, None
     orientation: 'vertical'
-    padding: dp(5), dp(2)
-    size: app.gui.width / 3, app.gui.height / 3
-    y: .67 * app.gui.height
-    x: 0 if root.show_DSO else -self.width
-
-    Button:
-        size_hint: 1, None
-        font_size: '20sp'
-        text: '[b]{:}[/b]'.format(root.Name) if root.Name else 'DSO name'
-        on_press: root.edit()
-        height: dp(30)
-        markup: True
-        text_size: self.size
-        padding: dp(3), dp(1)
-        halign: 'left'
-        color: app.lowlight_color
-        background_color: 0, 0, 0, 0
-
-    ParamValue:
-        param: 'Type'
-        value: root.otypes.get(root.OT, root.OT)
-        callback: root.edit
-    ParamValue:
-        param: 'Con'
-        value: root.Con
-        callback: root.edit
-    ParamValue:
-        param: 'RA'
-        value: root.RA
-        callback: root.paste_RA
-        #callback: Clipboard.copy(self.value)
-    ParamValue:
-        param: 'Dec'
-        value: root.Dec
-        #callback: Clipboard.copy(self.value)
-        callback: root.paste_Dec
-    ParamValue:
-        param: 'Mag'
-        value: root.Mag 
-        callback: root.edit
-    ParamValue:
-        param: 'Diam'
-        value: root.Diam
-        callback: root.edit
-    ParamValue:
-        param: 'Info'
-        value: root.Other
-        callback: root.edit
-
-    Label:
-        size_hint: 1, 1
-
-<ParamLabel@Label>:
-    size_hint: None, None
-    size: dp(100), dp(26)
-    text_size: self.size
-    padding: dp(5), dp(1)
-    markup: True
-    halign: 'right'
-    valign: 'center'
-    color: app.lowlight_color
-    font_size: app.form_font_size
-
-<WhiteParamLabel@ParamLabel>:
-    canvas.before:
-        Color:
-            rgba: .8, .8, .8, 1
-        Rectangle:
-            pos: self.pos
-            size: self.size
-    color: 0, 0, 0, 1
-
-<ParamValue2@TextInput>:
-    size_hint: None, None
-    size: dp(50), dp(26)
-    halign: 'right'
-    valign: 'center'
-    background_color: .8, .8, .8, 1
-    font_size: app.form_font_size
-
-<MyBoxLayout>:
-    size_hint: 1, None
-    height: dp(24)
-
-<DSOInfo>:
-    orientation: 'vertical'
-    size_hint: None, None
-    size: dp(360), dp(630)
-    spacing: dp(2) # 3 # dp(3)
-    matches: _matches
-    dso_input: _dso
-
-    Label:
-        size_hint: 1, None
-        height: dp(20)
-        color: app.lowlight_color
-        background_color: 0, 0, 0, 0
-        text: 'Type DSO name below, choose from list and "select"'
-    Label:
-        size_hint: 1, None
-        height: dp(20)
-        color: app.lowlight_color
-        background_color: 0, 0, 0, 0
-        text: 'Or add/edit object information and "update catalogue"'
-
-    TextInput:
-        unfocus_on_touch: False
-        id: _dso
-        font_size: '18sp'
-        text: root.dso.Name
-        size_hint: 1, None
-        valign: 'center'
-        height: dp(30)
-        on_text: root.lookup_dso(self.text)
-        background_color: .8, .8, .8, 1
-
-    Label:
-        size_hint: 1, 1
 
     BoxLayout:
-        canvas.before:
-            Color:
-                rgba: .1, .1, .1, 1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-        id: _matches
-        size_hint: 1, None
-        height: dp(200)
-        orientation: 'vertical'
+        size_hint: (1, None)
+        height: '48dp'
 
-    Label:
-        size_hint: 1, 1
+        MyTextField:
+            id: _name
+            width: '300dp'
+            height: '32dp'
+            helper_text: 'DSO'
+            hint_text: 'dso'
+            on_text: root.dso.Name_changed(self.text)
+            font_size: '{:}sp'.format(int(app.form_font_size[:-2]) + 8) # 28sp
 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Name[/b]'
-        ParamValue2:
-            text: root.Name
-            on_text: root.check(self, 'Name')
-            size_hint: 1, 1
-            halign: 'left'
+    DSOBoxLayout:
+        MyTextField:
+            hint_text: 'type'
+            helper_text: 'e.g. PN, GX'
+            on_focus: root.dso.OT_changed(self) if not self.focus else None
+            text: root.dso.OT
+        MyTextField:
+            hint_text: 'con'
+            helper_text: 'e.g. PER'
+            on_focus: root.dso.Con_changed(self) if not self.focus else None
+            text: root.dso.Con
 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Object type[/b]'
-        ParamValue2:
-            text: root.OT
-            on_text: root.check(self, 'OT')
-        ParamLabel:
-            size_hint: .3, 1
-            text: '1-3 char code'
-            halign: 'left'
+    DSOBoxLayout:
+        MyTextField:
+            hint_text: 'RA'
+            helper_text: "e.g. 21h30'42"
+            on_focus: root.dso.RA_changed(self) if not self.focus else None
+            text: '' if root.dso.RA == 'nan' else root.dso.RA
+        MyTextField:
+            hint_text: 'dec'
+            helper_text: "-3 21' 4"
+            on_focus: root.dso.Dec_changed(self) if not self.focus else None
+            text: '' if root.dso.Dec == 'nan' else root.dso.Dec
 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Constellation[/b]'
-        ParamValue2:
-            on_text: root.check(self, 'Con')
-            text: root.Con
-        ParamLabel:
-            size_hint: .3, 1
-            text: '3 char code'
-            halign: 'left'
+    DSOBoxLayout:
+        MyTextField:
+            hint_text: 'diam'
+            helper_text: "e.g. 21'"
+            on_focus: root.dso.Diam_changed(self) if not self.focus else None
+            text: root.dso.Diam
 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]RA[/b]'
-        ParamValue2:
-            text: root.RA_h
-            on_text: root.check(self, 'RA_h')
-        WhiteParamLabel:
-            width: dp(15)
-            text: 'h'
-        ParamValue2:
-            on_text: root.check(self, 'RA_m')
-            text: root.RA_m
-        WhiteParamLabel:
-            width: dp(15)
-            text: "m"
-        ParamValue2:
-            text: root.RA_s
-            on_text: root.check(self, 'RA_s')
-        WhiteParamLabel:
-            width: dp(15)
-            text: 's'
+        MyTextField:
+            hint_text: 'mag'
+            helper_text: "e.g. 14.1"
+            on_focus: root.dso.Mag_changed(self) if not self.focus else None
+            text: root.dso.Mag
 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Dec[/b]'
-        ParamValue2:
-            text: root.Dec_d
-            on_text: root.check(self, 'Dec_d')
-        WhiteParamLabel:
-            width: dp(15)
-            text: '\u00b0'
-        ParamValue2:
-            text: root.Dec_m
-            on_text: root.check(self, 'Dec_m')
-        WhiteParamLabel:
-            width: dp(15)
-            text: "'"
-        ParamValue2:
-            text: root.Dec_s
-            on_text: root.check(self, 'Dec_s')
-        WhiteParamLabel:
-            width: dp(15)
-            text: '"'
-
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Magnitude[/b]'
-        ParamValue2:
-            text: root.Mag
-            on_text: root.check(self, 'Mag')
- 
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Diameter[/b]'
-        ParamValue2:
-            text: root.Diam
-            on_text: root.check(self, 'Diam')
-        ParamLabel:
-            size_hint: .3, 1
-            text: 'arcmins'
-            halign: 'left'
-
-    MyBoxLayout:
-        ParamLabel:
-            text: '[b]Other[/b]'
-        ParamValue2:
-            text: root.Other
-            on_text: root.Other = self.text
-            size_hint: 1, 1
-            halign: 'left'
-
-    MyBoxLayout:
-        height: dp(30)
-        Label:
-            size_int: .67, .8
-        Button:
-            text: 'Clear fields'
-            size_hint: .33, .8
-            on_press: root.clear_DSO()
-
-    Label:
-        size_hint: 1, 1
-
-    MyBoxLayout:
-        height: dp(35)
-        Button:
-            text: 'Select'
-            size_hint: .3, .8
-            on_press: root.done()
-        Button:
-            text: 'Update catalogue'
-            size_hint: .4, .8
-            on_press: root.add_to_catalogue()
-        Button:
-            text: 'Cancel'
-            size_hint: .3, .8
-            on_press: root.dso.popup.dismiss()
-
-    ParamLabel:
-        size_hint: 1, None
-        height: dp(35)
-        text: root.message
-        halign: 'center'
-
-'''
-)
+    DSOBoxLayout:
+        MyTextField:
+            width: '200dp'
+            hint_text: 'other'
+            helper_text: ""
+            on_focus: root.dso.Other_changed(self) if not self.focus else None
+            text: root.dso.Other
+''')
 
 
-class MyBoxLayout(BoxLayout):
-    pass
+class MyTextField(MDTextField):
+    invalid = BooleanProperty(False)
 
-
-class MatchButton(Button, JWidget):
-    pass
-
-
-class DSOInfo(BoxLayout):
-
-    Name = StringProperty('')
-    OT = StringProperty('')
-    Con = StringProperty('')
-    RA_h = StringProperty('')
-    RA_m = StringProperty('')
-    RA_s = StringProperty('')
-    Dec_d = StringProperty('')
-    Dec_m = StringProperty('')
-    Dec_s = StringProperty('')
-    Mag = StringProperty('')
-    Diam = StringProperty('')
-    Other = StringProperty('')
-    message = StringProperty('')
-    matches = ObjectProperty(None)
-    all_valid = BooleanProperty(False)
-    dso_input = ObjectProperty(None)
+class DSO_panel(MDBoxLayout):
+    ''' visual representation of editable DSO properties
+    '''
 
     def __init__(self, dso, **kwargs):
         self.dso = dso
-
-        # fill in current values
-        for p in ['Name', 'Con', 'OT', 'Mag', 'Diam', 'Other']:
-            setattr(self, p, getattr(dso, p))
-
-        # deal with RA/Dec
-        try:
-            self.RA_h, self.RA_m, self.RA_s = dso.RA.replace('h', '').split()
-            self.Dec_d, self.Dec_m, self.Dec_s = dso.Dec.replace('\u00b0', '').split()
-        except:
-            pass
-
         super().__init__(**kwargs)
-        self.max_matches = 12
-        self.match_buttons = [
-            MatchButton(on_press=self.choose_dso) for i in range(self.max_matches)
-        ]
-        for b in self.match_buttons:
-            self.matches.add_widget(b)
 
-        Clock.schedule_once(self.set_focus, 0)
+def float_to_str(x):
+    ''' nans with return empty string
+    '''
+    try:
+        s = str(x)
+        if s == 'nan':
+            return ''
+        return s
+    except:
+        return ''
 
-    def set_focus(self, dt):
-        self.dso_input.focus = True
+@logger.catch()
+def str_to_arcmin(diam):
+    ''' convert string representation of diameter to float, taking
+        account of possible suffices (degrees, min, secs); 
+        need to raise correct exception (to do)
+    '''
+    diam = diam.strip()
+    if diam == 'nan':
+        return math.nan
+    if not diam:
+        return math.nan
+    if diam.endswith('d') or diam.endswith('\u00b0'):
+        return float(diam[:-1]) * 60
+    if diam.endswith('"'):
+        return float(diam[:-1]) / 60
+    if diam.endswith("'"):
+        return float(diam[:-1])
+    return float(diam)
 
-    def on_Mag(self, *args):
-        if self.Mag == 'nan':
-            self.Mag = ''
+def arcmin_to_str(diam):
+    ''' convert float representation of diam to a string with
+        the most suitable suffix (degree, arcmin, arcsec)
+    '''
+    if math.isnan(diam):
+        return ''
+    if diam > 60:
+        return "{:.2f}\u00b0".format(diam / 60)
+    if diam < 1:
+        return '{:.2f}"'.format(diam * 60)
+    return "{:.2f}\'".format(diam)
 
-    def on_Diam(self, *args):
-        if self.Diam == 'nan':
-            self.Diam = ''
+class DSO(Component):
 
-    def check_value(self, name, value):
-        try:
-            if name == 'Name':
-                ok = len(value) > 0
-                mess = 'must supply a name'
-            elif name == 'Mag':
-                ok = self.in_range(value, -20, 40, nonempty=False)
-                mess = 'magnitude out of range'
-            elif name == 'OT':
-                ok = len(value) in [1, 2, 3]
-                mess = 'object type must be 1 to 3-char code'
-            elif name == 'Con':
-                ok = len(value) == 3
-                mess = 'constellation must be 3-char code'
-            elif name == 'RA_h':
-                ok = self.in_range(value, 0, 23)
-                mess = 'RA hours must be 0-23'
-            elif name == 'RA_m':
-                ok = self.in_range(value, 0, 60)
-                mess = 'RA mins must be 0-60'
-            elif name == 'RA_s':
-                ok = self.in_range(value, 0, 60)
-                mess = 'RA secs must be 0-60'
-            elif name == 'Dec_d':
-                ok = self.in_range(value, -90, 90)
-                mess = 'Dec degrees must be -90 to +90'
-            elif name == 'Dec_m':
-                ok = self.in_range(value, 0, 60)
-                mess = 'Dec mins must be 0-60'
-            elif name == 'Dec_s':
-                ok = self.in_range(value, 0, 60)
-                mess = 'Dec secs must be 0-60'
-            elif name == 'Diam':
-                ok = self.in_range(value, 0, 9999, nonempty=False)
-                mess = 'Diameter must be a positive number'
-            elif name == 'Other':
-                ok = True
-                mess = ''
-        except Exception:
-            ok = False
-            mess = 'validation issue'
-
-        if ok:
-            mess = None
-
-        return mess
-
-    def check(self, field, name):
-        value = field.text.strip()
-        mess = self.check_value(name, value)
-        setattr(self, name, value)
-        if mess is None:
-            self.message = ''
-            field.foreground_color = 0, 0, 0, 1
-        else:
-            self.message = mess
-            field.foreground_color = 1, 0, 0, 1
-
-    def in_range(self, val, lo, hi, nonempty=True):
-        if nonempty and not val:
-            return False
-        if not nonempty and val == 'nan':
-            return True
-        if not nonempty and not val:
-            return True
-        try:
-            v = float(val)
-            return v <= hi and v >= lo
-        except:
-            return False
-
-    def done(self, *args):
-        # validate properties and form into suitable dict for DSO to display
-
-        props = {}
-        for p in ['OT', 'Con', 'Diam', 'Mag', 'Other']:
-            value = getattr(self, p)
-            if self.check_value(p, value) is None:
-                props[p] = value
-            else:
-                props[p] = ''
-
-        props['Name'] = self.Name
-
-        if (
-            self.check_value('RA_h', self.RA_h) is None
-            and self.check_value('RA_m', self.RA_m) is None
-            and self.check_value('RA_s', self.RA_s) is None
-        ):
-            props['RA'] = '{:2s}h {:2s} {:2s}'.format(self.RA_h, self.RA_m, self.RA_s)
-        else:
-            props['RA'] = ''
-
-        if (
-            self.check_value('Dec_d', self.Dec_d) is None
-            and self.check_value('Dec_m', self.Dec_m) is None
-            and self.check_value('Dec_s', self.Dec_s) is None
-        ):
-            props['Dec'] = '{:s}\u00b0 {:2s} {:2s}'.format(
-                self.Dec_d, self.Dec_m, self.Dec_s
-            )
-        else:
-            props['Dec'] = ''
-
-        self.dso.selected(props)
-
-    def choose_dso(self, but):
-        if len(but.text.strip()) > 0:
-            try:
-                ot, name = but.text.split(':')
-                self.show_DSO(name.strip(), ot.strip())
-            except:
-                pass
-
-    def show_DSO(self, name, ot):
-        self.Name = name
-        details = Component.get('ObservingList').lookup_details(
-            '{:}/{:}'.format(name, ot)
-        )
-        self.OT = details.get('OT', '')
-        self.Con = details.get('Con', '')
-        self.Mag = str(details.get('Mag', ''))
-        self.Diam = str(details.get('Diam', ''))
-        self.Other = str(details.get('Other', ''))
-        ra1, ra2, ra3 = str(RA(details.get('RA', ''))).split(' ')
-        self.RA_h = ra1.strip()[:-1]
-        self.RA_m = ra2.strip()
-        self.RA_s = ra3.strip()
-        dec1, dec2, dec3 = str(Dec(details.get('Dec', ''))).split(' ')
-        self.Dec_d = dec1.strip()[:-1]
-        self.Dec_m = dec2.strip()
-        self.Dec_s = dec3.strip()
-
-
-
-    def clear_DSO(self):
-        for p in ['Name', 'OT', 'Con', 'RA_h', 'RA_m', 'RA_s', 'Dec_d', 'Dec_m', 'Dec_s', 'Mag', 'Diam', 'Other']:
-            setattr(self, p, '')
-
-    def add_to_catalogue(self):
-
-        # check that data is all valid
-        for p in [
-            'Name',
-            'OT',
-            'Con',
-            'RA_h',
-            'RA_m',
-            'RA_s',
-            'Dec_d',
-            'Dec_m',
-            'Dec_s',
-            'Mag',
-            'Diam',
-            'Other',
-        ]:
-            resp = self.check_value(p, getattr(self, p))
-            if resp is not None:
-                self.message = resp
-                return
-
-        # check if catalogue exists; if not, create it and write header
-        # append row of data
-        try:
-            path = App.get_running_app().get_path('catalogues')
-            obj_file = os.path.join(path, 'user_objects.csv')
-            if not os.path.exists(obj_file):
-                with open(obj_file, 'w') as f:
-                    f.write('Name,RA,Dec,Con,OT,Mag,Diam,Other\n')
-        except Exception as e:
-            self.message = 'Problem creating user objects file'
-            Logger.error('DSO: problem creating objects list ({:})'.format(e))
-            return
-
-        try:
-            ra = 15 * float(self.RA_h) + float(self.RA_m) / 4 + float(self.RA_s) / 240
-            if float(self.Dec_d) < 0:
-                dec = (
-                    float(self.Dec_d)
-                    - float(self.Dec_m) / 60
-                    - float(self.Dec_s) / 3600
-                )
-            else:
-                dec = (
-                    float(self.Dec_d)
-                    + float(self.Dec_m) / 60
-                    + float(self.Dec_s) / 3600
-                )
-        except Exception as e:
-            self.message = 'Problem converting RA or Dec'
-            Logger.error('DSO: coverting RA or Dec ({:})'.format(e))
-            return
-
-        try:
-            Name = self.Name.strip()
-            OT = self.OT.strip().upper()
-            Con = self.Con.strip().upper()
-            Mag = self.Mag.strip()
-            if len(Mag) == 0:
-                Mag = math.nan
-            Diam = self.Diam.strip()
-            if len(Diam) == 0:
-                Diam = math.nan
-            Other = self.Other.strip().replace(',', ';')
-            with open(obj_file, 'a') as f:
-                f.write(
-                    '{:},{:.6f},{:.6f},{:},{:},{:},{:},{:}\n'.format(
-                        Name, ra, dec, Con, OT, Mag, Diam, Other
-                    )
-                )
-        except Exception as e:
-            self.message = 'Problem writing to user objects file'
-            Logger.error('DSO: writing to user objects file ({:})'.format(e))
-            return
-
-        # update objects listing (overwriting, if duplicate exists)
-        ol = Component.get('ObservingList')
-        try:
-            ol.objects['{:}/{:}'.format(Name, OT)] = {
-                'Name': Name,
-                'RA': ra,
-                'Dec': dec,
-                'Con': Con,
-                'OT': OT,
-                'Obs': 0,
-                'Added': '',
-                'List': 'N',
-                'Other': Other,
-                'Notes': '',
-                'Mag': float(Mag),
-                'Diam': float(Diam),
-            }
-            ol.compute_transits()
-            ol.update_status()
-
-        except Exception as e:
-            self.message = 'Problem updating objects list'
-            Logger.error('DSO: problem updating objects list ({:})'.format(e))
-            return
-
-        self.message = 'Written to catalogue!'
-
-    def lookup_dso(self, name):
-        """User has changed name field so look it up"""
-
-        self.clear_DSO()
-        for b in self.match_buttons:
-            b.text = ''
-        name = name.strip()
-        if name:
-            matches = sorted(
-                Component.get('ObservingList').lookup(
-                    name, max_matches=self.max_matches
-                )
-            )
-            if len(matches) == 1:
-                name, ot = matches[0].split('/')
-                self.show_DSO(name.strip(), ot.strip())
-            else:
-                for i, m in enumerate(matches):
-                    nm, ot = m.split('/')
-                    self.match_buttons[i].text = '{:}: {:}'.format(ot, nm)
-
-
-class DSO(BoxLayout, Component):
+    save_settings = ['show_DSO']
 
     Name = StringProperty('')
     Con = StringProperty('')
@@ -651,127 +179,281 @@ class DSO(BoxLayout, Component):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.app = App.get_running_app()
         otypes = Component.get('Catalogues').get_object_types()
         self.otypes = {k: v['name'] for k, v in otypes.items()}
-        App.get_running_app().gui.add_widget(self, index=8)
-        Logger.info('DSO: initialised')
+        self.dso_panel = DSO_panel(self)
+        self.app.gui.add_widget(self.dso_panel)
+        self.initial_values = {}
 
-    def on_Mag(self, *args):
-        if self.Mag == 'nan':
-            self.Mag = ''
-
-    def on_Diam(self, *args):
-        if self.Diam == 'nan':
-            self.Diam = ''
-        else:
-            try:
-                self.Diam = '{:.2f}'.format(float(self.Diam))
-            except Exception:
-                self.Diam = ''
-
-    def on_new_object(self, settings=None):
-        ''' Called at start and whenever user selects new object. Also called
-            when user selects a row from the DSO table.
+    def on_new_object(self):
+        ''' Called when user clicks new
         '''
-        if settings is None:
-            self.settings = Component.get('Metadata').get({'Name', 'OT'})
-            self._new_object()
-        else:
-            ''' Ask user for confirmation that they wish to rename the object
-            '''
-            self.settings = settings
-            if self.Name:
-                self.popup = JPopup(
-                    title='Change name to {:}?'.format(settings['Name']),
-                    actions={
-                        'Cancel': self.cancel_name_change,
-                        'Yes': self.confirmed_name_change,
-                    },
-                )
-                self.popup.open()
-            else:
-                self.confirmed_name_change()
 
-    def confirmed_name_change(self, *args):
-        self.changed = not Component.get('Stacker').is_empty()
-        self._new_object()
+        self.check_ambiguity = True
 
-    def cancel_name_change(self, *args):
-        pass
+        # empty DSO details
+        self.update_props({})
 
-    def _new_object(self, *args):
-        ''' Helper method called after normal new object selection or confirmation
-            of change of name
+        # store initial values so we can check for changes 
+        self.initial_values = {p: getattr(self, p) for p in self.props}
+
+
+    def on_previous_object(self):
+        ''' Called when user selected object in observations table
         '''
-        settings = self.settings
 
-        if 'Name' in settings and 'OT' in settings:
-            #  translate a few cases to new OTs
-            nm = settings['Name']
-            ot = settings['OT'].upper()
-            # deal with some legacies from v1
-            if ot == 'G+':
-                if nm.startswith('Arp') or nm.startswith('VV') or nm.startswith('AM '):
-                    ot = 'PG'
-                elif (
-                    nm.startswith('Hick')
-                    or nm.startswith('PCG')
-                    or nm.startswith('SHK')
-                ):
-                    ot = 'CG'
-            lookup_settings = Component.get('ObservingList').lookup_name(
-                '{:}/{:}'.format(nm, ot)
-            )
-            if lookup_settings is not None:
-                settings = lookup_settings
+        # switch off ambiguity check because no ambiguity on previous object's OT
+        self.check_ambiguity = False
 
-        # now extract all
-        for p in self.props:
-            setattr(self, p, str(settings.get(p, '')))
-        self.saved_props = {p: getattr(self, p) for p in self.props}
+        # Data for new object is in Metadata
+        settings = Component.get('Metadata').get({'Name', 'OT'})
 
+        # lookup rest from name and object type
+        full_settings = Component.get('ObservingList').lookup_name(
+            '{:}/{:}'.format(settings.get('Name', ''), settings.get('OT', '')))
+
+        # update DSO display
+        self.update_props(full_settings)
+
+        # store initial values so we can check for changes 
+        self.initial_values = {p: getattr(self, p) for p in self.props}
+
+        # switch back on in case user does wish to change OT after the event
+        self.check_ambiguity = True
+
+
+    def new_DSO_name(self, settings):
+        ''' Called when user selects a name from the DSO table. What we do depends
+            on whether we already have an object loaded, in which case we note the
+            change of name so that it can be confirmed on save.
+        '''
+
+        self.check_ambiguity = False
+
+        # lookup rest
+        full_settings = Component.get('ObservingList').lookup_name(
+            '{:}/{:}'.format(settings.get('Name', ''), settings.get('OT', '')))
+
+        # update DSO properties
+        self.update_props(full_settings)
+
+        # if stack is empty, treat this as a new observation
+        if Component.get('Stacker').is_empty():
+            logger.info('new DSO from table {:}'.format(full_settings))
+            self.initial_values = {p: getattr(self, p) for p in self.props}
+        else:
+            logger.info('user changes DSO name {:}'.format(full_settings))
+
+        self.check_ambiguity = True
+
+
+    @logger.catch()
+    def Name_changed(self, val, *args):
+        ''' Name is changed as soon as the text is altered to allow lookup
+            while other properties are changed on defocus
+        '''
+
+        if not self.check_ambiguity:
+            return
+
+        # lookup
+        OTs = Component.get('ObservingList').lookup_OTs(val)
+
+        # if unique match, fill in
+        if len(OTs) ==  1:
+            self.exact_match(val + '/' + OTs[0])
+            return
+
+        # clear all but name field to signal ambiguity
+        for p in set(self.props) - {'Name'}:
+            setattr(self, p, '')
+
+        if len(OTs) == 0:
+            # no match so set name
+            self.Name = val
+            self.new_values['Name'] = val
+            self.check_for_change()
+            return
+
+        self.choose_OT = MDStackLayout(pos_hint={'x': .1, 'top': 1}, spacing=[20, 20])
+        self.app.gui.add_widget(self.choose_OT)
+        for ot in OTs:
+            self.choose_OT.add_widget(MDTextButton(text=ot,
+                on_press=partial(self.exact_match, val + '/' + ot)))
+
+    def exact_match(self, m, *args):
+        if hasattr(self, 'choose_OT'):
+            self.choose_OT.clear_widgets()
+            del self.choose_OT
+        logger.debug('Found match: {:}'.format(m))
+        self.update_props(Component.get('ObservingList').lookup_name(m), 
+            update_name_field=False)
+        self.new_values['Name'] = self.Name
+        self.check_for_change()
+
+    @logger.catch()
+    def update_props(self, settings, update_name_field=True):
+        ''' update DSO properties, causing display update
+        '''
+
+        self.Name = settings.get('Name', '')
+        self.RA = str(RA(settings.get('RA', math.nan)))
+        self.Dec = str(Dec(settings.get('Dec', math.nan)))
+        self.Con = settings.get('Con', '')
+        self.OT = settings.get('OT', '')
+        self.Mag = float_to_str(settings.get('Mag', ''))
+        self.Other = settings.get('Other', '')
+        self.Diam = arcmin_to_str(str_to_arcmin(str(settings.get('Diam', ''))))
+        # update new values to reflect changes
+        self.new_values = {p: getattr(self, p) for p in self.props}
+        if update_name_field:
+            self.dso_panel.name_field.text = self.Name
+        # check for change at this point
+        self.check_for_change()
+
+    def OT_changed(self, widget):
+        ''' For the moment we allow any object type but in the future
+            could check if one of known types and allow user to
+            introduce a new type via a dialog
+        '''
+        widget.current_hint_text_color = self.app.hint_color
+        ot = widget.text.upper()
+        if len(ot) > 3:
+            widget.current_hint_text_color = [1, 0, 0, 1]
+        else:
+            self.OT = ot
+            self.new_values['OT'] = ot
+            self.check_for_change() 
+
+    def Con_changed(self, widget):
+        ''' Likewise, we should check constellations in future
+        '''
+        widget.current_hint_text_color = self.app.hint_color
+        con = widget.text.upper()
+        if len(con) > 3:
+            widget.current_hint_text_color = [1, 0, 0, 1]
+        else:
+            self.Con = con
+            self.new_values['Con'] = con
+            self.check_for_change() 
+
+    @logger.catch()
+    def RA_changed(self, widget):
+        '''
+        '''
+        widget.current_hint_text_color = self.app.hint_color
+        RA_str = widget.text.strip()
+        if not RA_str:
+            return
+        ra_deg = RA.parse(RA_str)
+        if ra_deg is None:
+            widget.current_hint_text_color = [1, 0, 0, 1]
+        else:
+            self.RA = '-'  # need to force an update
+            self.RA = str(RA(ra_deg))
+            self.new_values['RA'] = self.RA
+            self.check_for_change() 
+
+    def Dec_changed(self, widget):
+        widget.current_hint_text_color = self.app.hint_color
+        Dec_str = widget.text.strip()
+        if not Dec_str:
+            return
+        dec_deg = Dec.parse(Dec_str)
+        if dec_deg is None:
+            widget.current_hint_text_color = [1, 0, 0, 1]
+        else:
+            self.Dec = '-'  # need to force an update
+            self.Dec = str(Dec(dec_deg))
+            self.new_values['Dec'] = self.Dec
+            self.check_for_change() 
+
+    def Mag_changed(self, widget):
+        ''' should be a int or float
+        '''
+        mag_str = widget.text.strip()
+        if not mag_str:
+            return
+        try:
+            mag = str(float(mag_str))
+            self.Mag = '-'
+            self.Mag = mag
+            self.new_values['Mag'] = mag_str
+            self.check_for_change() 
+        except:
+            widget.invalid = True
+
+    def Diam_changed(self, widget):
+        ''' Suffix can be d or degree symbol, ' or "
+            assume arcmin if no suffix
+        '''
+
+        diam = widget.text.strip()
+        if not diam:
+            return
+        try:
+            # normalise diam by converting to arcmin then back to string
+            diam = arcmin_to_str(str_to_arcmin(diam))
+            self.new_values['Diam'] = diam
+            self.Diam = diam
+            self.check_for_change() 
+        except:
+            logger.warning('invalid format for diameter {:}'.format(diam))
+            widget.invalid = True
+
+    def Other_changed(self, widget):
+        self.Other = widget.text.strip()
+        self.new_values['Other'] = self.Other
+        self.check_for_change() 
+ 
+    @logger.catch()
+    def check_for_change(self):
+        ''' Check if any property has changed and stack is not empty
+        '''
+
+        changes = []
+        for k, v in self.initial_values.items():
+            if k in self.new_values and self.new_values[k] != v:
+                changes += [True]
+
+        # tell gui about any changes
+        self.app.gui.has_changed('DSO', any(changes))
+
+
+    @logger.catch()
     def on_save_object(self):
+
+        ''' On saving we ensure that Name, OT and Con is saved as these 
+            appear in the previous object table; other props don't need to
+            be saved as they are looked up from the DSO database on each
+            load.
+        '''
         Component.get('Metadata').set(
             {'Name': self.Name.strip(), 'OT': self.OT, 'Con': self.Con}
         )
+
+        ''' If there have been any changes update user objects catalogue
+        '''
+
+        props = {p: getattr(self, p) for p in self.props}
+
+        # convert RA/Dec etc
+        if 'RA' in props:
+            props['RA'] = RA.parse(props['RA'])
+        if 'Dec' in props:
+            props['Dec'] = Dec.parse(props['Dec'])
+        if 'Diam' in self.props:
+            try:
+                diam = str_to_arcmin(props['Diam'])
+            except:
+                diam = math.nan 
+            props['Diam'] = diam
+
+        Component.get('Catalogues').update_user_catalogue(props)
+
 
     def current_object_coordinates(self):
         if self.RA and self.Dec:
             return (float(RA(self.RA)), float(Dec(self.Dec)))
         return None, None
-
-    def paste_RA(self, *args):
-        Clipboard.copy(self.RA)
-
-    def paste_Dec(self, *args):
-        Clipboard.copy(self.Dec)
-
-    def edit(self, *args):
-        content = DSOInfo(self)
-        self.popup = JPopup(
-            title='Select, add or edit DSO', content=content, posn='top-left'
-        )
-        self.popup.open()
-
-    def selected(self, new_props, *args):
-        for p in self.props:
-            if p in new_props:
-                setattr(self, p, new_props[p])
-            else:
-                setattr(self, p, '')
-        self.changed = (
-            self.saved_props != {p: getattr(self, p) for p in self.props}
-            and not Component.get('Stacker').is_empty()
-        )
-        self.popup.dismiss()
-
-    # commented this while seeking weird touch down bug
-    def on_touch_down(self, touch):
-        # print(' TD in DSO')
-        if (
-            self.collide_point(*touch.pos)
-            and touch.pos[0] < dp(100)
-            and App.get_running_app().showing == 'main'
-        ):
-            return super().on_touch_down(touch)
-        return False

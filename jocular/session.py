@@ -2,172 +2,116 @@
 '''
 
 import json
+import math
 from datetime import datetime
+from loguru import logger
 
-from kivy.logger import Logger
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty, ConfigParserProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 from kivy.clock import Clock
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
-from kivy.metrics import dp
+
+from kivymd.uix.boxlayout import MDBoxLayout
 
 from jocular.component import Component
-from jocular.widgets import JPopup
+from jocular.settingsmanager import Settings
+
 
 Builder.load_string('''
 
-<MyLabel@Label>:
-    size_hint: 1, None
-    height: dp(24)
-    text_size: self.size
-    markup: True
-    halign: 'left'
+<SessionTextField@MDTextField>:
+    current_hint_text_color: app.hint_color
+    size_hint: (None, None)
+    height: '28dp'
+    width: '100dp'
+    helper_text_mode: 'on_focus'        
+    color_mode: 'accent'
     font_size: app.form_font_size
 
-<MyTextInput@TextInput>:
-    size_hint: 1, None
-    background_color: app.background_color
-    foreground_color: app.lowlight_color
-    multiline: True
-    hint_text_color: app.lowlight_color
-    height: dp(28)
-    cursor_width: '2sp'
-    font_size: app.form_font_size
-
-<ParamValue1@ParamValue>:
-    callback: root.parent.edit
-
-<Session>:
-    size_hint: None, None
-    orientation: 'vertical'
-    padding: dp(5), dp(2)
-    size: max(dp(250), (app.gui.width - app.gui.height) / 2), app.gui.height / 2
-    y: 0
-    x: 0 if root.show_session else -self.width
-
-    Button:
-        size_hint: 1, 1
-        markup: True
-        text_size: self.size
-        padding: dp(3), dp(1)
-        halign: 'left'
-        valign: 'bottom'
-        font_size: app.info_font_size
-        background_color: 0, 0, 0, 0
-        color: app.lowlight_color
-        height: dp(20)
-        text: '[b]Session notes[/b] {:}'.format(root.session_notes)
-
-    ParamValue1:
-        param: 'Date'
-        value: root.session
-    ParamValue1:
-        param: 'Temp.'
-        value: '' if root.temperature is None else '{:}\N{DEGREE SIGN}C'.format(root.temperature)
-    ParamValue1:
-        param: 'SQM'
-        value: '' if root.SQM is None else '{:.2f} mag/arcsec^2'.format(root.SQM)
-    ParamValue1:
-        param: 'Seeing'
-        value: '{:}'.format(root.seeing if root.seeing else '')
-    ParamValue1:
-        param: 'Transp.'
-        value: '{:}'.format(root.transparency if root.transparency else '')
-    ParamValue1:
-        param: 'Scope'
-        value: root.telescope
-    ParamValue1:
-        param: 'Camera'
-        value: root.camera
+<MyBoxLayout@BoxLayout>:
+    size_hint: (1, None)
+    height: '{:}dp'.format(int(app.form_font_size[:-2]) + 20)
 
 <SessionInfo>:
-    orientation: 'vertical'
+    padding: '10dp'
+    adaptive_height: True
+    #adaptive_width: True
+    pos_hint: {'y': 0, 'x': 0} if root.session.show_session else {'y': 0, 'right': -1000} 
     size_hint: None, None
-    size: dp(300), dp(500)
-    spacing: dp(5)
-
-    MyLabel:
-        text: 'Session notes:'
-    MyTextInput:
-        id: _notes
-        hint_text: 'not specified'
-        text: root.session.session_notes
-        multiline: True
-        size_hint: 1, None
-        height: dp(80)
-        on_text: root.session.session_notes = self.text
-
-    MyLabel:
-        text: 'Seeing:'
-    MyTextInput:
-        id: _seeing
-        hint_text: ' not specified'
-        text: root.session.seeing
-        on_text: root.session.seeing = self.text
-
-    MyLabel:
-        text: 'Transparency:'
-    MyTextInput:
-        id: _transparency
-        hint_text: 'not specified'
-        text: root.session.transparency
-        on_text: root.session.transparency = self.text
-
-    MyLabel:
-        text: 'Temperature {:}\N{DEGREE SIGN}C'.format(_temperature.value) if _temperature.value > -26 else 'Temperature not set'
-    Slider:
-        size_hint: 1, None
-        height: dp(30)
-        id: _temperature
-        value: root.session.temperature if root.session.temperature is not None else -26
-        on_value: root.session.temperature = self.value if self.value > -26 else None
-        min: -26
-        max: 40
-        step: 1
-
-    MyLabel:
-        text: 'SQM {:.2f} mag/arcsec^2'.format(_sqm.value) if _sqm.value > 15.9999 else 'SQM not set'
-    Slider:
-        size_hint: 1, None
-        height: dp(24)
-        id: _sqm
-        value: root.session.SQM if root.session.SQM is not None else 15.9999
-        on_value: root.session.SQM = self.value if self.value > 16 else None
-        min: 15.9
-        max: 22
-        step: .01
-
-    MyLabel:
-        text: 'Telescope:'
-    MyTextInput:
-        id: _scope
-        hint_text: 'not specified'
-        text: root.session.telescope
-        on_text: root.session.telescope = self.text
-
-    MyLabel:
-        text: 'Camera:'
-    MyTextInput:
-        id: _camera
-        hint_text: 'not specified'
-        text: root.session.camera
-        on_text: root.session.camera = self.text
+    orientation: 'vertical'
 
     BoxLayout:
-        size_hint: 1, None
-        height: dp(40)
-        Button:
-            text: 'Close'
-            size_hint: 1, .8
-            on_press: root.session.done()
+        size_hint: (1, None)
+        height: '48dp'
+
+        SessionTextField:
+            width: '150dp'
+            height: '32dp'
+            helper_text: ''
+            on_focus: root.session.session_changed(self.text) if not self.focus else None
+            text: root.session.session
+
+    MyBoxLayout:
+        SessionTextField:
+            hint_text: 'transparency'
+            width: '250dp'
+            helper_text: 'e.g. high clouds, good'
+            on_focus: root.session.transparency_changed(self.text) if not self.focus else None
+            text: root.session.transparency
+
+
+    MyBoxLayout:
+        SessionTextField:
+            hint_text: 'seeing'
+            width: '250dp'
+            helper_text: 'e.g. poor, excellent'
+            on_focus: root.session.seeing_changed(self.text) if not self.focus else None
+            text: root.session.seeing
+
+    MyBoxLayout:
+        SessionTextField:
+            hint_text: 'temperature'
+            helper_text: 'e.g. 5C or 45F'
+            on_focus: root.session.temperature_changed(self.text) if not self.focus else None
+            text: root.session.formatted_temperature
+
+        SessionTextField:
+            hint_text: 'brightness'
+            helper_text: 'e.g. 19.23 or 4.5'
+            on_focus: root.session.sky_brightness_changed(self.text) if not self.focus else None
+            text: root.session.formatted_sky_brightness
+
+    MyBoxLayout:
+        SessionTextField:
+            width: '150dp'
+            hint_text: 'scope'
+            helper_text: ''
+            on_focus: root.session.telescope_changed(self.text) if not self.focus else None
+            text: root.session.telescope
+
+        SessionTextField:
+            width: '150dp'
+            hint_text: 'camera'
+            helper_text: ''
+            on_focus: root.session.camera_changed(self.text) if not self.focus else None
+            text: root.session.camera
+
+    BoxLayout:
+        size_hint: (1, None)
+        height: '72dp'
+
+        SessionTextField:
+            id: _name
+            width: '400dp'
+            height: '64dp'
+            multiline: True
+            hint_text: 'session notes'
+            helper_text: ''
+            text: root.session.session_notes
+            on_focus: root.session.session_notes_changed(self.text) if not self.focus else None
 
 ''')
 
-class SessionInfo(BoxLayout):
-    def __init__(self, session, **kwargs):
-        self.session = session
-        super().__init__(**kwargs)
 
 date_time_format = '%d %b %y %H:%M'
 
@@ -177,68 +121,264 @@ def datenow():
 def hours_since_date(mydate):
     return (datetime.now() - datetime.strptime(mydate, date_time_format)).total_seconds()/3600
 
-class Session(BoxLayout, Component):
+# from http://unihedron.com/projects/darksky/NELM2BCalc.html
+def SQM_to_NELM(sqm):
+    return 7.93 - 5 * math.log(10 ** (4.316-(sqm / 5)) + 1)
+
+def NELM_to_SQM(nelm):
+    return 21.58 - 5 * math.log(10 ** (1.586 - nelm / 5) - 1)
+
+
+class SessionInfo(MDBoxLayout):
+    def __init__(self, session, **kwargs):
+        self.session = session
+        super().__init__(**kwargs)
+
+class Session(Component, Settings):
+
+    save_settings = ['show_session']
 
     session = StringProperty('')
-    SQM = NumericProperty(None, allownone=True)
+    sky_brightness = NumericProperty(None, allownone=True)
     temperature = NumericProperty(None, allownone=True)
     seeing = StringProperty('')
     transparency = StringProperty('')
     session_notes = StringProperty('')
     telescope = StringProperty('')
     camera = StringProperty('')
-
-    retain_hours =  ConfigParserProperty(3, 'Session', 'retain_hours', 'app', val_type=float)
     is_new_object = BooleanProperty(False)
     show_session = BooleanProperty(False)
+    sky_brightness_units = StringProperty('SQM')
+    temperature_units = StringProperty('Centigrade')
+    formatted_temperature = StringProperty('')
+    formatted_sky_brightness = StringProperty('')
+    retain_hours =  NumericProperty(3)
 
-    props = ['SQM', 'temperature', 'seeing', 'transparency', 'session_notes', 
+    configurables = [
+        ('retain_hours', {'name': 'time to retain session information?', 'float': (0, 48, 1),
+            'help': 'Session information persists for some time to handle restarts of the program',
+            'fmt': '{:.0f} hours'}),
+        ('temperature_units', {
+            'name': 'temperature units', 
+            'options': ['Centigrade', 'Fahrenheit'],
+            'help': 'temperatures are stored internally in degrees C'
+            }),
+        # ('sky_brightness_units', {
+        #     'name': 'sky brightness units', 
+        #     'options': ['SQM', 'NELM'],
+        #     'help': 'brightness stored internally in SQM'
+        #     })
+        ]
+
+    # all editable properties
+    props = ['sky_brightness', 'temperature', 'seeing', 'transparency', 'session_notes', 
         'telescope', 'camera', 'session']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        self.app.gui.add_widget(self, index=2) 
+        self.session_info = SessionInfo(self)
+        self.app.gui.add_widget(self.session_info)
 
+    def describe(self):
+        ''' return information for Snapshotter
+        '''
+        return [
+            self.session, 
+            self.formatted_sky_brightness,
+            self.formatted_temperature,
+            self.seeing if self.seeing else None,
+            self.transparency if self.transparency else None
+            ]
+
+    def temperature_changed(self, temp):
+        ''' called when temperature field is altered; parse various formats
+            with and without degrees and C or F
+        '''
+        temp = temp.lower().strip()
+        try:
+            if len(temp) == 0:
+                self.temperature = None
+            else:
+                units = 'F' if temp.endswith('f') else 'C'
+                if temp[-1] in {'f', 'c'}:
+                    temp = temp[:-1].strip()
+                if temp[-1] == '\N{DEGREE SIGN}':
+                    temp = temp[:-1].strip()
+                temp = int(temp)
+                self.temperature = temp if units == 'C' else (temp - 32) / 1.8
+        except Exception as e:
+            self.temperature = None
+            logger.exception(e)
+        self.on_temperature()
+        self.check_for_change() 
+
+    def get_temperature(self):
+        ''' return string temperature in C or F, or empty string if error
+            in conversion or non-existent temperature
+        '''
+        try:
+            temp = int(self.temperature)
+        except:
+            return ''
+        if self.temperature_units == 'Centigrade':
+            return '{:.0f}\N{DEGREE SIGN}C'.format(temp)
+        return '{:.0f}\N{DEGREE SIGN}F'.format(temp*1.8 + 32)
+
+    @logger.catch()
+    def on_temperature(self, *args):
+        ''' whenever temperature changes, ensure formatted temperature
+            is updated
+        '''
+        self.formatted_temperature = 'xyz'  # forces an update
+        self.formatted_temperature = self.get_temperature()
+
+    def on_temperature_units(self, *args):
+        ''' whenever user changes temperature preferences in config screen,
+            ensure it is applied immediately
+        '''
+        self.formatted_temperature = self.get_temperature()
+
+    ''' similar methods for sky brightness
+    '''
+
+    def sky_brightness_changed(self, bright):
+        bright = bright.lower().strip()
+        try:
+            if len(bright) == 0:
+                self.sky_brightness = None
+            else:
+                units= 'SQM'
+                if bright.endswith('nelm'):
+                    units = 'NELM'
+                    bright = bright[:-4].strip()
+                elif bright.endswith('sqm'):
+                    bright = bright[:-3].strip()
+                bright = float(bright)
+                self.sky_brightness = bright if units == 'SQM' else SQM_to_NELM(bright)
+        except Exception as e:
+            print(e)
+            self.sky_brightness = None
+        self.on_sky_brightness()
+        self.check_for_change() 
+
+    def get_sky_brightness(self):
+        try:
+            bright = float(self.sky_brightness)
+        except:
+            return ''
+        if self.sky_brightness_units == 'SQM':
+            return '{:.2f} sqm'.format(bright)
+        return '{:.1f} nelm'.format(NELM_to_SQM(bright))
+
+    def on_sky_brightness(self, *args):
+        self.formatted_sky_brightness = 'xyz'
+        self.formatted_sky_brightness = self.get_sky_brightness()
+
+    def on_sky_brightness_units(self, *args):
+        self.formatted_sky_brightness = self.get_sky_brightness()
+
+    ''' remaining changes
+    '''  
+
+    def session_notes_changed(self, session_notes):
+        self.session_notes = session_notes
+        self.check_for_change() 
+
+    def seeing_changed(self, seeing):
+        self.seeing = seeing
+        self.check_for_change() 
+
+    def transparency_changed(self, transparency):
+        self.transparency = transparency
+        self.check_for_change() 
+
+    def telescope_changed(self, telescope):
+        ''' Since we persist this between sessions, ensure we save
+            the session on any change; likewise with camera
+        '''
+        self.telescope = telescope
+        self.check_for_change()
+        self.save_session()
+
+    def camera_changed(self, camera):
+        self.camera = camera
+        self.check_for_change()
+        self.save_session() 
+
+    def session_changed(self, session):
+        self.session = session
+        self.check_for_change() 
+
+    @logger.catch()
+    def check_for_change(self):
+        ''' Check if any property has changed and stack is not empty
+            For new objects, don't check if session has changed as it is
+            continually changing! (clock) 
+        '''
+        props = self.props
+        if self.is_new_object:
+            props = set(props) - {'session'}
+
+        changes = [getattr(self, p) != self.initial_values.get(p, '') for p in props]
+
+        # tell gui about any changes
+        self.app.gui.has_changed('Session', not Component.get('Stacker').is_empty() and any(changes))
+
+    ''' main methods for handling new/previous sessions
+    '''
+
+    @logger.catch()
     def on_new_object(self):
-        self.is_new_object = not Component.get('ObjectIO').existing_object
-        # move this to see if I can cancel session clock more reliably
+        self.is_new_object = True
+        self.cancel_session_clock()
+        self.load_session()
+        self.initial_values = {p: getattr(self, p) for p in self.props}
+
+    @logger.catch()
+    def on_previous_object(self):
+        ''' apply previous session settings, keeping a record so changes can be monitored
+        '''
+        self.is_new_object = False
+        self.cancel_session_clock()
+        settings = Component.get('Metadata').get(self.props)
+        self.apply_session_settings(settings)
+        self.initial_values = {p: getattr(self, p) for p in self.props}
+
+    def cancel_session_clock(self):
         if hasattr(self, 'session_clock'):
             self.session_clock.cancel()
-        if self.is_new_object:
-            self.load_session()
-        else:
-            settings = Component.get('Metadata').get(self.props)
-            self.apply_settings(settings)
 
     def load_session(self):
+        ''' Try to get information from last session and apply it, otherwise
+            create a new session
+        '''
         try:
             with open(self.app.get_path('last_session.json'), 'r') as f:
                 session = json.load(f)
             if hours_since_date(session['session']) < self.retain_hours:
-                self.apply_settings(session)
+                self.apply_session_settings(session)
             else:
                 # start fresh session but restore scope/camera details
-                self.create_new_session()
+                self.create_empty_session()
                 self.telescope = session.get('telescope', '') 
                 self.camera = session.get('camera', '')
         except Exception as e:
             # any problems we just start a fresh session
-            Logger.debug('Session: problem loading session data, so recreating {:}'.format(e))
-            self.create_new_session()
+            logger.debug('problem loading session data, so recreating {:}'.format(e))
+            self.create_empty_session()
 
         # create date and clock to update it
         self.session = datetime.now().strftime(date_time_format)
         self.session_clock = Clock.schedule_interval(self.update_time, 1.0)
 
-    def create_new_session(self):
-        self.SQM = None
+    def create_empty_session(self):
+        ''' set all properties except session to empty/None
+        '''
         self.temperature = None
-        self.seeing = ''
-        self.transparency = ''
-        self.session_notes = ''
-        self.telescope = ''
-        self.camera = ''
+        self.sky_brightness = None
+        for p in set(self.props) - {'session', 'temperature', 'sky_brightness'}:
+            setattr(self, p, '')
 
     def get_session(self):
         # accessor method that strips off seconds if present
@@ -256,21 +396,28 @@ class Session(BoxLayout, Component):
         session['session'] = self.get_session()
         return session
 
-    def apply_settings(self, settings):
-        self.create_new_session()
+    def apply_session_settings(self, settings):
+        ''' apply 'settings', by clearing existing settings and
+            overriding
+        '''
+        self.create_empty_session()
         for p in self.props:
             if p in settings:
                 setattr(self, p, settings[p])
 
+    @logger.catch()
     def save_session(self):
-        Logger.debug('Session: saving session')
+        logger.debug('saving session')
         with open(self.app.get_path('last_session.json'), 'w') as f:
             json.dump(self.current_session_info(), f, indent=1)    
 
+    @logger.catch()
     def on_save_object(self):
 
-        # save properties
-        for p in ['SQM', 'temperature', 'seeing', 'transparency', 'session_notes', 'telescope', 'camera']:
+        logger.debug('saving properties to metadata')
+
+        # save properties
+        for p in self.props:
             Component.get('Metadata').set(p, getattr(self, p))
 
         # only update last session if live rather than previous
@@ -279,27 +426,3 @@ class Session(BoxLayout, Component):
 
     def update_time(self, *args):
         self.session = datetime.now().strftime('%d %b %y %H:%M:%S')
-
-    def edit(self, *args):
-        content = SessionInfo(self)
-        self.popup = JPopup(title='Session information', content=content, posn='bottom-left')
-        self.popup.open()
-
-    def done(self, *args):
-        self.popup.dismiss()
-        self.changed = not Component.get('Stacker').is_empty() and (
-            self.temperature != Component.get('Metadata').get('temperature', default=None) or \
-            self.SQM != Component.get('Metadata').get('SQM', default=None) or \
-            self.seeing.strip() != Component.get('Metadata').get('seeing', default='') or \
-            self.transparency.strip() != Component.get('Metadata').get('transparency', default='') or \
-            self.telescope.strip() != Component.get('Metadata').get('telescope', default='') or \
-            self.camera.strip() != Component.get('Metadata').get('camera', default='')
-            )
-        if self.is_new_object:
-            self.save_session()
-
-    def on_touch_down(self, touch):
-        # print(' TD in Session')
-        if self.collide_point(*touch.pos) and touch.pos[0] < dp(100) and self.app.showing == 'main':
-            return super().on_touch_down(touch)
-        return False

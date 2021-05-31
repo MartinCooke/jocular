@@ -6,20 +6,38 @@ import os
 import glob
 import csv
 import json
+import math
 from copy import deepcopy
 import numpy as np
 from kivy.app import App
-from kivy.logger import Logger
-from kivy.properties import ConfigParserProperty
+from loguru import logger
+from kivy.properties import BooleanProperty
 
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
 
-class Catalogues(Component):
+class Catalogues(Component, Settings):
 
-    exclude_cats = ConfigParserProperty('VS', 'Catalogues', 'exclude_cats', 'app', val_type=str)
+    VS = BooleanProperty(True)
+    WDS = BooleanProperty(True)
+    SkiffSpectralClasses = BooleanProperty(True)
+    milliquas = BooleanProperty(True)
+    Hyperleda = BooleanProperty(True)
+
+    tab_name = 'Catalogues'
+    configurables = [
+        ('VS', {'name': 'annotate variable stars?', 'switch': '',
+            'help': 'Switch this off if you end up with crowded annotations'}),
+        ('WDS', {'name': 'annotate double stars?', 'switch': ''}),
+        ('SkiffSpectralClasses', {'name': 'annotate spectra classes?', 'switch': ''}),
+        ('milliquas', {'name': 'annotate quasars?', 'switch': ''}),
+        ('Hyperleda', {'name': 'annotate faint galaxies?', 'switch': ''})
+        ]
+
+    props = ['Name', 'RA', 'Dec', 'Con', 'OT', 'Mag', 'Diam', 'Other']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -47,7 +65,7 @@ class Catalogues(Component):
         if self.star_db is None:
             try:
                 self.star_db  = np.load(self.app.get_path('star_db'))
-            except Exception as e:
+            except:
                 pass
 
     def has_platesolving_db(self):
@@ -103,53 +121,110 @@ class Catalogues(Component):
         return self.dsos
 
     def load_basic_dsos(self):
-        ''' We load the shipped and user catalogues at the start once only
-        '''
-
-        ''' construct list of .csv files; we load shipped then user cats
-            with later loads overwriting earlier loads of duplicate
-            objects (thereby supporting user updates)
+        ''' load shipped catalogues then update/overwrite with any user 
+            catalogue items; convert to uppercase name/OT as keys on read-in
+            for speed of matching later
         '''
 
         shipped = glob.glob(os.path.join(self.app.get_path('dsos'), '*.csv'))
         usercats = glob.glob(os.path.join(self.app.get_path('catalogues'), '*.csv'))
 
         self.dsos = {}
-        for f in shipped + usercats:
-            user_objects = f.endswith('user_objects.csv')
-            dupes = 0
-            with open(f, newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter=',')
-                hdr = next(reader)
-                if {'Name', 'RA', 'Dec', 'OT', 'Con'} <= set(hdr):
-                    cnames = ['Name', 'RA', 'Dec', 'Con', 'OT', 'Mag', 'Diam', 'Other']
-                    cols = {c: (hdr.index(c) if c in hdr else None) for c in cnames}
-                    cols = {c: i for c, i in cols.items() if i is not None}
-                    for row in reader:
-                        try:
-                            dd = {c: row[i] for c, i in cols.items()}
-                            name = '{:}/{:}'.format(dd['Name'], dd['OT'])
-                            if name in self.dsos and not user_objects:
-                                dupes += 1
-                            else:
-                                self.dsos[name] = dd
-                        except:
-                            if len(row) > 0:
-                                Logger.warn('Catalogues: error in catalogue {:}, {:}'
-                                    .format(f, row))
-                else:
-                    Logger.warn('Catalogues: {:} no Name/RA/Dec/OT/Con'.format(f))
-            Logger.info('Catalogues: loaded {:} ({:} duplicates)'.format(
-                os.path.basename(f), dupes))
+        for objfile in shipped + usercats:
+            # handle user objects last as they overwrite everything else
+            if not objfile.endswith('user_objects.csv'):
+                # form dict from user_objects
+                with open(objfile, newline='') as f:
+                    reader = csv.DictReader(f)
+                    for d in reader:
+                        nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
+                        self.dsos[nm] = d
 
-        # convert all numeric cols to floats
+        logger.info('loaded {:} DSOs from {:} catalogues'.format(
+            len(self.dsos), len(shipped + usercats)))
+
+        # now read user objects and allow them to overwrite
+        obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
+        if os.path.exists(obj_file):
+            with open(obj_file, newline='') as f:
+                reader = csv.DictReader(f)
+                for d in reader:
+                    nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
+                    self.dsos[nm] = d
+            logger.info('loaded user DSOs')
+
+        # add any missing fields
+        for v in self.dsos.values():
+            for p in self.props:
+                if p not in v:
+                    v[p] = ''
+
+        # convert all numeric cols to floats & ensure OTs/constellations are uppercase
         for k, v in self.dsos.items():
             for col in ['RA', 'Dec', 'Mag', 'Diam']:
-                if col in v:
-                    v[col] = float(v[col] if v[col] else 'nan')
+                v[col] = float(v[col] if v[col] else math.nan)
+            for col in ['OT', 'Con']:
+                v[col] = v[col].upper()
 
-        Logger.info('Catalogues: loaded {:} DSOs from {:} catalogues'.format(
-            len(self.dsos), len(shipped + usercats)))
+
+    def update_user_catalogue(self, props):
+        ''' Update (or create new entry) for DSO defined by dict
+            props
+        '''
+
+        logger.debug('props {:}'.format(props))
+
+        # no name or empty name
+        if props.get('Name', '').strip == '':
+            return
+
+        if 'OT' not in props:
+            props['OT'] = ''
+
+        name = '{:}/{:}'.format(props['Name'], props['OT'])
+
+        logger.info('Updating user objects with {:}'.format(name))
+
+        # 
+
+
+        ''' check if we already have a user_objects files; create if not
+            and overwrite props or append if name/OT doesn't exist
+        '''
+        try:
+            obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
+            if not os.path.exists(obj_file):
+                logger.info('Creating user_objects.csv')
+                with open(obj_file, 'w') as f:
+                    f.write(','.join(self.props) + '\n')
+
+            # form dict from user_objects
+            with open(obj_file, newline='') as f:
+                reader = csv.DictReader(f)
+                odict = {'{:}/{:}'.format(row['Name'], row['OT']).upper(): row for row in reader}
+
+            # add/update properties
+            odict[name.upper()] = props
+
+            # update dsos
+            self.dsos[name.upper()] = props  
+
+            # write to csv
+            with open(obj_file, 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=self.props)
+                writer.writeheader()
+                for v in odict.values():
+                    writer.writerow(v)
+
+            logger.info('Updated user objects (currently: {:} entries)'.format(
+                len(odict)))
+
+        except Exception as e:
+            logger.exception('Problem writing user_objects.csv ({:})'.format(e))
+
+
+    def is_excluded(self, catname):
+        return hasattr(self, catname) and not getattr(self, catname)
 
     def get_annotation_dsos(self, tile=None):
         ''' Retrieve all DSOs in the specified tile. Use basic DSOs combined
@@ -176,10 +251,9 @@ class Catalogues(Component):
                 if (v['RA'] >= rmin) | (v['RA'] < rmax)}
 
         # load any deep catalogues that user has placed in catalogues
-        excluded = self.exclude_cats.lower().split()
         deepcats = glob.glob(os.path.join(self.app.get_path('catalogues'), '*.npz'))
         for cat in deepcats:
-            if os.path.basename(cat)[:-4].lower() not in excluded:
+            if not self.is_excluded(os.path.basename(cat)[:-4]):
                 matches = {**matches, **self.load_deepcat(cat, tile)}
 
         # return copy in case receiver decides to modify things
@@ -215,6 +289,4 @@ class Catalogues(Component):
             v['Cat'] = catname
 
         return matches
-
-
 

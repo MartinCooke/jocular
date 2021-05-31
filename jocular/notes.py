@@ -1,114 +1,53 @@
-''' Observing notes panel.
+''' Observing notes
 '''
 
-from kivy.clock import Clock
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty, ObjectProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
-
+from kivymd.uix.boxlayout import MDBoxLayout
 from jocular.component import Component
-from jocular.widgets import JPopup
 
 Builder.load_string('''
 <Notes>:
-    canvas.before:
-        Color:
-            rgba: 1, 0, 0, 0
-        Rectangle:
-            pos: self.pos
-            size: self.size
+    observing_notes: _notes
+    adaptive_height: True
+    adaptive_width: True
+    pos_hint: {'top': .99, 'right': .99} if root.show_notes else {'top': .99, 'right': 0} 
     size_hint: None, None
-    orientation: 'vertical'
-    padding: dp(5), dp(2)
-    size: ((app.gui.width - app.gui.height) / 2) - dp(4), app.gui.height / 3
-    y: 2 * app.gui.height / 3
-    x: app.gui.width - self.width if root.show_notes else app.gui.width
+    width: dp(200) 
 
-    Button:
-        text: 'Observational notes: {:}'.format(root.notes)
-        # size: self.texture_size
-        background_color: .6, 0, .6, 0
-        size_hint: 1, 1
-        valign: 'top'
-        halign: 'right'
-        color: app.lowlight_color
-        on_press: root.edit()
-        markup: True
-        font_size: app.info_font_size
-        text_size: self.size
-
-<NotesInfo>:
-    orientation: 'vertical'
-    size_hint: None, None
-    size: dp(300), dp(360)
-    spacing: dp(5)
-    notes_input: _notes
-
-    TextInput:
+    MDTextField:
         id: _notes
-        unfocus_on_touch: False
-        background_color: app.background_color
-        foreground_color: app.lowlight_color
-        hint_text_color: app.lowlight_color
-        hint_text: 'type your observing notes here'
-        text: root.notes.notes
         multiline: True
-        size_hint: 1, None
-        height: dp(300)
-        font_size: app.form_font_size
-        valign: 'top'
-
-    BoxLayout:
-        size_hint: 1, None
-        height: dp(40)
-        Button:
-            text: 'Save'
-            size_hint: .5, .8
-            on_press: root.notes.edited(_notes.text)
-        Button:
-            text: 'Cancel'
-            size_hint: .5, .8
-            on_press: root.notes.cancel_edit()
-
+        hint_text: 'Observing notes'
+        helper_text: ''
+        helper_text_mode: 'on_focus'
+        current_hint_text_color: app.hint_color        
+        color_mode: 'accent'
+        on_focus: root.notes_changed() if not self.focus else None
+        font_size: app.form_font_size # '20sp'
 ''')
 
-class NotesInfo(BoxLayout): 
-    notes_input = ObjectProperty(None)
-    def __init__(self, notes, **kwargs):
-        self.notes = notes
-        super().__init__(**kwargs)
-        Clock.schedule_once(self.set_focus, 0)
 
-    def set_focus(self, dt):
-        self.notes_input.focus = True
-
-class Notes(BoxLayout, Component):
+class Notes(MDBoxLayout, Component):
 
     notes = StringProperty('')
     show_notes = BooleanProperty(False)
+    save_settings = ['show_notes']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        App.get_running_app().gui.add_widget(self) # , index=2) 
+        self.app = App.get_running_app()
+        self.app.gui.add_widget(self) 
 
     def on_new_object(self):
-        self.notes =  Component.get('Metadata').get('Notes', default='')
+        self.orig_notes = Component.get('Metadata').get('Notes', default='')
+        self.observing_notes.text = self.orig_notes
 
     def on_save_object(self):
         if len(self.notes) > 0:
             Component.get('Metadata').set('Notes', self.notes)
 
-    def edit(self, *args):
-        content = NotesInfo(self)
-        self.popup = JPopup(title='Observing notes', content=content, posn='top-right')
-        self.popup.open()
-        
-    def edited(self, notes):
-        self.notes = notes
-        self.changed = self.notes != Component.get('Metadata').get('Notes', default='') and \
-            not Component.get('Stacker').is_empty()
-        self.popup.dismiss()
-
-    def cancel_edit(self, *args):
-        self.popup.dismiss()
+    def notes_changed(self, *args):
+        self.notes = self.observing_notes.text
+        self.app.gui.has_changed('Notes', self.notes != self.orig_notes)

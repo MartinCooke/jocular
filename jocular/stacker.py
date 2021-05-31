@@ -5,17 +5,21 @@ import os
 import glob
 import numpy as np
 from datetime import datetime
+from loguru import logger
 
 from kivy.app import App
-from kivy.logger import Logger
 from kivy.properties import (BooleanProperty, NumericProperty, OptionProperty, 
-    StringProperty, ListProperty, ConfigParserProperty)
+    StringProperty, ListProperty)
 from kivy.clock import Clock
+from kivymd.uix.button import MDFlatButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
-from jocular.utils import percentile_clip, s_to_minsec, move_to_dir, purify_name
-from jocular.widgets import JBubble
+from jocular.settingsmanager import Settings
+from jocular.utils import percentile_clip, s_to_minsec, move_to_dir, purify_name, unique_member
 from jocular.image import Image, fits_in_dir
+from jocular.exposurechooser import exp_to_str
 
 def combine_stack(stk, method='mean'):
     if len(stk) == 1:
@@ -30,7 +34,9 @@ def combine_stack(stk, method='mean'):
         s = percentile_clip(stk, perc=int(method))
     return s
 
-class Stacker(Component):
+class Stacker(Component, Settings):
+
+    save_settings = ['spectral_mode', 'speed']
 
     selected_sub = NumericProperty(-1) # index of currently selected sub starts at 0
     sub_or_stack = StringProperty('sub')
@@ -40,9 +46,18 @@ class Stacker(Component):
     combine = OptionProperty('mean', options=['mean', 'median', '70', '80', '90'])
     speed = NumericProperty(2)
     spectral_mode = OptionProperty('mono', options=['mono', 'LRGB', 'L+'])
-    confirm_on_clear_stack = ConfigParserProperty(0, 'Confirmations', 'confirm_on_clear_stack', 'app', val_type=int)
-    reload_rejected = ConfigParserProperty(0, 'rejects', 'reload_rejected', 'app', val_type=int)
-    use_TOA_for_exposure = ConfigParserProperty(1, 'Exposure', 'use_TOA_for_exposure', 'app', val_type=int)
+    confirm_on_clear_stack = BooleanProperty(False)
+    reload_rejected = BooleanProperty(False)
+
+    configurables = [
+        ('confirm_on_clear_stack', {
+            'name': 'confirm before clearing stack?', 
+            'switch': '',
+            'help': 'Clearing deletes all the current subs in the stack'}),
+        ('reload_rejected', {'name': 'reload rejected subs?', 
+            'switch': '',
+            'help': 'include subs that were previously marked as rejected'})
+        ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -55,58 +70,76 @@ class Stacker(Component):
             'delete': (.1, .1, .1, .6)}
 
     def on_new_object(self):
-        ''' Prepare for existing or new object. For existing object, loading takes
-        place after all components' on_new_object methods have been called 
-        '''
-
         self.reset()
-        self.orig_rejects = set({})
-        self.original_exposure = 0
-        settings = Component.get('Metadata').get({'sub_type', 'rejected', 'exposure'})
-        sub_type = settings.get('sub_type', 'light')
-        cod = Component.get('ObjectIO').current_object_dir
+        self.app.gui.enable(['clear_stack'])
 
-        # in pre v3 we used a 'rejected' list to store names of rejects; now we don't
+    def on_previous_object(self):
+
+        # do the standard resets
+        self.reset()
+
+        # don't allow users to clear stack for previous objects
+        self.app.gui.disable(['clear_stack'])
+
+        # and all the specific stuff to reload previous
+        cod = Component.get('ObjectIO').current_object_dir
+        settings = Component.get('Metadata').get({'sub_type', 'rejected', 'exposure'})
         rejected = set(settings.get('rejected', []))
         exposure = settings.get('exposure', None)
-        if cod is not None:
-            # move any in rejects if user has requested this
-            if self.reload_rejected:
-                for f in fits_in_dir(os.path.join(cod, 'rejects')):
-                    try:
-                        bn = os.path.basename(f)
-                        os.rename(f, os.path.join(cod, bn))
-                        rejected.add(bn)
-                    except Exception as e:
-                        Logger.warn('Stacker: problem moving rejected on load {:} ({:})'.format(f, e)) 
-            # now load all (which now will include prev rejects)
-            for f in fits_in_dir(cod):
+        sub_type = settings.get('sub_type', 'light')
+        if self.reload_rejected:
+            for f in fits_in_dir(os.path.join(cod, 'rejects')):
                 try:
-                    im = Image(f)
-                    im.status = 'reject' if os.path.basename(f) in rejected else 'select'
-                    if im.exposure is None:
-                        im.exposure = exposure
-                    if im.sub_type is None:
-                        im.sub_type=sub_type
-                    self.subs.append(im)
+                    bn = os.path.basename(f)
+                    os.rename(f, os.path.join(cod, bn))
+                    rejected.add(bn)
                 except Exception as e:
-                    Logger.warn('Stacker: problem reading image {:} ({:})'.format(f, e))
-            # if we have loaded up some calibration subs, ensure that we mark things as changed
-            if not self.is_empty():
-                self.changed = self.subs[0].sub_type in {'dark', 'bias', 'flat'}
-                self.original_exposure = self.subs[0].exposure
-            # store rejected to see if anything has changed and needs saving
-            self.orig_rejects = rejected
+                    logger.exception('problem moving rejected on load {:} ({:})'.format(f, e)) 
+        # now load all (which now will include prev rejects)
+        for f in fits_in_dir(cod):
+            try:
+                im = Image(f)
+                im.status = 'reject' if os.path.basename(f) in rejected else 'select'
+                if im.exposure is None:
+                    im.exposure = exposure
+                if im.sub_type is None:
+                    im.sub_type=sub_type
+                self.subs.append(im)
+            except Exception as e:
+                logger.exception('problem reading image {:} ({:})'.format(f, e))
+        # if we have loaded up some calibration subs, ensure that we mark things as changed
+        if not self.is_empty():
+            self.app.gui.has_changed('Stacker', self.subs[0].sub_type in {'dark', 'bias', 'flat'})
+            # self.changed = self.subs[0].sub_type in {'dark', 'bias', 'flat'}
+            self.original_exposure = self.subs[0].exposure
+        # store rejected to see if anything has changed and needs saving
+        self.orig_rejects = rejected
+
+        if self.is_empty():
+            return
+
+        self.recompute()
+
+        # get filter/exposure/subtype and send to CaptureScript
+        expo = unique_member([s.exposure for s in self.subs])
+        if expo is None:
+            expo = Component.get('Metadata').get('exposure')
+        Component.get('CaptureScript').set_external_details(
+            exposure=0 if expo is None else expo, 
+            sub_type=unique_member([s.sub_type for s in self.subs]), 
+            filt=''.join({s.filter for s in self.subs}))
+
  
     def reset(self):
         # Called when we have a new object and when user clears stack
         self.stack_cache = {}
+        self.orig_rejects = set({}) # new
         self.subs.clear()
         self.selected_sub = -1
         self.update_stack_scroller()
         self.set_to_subs()
         Component.get('View').reset()  # might not be needed as View also does a reset!
-        self.info('reset stack')
+        self.info('')
 
     def on_save_object(self):
         # move rejected subs to 'rejected'; we won't touch non-aligned as they are salvageable often
@@ -121,10 +154,10 @@ class Stacker(Component):
     def update_status(self):
         d = self.describe()
         if d:
-            self.info('{:} | {:}x{:.0f}s | {:}'.format(
+            self.info('exposure {:} | {:}x{:} | {:}'.format(
                 s_to_minsec(d['total_exposure']), 
                 d['nsubs'], 
-                d['sub_exposure'], 
+                exp_to_str(d['sub_exposure']), 
                 d['filters']))
 
     def describe(self):
@@ -176,22 +209,45 @@ class Stacker(Component):
             return
 
         if self.confirm_on_clear_stack:
-            JBubble(actions={'Really clear?': self._clear}, loc='mouse').open()
+            self.dialog = MDDialog(
+                auto_dismiss=False,
+                text="Are you sure you wish to clear the stack?",
+                buttons=[
+                    MDFlatButton(text="YES", 
+                        text_color=self.app.theme_cls.primary_color,
+                        on_press=self._clear),
+                    MDFlatButton(
+                        text="CANCEL", 
+                        text_color=self.app.theme_cls.primary_color,
+                        on_press=self._cancel)
+                ],
+            )
+            self.dialog.open()
         else:
             self._clear()
 
+    def _cancel(self, *args):
+        self.dialog.dismiss()
+
     def _clear(self, *args):
         # clear stack auxilliary method since might come after confirmation
-
-        cod = Component.get('ObjectIO').current_object_dir
+        if hasattr(self, 'dialog'):
+            self.dialog.dismiss()
+        objio = Component.get('ObjectIO')
+        cod = objio.current_object_dir
         for nm in glob.glob(os.path.join(cod, '*.fit*')):
-            move_to_dir(os.path.join(cod, nm), 'deleted')
+            objio.delete_file(os.path.join(cod, nm))
+
+        #cod = Component.get('ObjectIO').current_object_dir
+        #for nm in glob.glob(os.path.join(cod, '*.fit*')):
+        #    move_to_dir(os.path.join(cod, nm), 'deleted')
 
         # perform necessary resets
         Component.get('Aligner').reset()
         self.reset()
-        Component.get('Capture').soft_reset()
-        self.changed = False # indicate nothing has changed
+        Component.get('Capture').reset(stop_capturing=False)
+        self.app.gui.has_changed('Stacker', False)
+        #self.changed = False # indicate nothing has changed
 
     def delete_sub(self, *args):
         if self.is_empty():
@@ -199,8 +255,11 @@ class Stacker(Component):
         sub_num = self.selected_sub
         if sub_num == 0:
             return
-        cod = Component.get('ObjectIO').current_object_dir
-        move_to_dir(os.path.join(cod, self.subs[sub_num].name), 'deleted')
+        objio = Component.get('ObjectIO')
+        cod = objio.current_object_dir
+        objio.delete_file(os.path.join(cod, self.subs[sub_num].name + '.fit'))        
+        #cod = Component.get('ObjectIO').current_object_dir
+        #move_to_dir(os.path.join(cod, self.subs[sub_num].name), 'deleted')
         del self.subs[sub_num]
         self.selected_sub -= 1
 
@@ -261,7 +320,10 @@ class Stacker(Component):
         self.stack_changed()            # will check if sub or stack
 
         # check if anything has changed
-        self.check_for_changes()
+        if self.subs[0].sub_type == 'light':
+            changed = {s.name for s in self.subs if s.status == 'reject'} != self.orig_rejects or \
+                self.subs[0].exposure != self.original_exposure
+            self.app.gui.has_changed('Stacker', changed)
 
     def on_spectral_mode(self, *args):
         self.stack_changed()
@@ -277,7 +339,7 @@ class Stacker(Component):
             return
 
         # see if we can satisfy user's non-mono preferences and if not, drop thru to mono
-        filters = self.get_filters()
+        # filters = self.get_filters()
 
         if self.spectral_mode == 'LRGB':
             Component.get('MultiSpectral').LRGB_changed(
@@ -312,7 +374,7 @@ class Stacker(Component):
             l.background_color[-1] = 0
 
         # we have some subs
-        fw = Component.get('FilterWheel')
+        fw = Component.get('FilterChooser')
         for i, l in enumerate(labs, start=self.selected_sub - 2):
             # if position is occupied by a sub
             if (i >= 0) and (i < len(self.subs)):
@@ -325,7 +387,6 @@ class Stacker(Component):
             self.selected_sub = 0
         else:
             self.selected_sub += 1
-
 
     def get_screen(self, dt=None):
         im = Component.get('Snapshotter').snap(return_image=True).copy()
@@ -387,8 +448,8 @@ class Stacker(Component):
             else:
                 im = self.get_stack()
             return Component.get('View').do_flips(im)
-        except Exception as e:
-            Logger.warning('Stacker: no image for platesolving')
+        except:
+            logger.warning('no image for platesolving')
             return None
 
     def get_selected_sub_count(self):
@@ -447,63 +508,33 @@ class Stacker(Component):
 
         return stacked
 
+    @logger.catch()
     def add_sub(self, sub):
-        # for sub coming from Watcher
-
-        ''' if exposure is estimated, then find estimate. Rules, in priority order:
-            (1) if the user has provided a manual estimate via GUI, then always use that.
-            (2) if the user allows TOA differences and there are enough subs, use that.
-                and propogate estimate to rest of stack so it is continually updated
-            (3) otherwise for now use value for this sub type from GUI, even if user
-                hasn't altered it; note that it is still not a manual estimate to
-                give a chance for re-estimation using TOA later
+        ''' for sub coming from watcher
         '''
 
-        if sub.exposure_is_an_estimate:
-            # if first sub used manual estimate, use that estimate
-            if len(self.subs) > 0 and self.subs[0].exposure_is_manual_estimate:
-                sub.exposure = self.subs[0].exposure
-                sub.exposure_is_manual_estimate = True
-            # if user wishes to to TOA for exposure, try to use that
-            elif self.use_TOA_for_exposure and len(self.subs) > 3:
-                dTOA = int(np.mean(np.diff([s.arrival_time for s in self.subs])))
-                sub.exposure = dTOA
-                # propagate it to all subs
-                for s in self.subs:
-                    s.exposure = dTOA
-                    s.exposure_is_manual_estimate = False
-            # otherwise use current exposure indicated for this sub type
-            else:
-                sub.exposure = Component.get('CaptureScript').get_current_exposure(sub.sub_type)
-                sub.exposure_is_manual_estimate = False
-
-            # tell interface
-            Component.get('CaptureScript').set_external_details(sub_type=sub.sub_type, exposure=sub.exposure)
-
+        ''' check if sub is the same dims as existing stack, otherwise don't add; note
+            dims are in reverse order to those of the numpy array
+        ''' 
+        if not self.is_empty():
+            width, height = self.subs[0].image.shape
+            if sub.shape[1] != width or sub.shape[0] != height:
+                msg = 'sub dimensions {:} x {:} incompatible with those of current stack {:}'.format(
+                    width, height, self.subs[0].get_image().shape)
+                toast(msg)
+                logger.error(msg)
+                return
 
         self.process(sub)
         self.subs.append(sub)
         self.sub_added()
 
-        self.changed = not self.is_empty()
+        self.app.gui.has_changed('Stacker', not self.is_empty())
 
-    def exposure_provided_manually(self, exposure_estimate):
-        # called by CaptureScript when user changes exposure using GUI
-        # natively captured subs won't be estimated, so won't get updated
-        for s in self.subs:
-            if s.exposure_is_an_estimate:
-                s.exposure = exposure_estimate
-                s.exposure_is_manual_estimate = True
-        # check if exposure has changed but only when we are not capturing natively
-        if not self.is_empty() and self.subs[0].exposure_is_an_estimate:
-            self.check_for_changes()
-
-    def check_for_changes(self):
-        # for light subs only, denote a change if any change in select/reject
-        # for calibration frames self.changed is always True (so we can save master)
-        if self.subs[0].sub_type == 'light':
-            self.changed = {s.name for s in self.subs if s.status == 'reject'} != self.orig_rejects or \
-                self.subs[0].exposure != self.original_exposure
+        Component.get('CaptureScript').set_external_details(
+            exposure=sub.exposure,
+            filt=''.join(sub.filter),
+            sub_type=sub.sub_type)
 
     def realign(self, *args):
         self.recompute(realign=True)
@@ -512,7 +543,7 @@ class Stacker(Component):
         # initial load, recompute or realign
         Component.get('Aligner').reset()
         self.stack_cache = {}
-        # shuffle-baased realign
+        # shuffle-based realign
         if realign:
             np.random.shuffle(self.subs)
             # if we have a B or Ha, keep shuffling until we start with that
@@ -540,4 +571,3 @@ class Stacker(Component):
             Component.get('Aligner').process(sub)
         elif sub.sub_type == 'flat':
             Component.get('Calibrator').calibrate_flat(sub)
-

@@ -1,17 +1,15 @@
 ''' Manages all individual components, including imports/instantiation,
-    in a uniform way. A bit 'meta' but some advantages of doing it this
-    way.
+    in a uniform way.
 '''
 
-import time
+import json
 import importlib
 import math
+from loguru import logger
 from collections import OrderedDict
 from kivy.app import App
-from kivy.logger import Logger
 from kivy.event import EventDispatcher
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty
-from jocular.widgets import jicon
+from kivy.properties import StringProperty, ListProperty
 
 def remove_nulls_from_dict(d):
     return {k: v for k, v in d.items() \
@@ -25,30 +23,26 @@ class Component(EventDispatcher):
 
     components = OrderedDict()
     infoline = StringProperty('')   # ensures each component can signal its status for technical panel
-    errors = NumericProperty(0)     # use these at some point
-    warnings = NumericProperty(0)
-    changed = BooleanProperty(True)
+    #errors = NumericProperty(0)     # use these at some point
+    #warnings = NumericProperty(0)
+    save_settings = ListProperty([])
 
     @classmethod
     def get(cls, name):
         # Returns component whose class is identified by name; loads if not found
 
+        logger.trace(name)
         if name in cls.components:
             return cls.components[name]
         try:
-            t0 = time.time()
             module = importlib.import_module('jocular.' + name.lower())
             class_ = getattr(module, name)
-            import_time = time.time() - t0
-            t1 = time.time()
             inst = class_()
-            init_time = time.time() - t1
             cls.register(inst)
-            Logger.info('Component: imported {:} in {:.0f}ms, init in {:.0f}ms'.format(name, 
-                1000 * import_time, 1000 * init_time))
+            logger.info('{:} imported'.format(name))
             return inst
         except Exception as e:
-            Logger.error('Component: cannot import module {:} ({:})'.format(name, e))
+            logger.exception('cannot import module {:} ({:})'.format(name, e))
             return
  
     @classmethod
@@ -62,14 +56,24 @@ class Component(EventDispatcher):
             cls.components[name] = obj
             App.get_running_app().gui.initialise_component(name)
         else:
-            Logger.error('Component: name clash for {:}'.format(name))
+            logger.error('name clash for {:}'.format(name))
  
     @classmethod
     def initialise_new_object(cls):
+        logger.info('initialising for new object')
         for c in cls.components.keys():
-            cls.components[c].changed = False
             cls.components[c].on_new_object()
+        App.get_running_app().gui.reset_changes()
 
+    @classmethod
+    def initialise_previous_object(cls):
+        # ensure metadata is first and stacker the last to be initialised
+        logger.info('initialising for previous object')
+        comps = ['Metadata'] + list(cls.components.keys() - {'Stacker', 'Metadata'}) + ['Stacker']
+        for c in comps:
+            cls.components[c].on_previous_object()
+        App.get_running_app().gui.reset_changes()
+ 
     @classmethod
     def save_object(cls):
         for c in cls.components.keys():
@@ -77,7 +81,13 @@ class Component(EventDispatcher):
 
     @classmethod
     def close(cls):
-        Logger.info('Component: closedown')
+        logger.debug('closedown')
+        tosave = {}
+        for c in cls.components.values():
+            for k in c.save_settings:
+                tosave[k] = getattr(c, k)
+        with open(App.get_running_app().get_path('gui_settings.json'), 'w') as f:
+            json.dump(tosave, f, indent=1)
         for c in cls.components.keys():
             cls.components[c].on_close()
 
@@ -85,35 +95,23 @@ class Component(EventDispatcher):
     def bind_status(cls):
         for name, inst in cls.components.items():
             cls.get('Status').bind_status(name, inst)
-            inst.info('loaded')
+            #inst.info('loaded')
 
-    @classmethod
-    def check_change(cls):
-        for c in cls.components.keys():
-            if cls.components[c].changed:
-                App.get_running_app().gui.something_has_changed = True
-                return
-        App.get_running_app().gui.something_has_changed = False
+    def redraw(self, *args): 
+        pass
 
-    def redraw(self, *args): pass
-    def on_new_object(self, *args): pass
-    def on_save_object(self, *args): pass
-    def on_close(self, *args): pass
+    def on_new_object(self, *args): 
+        pass
 
-    def on_changed(self, *args):
-        Component.check_change()
+    def on_previous_object(self, *args):
+        # treat as new object unless a component overrides this
+        self.on_new_object(*args)
+
+    def on_save_object(self, *args): 
+        pass
+
+    def on_close(self, *args): 
+        pass
 
     def info(self, message=None, prefix=None, typ='normal'):
-        i = '' if typ == 'normal' else jicon(typ)
-        self.infoline = '{:}: [b]{:}[/b] {:}'.format(message, self.__class__.__name__, i)
-
-    def warn(self, message):
-        self.warnings += 1
-        self.info(message, typ='warn')
-        Logger.debug('{:}: {:}'.format(self.__class__.__name__, message))
-
-    def error(self, message):
-        self.errors += 1
-        self.info(message, typ='error')
-        Logger.exception('{:}: {:}'.format(self.__class__.__name__, message))
-
+        self.infoline = message

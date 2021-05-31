@@ -8,15 +8,25 @@ import numpy as np
 from scipy.ndimage import convolve
 
 from kivy.app import App
-from kivy.properties import ConfigParserProperty
-from kivy.logger import Logger
+from kivy.properties import BooleanProperty, NumericProperty
+from loguru import logger
 
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 
-class BadPixelMap(Component):
+class BadPixelMap(Component, Settings):
 
-    apply_BPM = ConfigParserProperty(1, 'BadPixelMap', 'apply_BPM', 'app', val_type=int)
-    bpm_frames = ConfigParserProperty(3, 'BadPixelMap', 'bpm_frames', 'app', val_type=int)
+    apply_BPM = BooleanProperty(True)
+    bpm_frames = NumericProperty(3)
+
+    tab_name = 'Bad pixel map'
+    configurables = [
+        ('apply_BPM', {'name': 'remove hot pixels?', 'switch': '',
+            'help': 'Switching this off can help diagnose tracking issues'}),
+        ('bpm_frames', {'name': 'successive subs to create BPM', 'float': (1, 10, 1),
+            'help': 'Only treat as a bad pixel if it occurs in this many subs in succession',
+            'fmt': '{:.0f} subs'})
+        ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -35,11 +45,9 @@ class BadPixelMap(Component):
         if os.path.exists(path):
             bpm = np.load(path)
             self.update_bpm({(x, y) for x, y in zip(bpm[0], bpm[1])})
-            self.info('loaded')
-            Logger.info('BPM: loaded map with {:} members'.format(len(bpm[0])))
+            logger.info('loaded bad pixel map with {:} members'.format(len(bpm[0])))
         else:
-            self.info('new map')
-            Logger.info('BPM: new map')
+            logger.info('creating new bad pixel map')
 
     def on_close(self):
         self.save_BPM()
@@ -65,7 +73,7 @@ class BadPixelMap(Component):
         if sub.sub_type == 'light':
             self.update_bpm(badpix)
             if self.bpm is not None:
-                self.info('{:} pix, {:} in map'.format(len(badpix), len(self.bpm)))
+                logger.debug('{:} pix, {:} in map'.format(len(badpix), len(self.bpm)))
         self.do_bpm(im, self.bpm)
 
 
@@ -132,4 +140,4 @@ class BadPixelMap(Component):
         bpm = np.array([[x for x, y in self.bpm], [y for x, y in self.bpm]])
         path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
         np.save(path, bpm)
-        Logger.info('BPM: saved map with {:} members'.format(len(bpm[0])))
+        logger.info('saved map with {:} members'.format(len(bpm[0])))

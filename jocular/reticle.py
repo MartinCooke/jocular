@@ -13,7 +13,7 @@ Builder.load_string('''
 <Reticle>:
     canvas:
         Color: 
-            rgba: app.highlight_color if root.show else self.disabled_color
+            rgba: app.theme_cls.primary_color if root.show else self.disabled_color
         Line:
             circle: self.x, self.y, inner, 0, 360, 100
         Line:

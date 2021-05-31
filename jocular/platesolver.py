@@ -7,12 +7,14 @@ from scipy.spatial.distance import cdist
 from skimage.feature import blob_dog
 from skimage.transform import estimate_transform
 from concurrent.futures import ThreadPoolExecutor
+from loguru import logger
 
 from kivy.app import App
-from kivy.logger import Logger
-from kivy.properties import ConfigParserProperty
+from kivy.properties import BooleanProperty, NumericProperty
+from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 from jocular.RA_and_Dec import RA, Dec
 from jocular.uranography import (
     to360,
@@ -45,14 +47,14 @@ def fastmatch(
     match_arcsec=15,
     first_match=True,
 ):
-    """find possible match of image points im in star database cloud db
+    ''' find possible match of image points im in star database;
     both db and im are ordered by magnitude; works by choosing a pair
     of image points, rotating and scaling so they sit at (0, 0) and (1, 0);
     then searching across pairs of image points at a similar separation, applying
     similar rotation/scaling, then counting matches; if first_match is true, return
     first match that contains more than min_matches stars, otherwise return
     the match that contains the most correspondences.
-    """
+    '''
 
     max_matches = 0
     best_matches = None
@@ -103,28 +105,57 @@ def fastmatch(
     return best_matches
 
 
-class PlateSolver(Component):
+class PlateSolver(Component, Settings):
 
-    focal_length = ConfigParserProperty(
-        800.0, 'PlateSolver', 'focal_length', 'app', val_type=float
-    )
-    pixel_height = ConfigParserProperty(
-        8.4, 'PlateSolver', 'pixel_height', 'app', val_type=float
-    )
-    binning = ConfigParserProperty(1, 'PlateSolver', 'binning', 'app', val_type=int)
-    n_stars_in_image = ConfigParserProperty(
-        30, 'PlateSolver', 'n_stars_in_image', 'app', val_type=int
-    )
-    min_matches = ConfigParserProperty(
-        8, 'PlateSolver', 'min_matches', 'app', val_type=int
-    )
-    match_arcsec = ConfigParserProperty(
-        15, 'PlateSolver', 'match_arcsec', 'app', val_type=float
-    )
-    mag_range = ConfigParserProperty(5, 'PlateSolver', 'mag_range', 'app', val_type=int)
-    first_match = ConfigParserProperty(
-        1, 'PlateSolver', 'first_match', 'app', val_type=int
-    )
+    match_arcsec = NumericProperty(15)
+    focal_length = NumericProperty(800)
+    pixel_height = NumericProperty(8.4)
+    n_stars_in_image = NumericProperty(30)
+    min_matches = NumericProperty(10)
+    mag_range = NumericProperty(5)    # dont' allow user to set this
+    first_match = BooleanProperty(False)
+    binning = NumericProperty(1)
+
+    tab_name = 'Plate-solving'
+
+    configurables = [
+        ('focal_length', {
+            'name': 'focal length', 'float': (50, 2400, 10),
+            'fmt': '{:.0f} mm',
+            'help': 'Focal length of scope (including reducers)'
+            }),
+        ('pixel_height', {
+            'name': 'pixel height', 
+            'double_slider_float': (1, 16),
+            'fmt': '{:.2f} um',
+            'help': 'Pixel height of sensor'
+            }),
+        ('binning', {
+            'name': 'binning', 'float': (1, 4, 1),
+            'fmt': '{:.0f}',
+            'help': 'If binning, specify amount here (1=no binning)'
+            }),
+        ('n_stars_in_image', {
+            'name': 'number of stars to extract', 'float': (5, 50, 1),
+            'fmt': '{:.0f} stars',
+            'help': 'Ideal number of stars to extract from image (factory: 30)'
+            }),
+        ('min_matches', {
+            'name': 'minimum number of stars to match', 'float': (5, 30, 1),
+            'fmt': '{:.0f} stars',
+            'help': 'Must match at least this many stars in stellar database (factory: 10)'
+            }),
+        ('match_arcsec', {
+            'name': 'star proximity for matching', 'float': (5, 25, 1),
+            'fmt': '{:.0f} arcsec',
+            'help': 'How close reference and image stars must be to match, in arcsec (factory: 15)'
+            }),
+        ('first_match', {
+            'name': 'return after finding', 
+            'boolean': {'first match': True, 'best match': False},
+            'help': 'tradeoff speed and accuracy'
+            })
+        ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -134,7 +165,7 @@ class PlateSolver(Component):
     def on_new_object(self):
         self.cart2pix = None
         self.can_solve = Component.get('Catalogues').has_platesolving_db()
-        self.info('ready' if self.can_solve else 'no database')
+        self.info('')
 
     def match(self):
         # runs in separate thread
@@ -162,7 +193,7 @@ class PlateSolver(Component):
             x_im, y_im = x[inds], y[inds]
 
             if len(x_im) < self.min_matches:
-                self.warn('too few stars ({:})'.format(len(x_im)))
+                toast('Too few stars to platesolve (min: {:})'.format(len(x_im)))
                 return
 
             # get reference stars for search field (NB larger fov is worse)
@@ -189,12 +220,11 @@ class PlateSolver(Component):
 
             # check if we have a result
             if matches is None:
-                self.warn('failed to match')
-                Logger.warn('Platesolver: no match, {:} im stars, {:} ref stars'.format(
+                # self.warn('failed to match')
+                toast('Failed to solve: is image flipped correctly?')
+                logger.warning('no match, {:} im stars, {:} ref stars'.format(
                     len(x_im), len(ras)))
                 return
-
-            self.info('matched {:}'.format(len(matches)))
 
             # use result to find transform from ref in cartesian to im  in pixels
             src = np.vstack([ras, decs]).T[[j for (i, j) in matches], :]
@@ -226,18 +256,22 @@ class PlateSolver(Component):
                 90 - np.degrees(np.arctan2(yy[1] - yy[0], xx[1] - xx[0]))
             )
 
-            Logger.info(
-                'PlateSolver: {:5.3f} x {:5.3f}, {:.0f}\u00b0, RA: {:} Dec: {:}'.format(
-                    self.FOV_w,
-                    self.FOV_h,
-                    self.north,
-                    str(RA(self.tile_ra0)),
-                    str(Dec(self.tile_dec0)),
-                )
-            )
+            desc = '{:5.3f} x {:5.3f}, {:.0f}\u00b0, RA: {:} Dec: {:}'.format(
+                self.FOV_w,
+                self.FOV_h,
+                self.north,
+                str(RA(self.tile_ra0)),
+                str(Dec(self.tile_dec0)))
 
-        except Exception as e:
-            Logger.warn('PlateSolver: error in match')
+            toast('Solved ({:} matched) {:}'.format(len(matches), desc))
+            logger.info(desc)
+            self.info('{:.2f}\u00b0 x {:.2f}\u00b0 | {:} | {:}'.format(
+                self.FOV_w, self.FOV_h,
+                str(RA(self.tile_ra0)),
+                str(Dec(self.tile_dec0))))
+
+        except:
+            logger.warning('error in match')
 
     def solve(self, *args):
         # called when user presses loc icon
@@ -249,13 +283,15 @@ class PlateSolver(Component):
 
         self.ra0, self.dec0 = Component.get('DSO').current_object_coordinates()
         if self.ra0 is None:
-            self.warn('unknown DSO')
+            # self.warn('unknown DSO')
+            toast('Cannot solve: unknown DSO')
             return
 
         # get current image (sub or stack)
         self.im = Component.get('Stacker').get_image_for_platesolving()
         if self.im is None:
-            self.warn('no current image')
+            toast('Cannot solve: no current image')
+            # self.warn('no current image')
             return
 
         pool = ThreadPoolExecutor(3)
@@ -264,7 +300,8 @@ class PlateSolver(Component):
 
     def annotate(self, *args):
         if self.cart2pix is None:
-            self.warn('failed')
+            toast('platesolving failed')
+            # self.warn('failed')
         else:
             Component.get('Annotator').annotate()
 
@@ -296,47 +333,10 @@ class PlateSolver(Component):
             return x[0], y[0]
         return x, y
 
-    # def get_stars(self, tile):
-    #     # get stars in tile by reading npys that are spaced at 30 x 10 degrees in RA/Dec
-    #     # star_db = self.app.get_path('star_db')
-    #     min_ra, max_ra = tile['min_ra'], tile['max_ra']
-    #     min_dec, max_dec = tile['min_dec'], tile['max_dec']
-    #     dec_tiles = np.arange(dec2tile(min_dec), dec2tile(max_dec) + DEC_STEP, DEC_STEP)
-    #     if min_ra < max_ra:
-    #         ra_tiles = np.arange(ra2tile(min_ra), ra2tile(max_ra) + RA_STEP, RA_STEP)
-    #     else:
-    #         ra_tiles = list(range(ra2tile(min_ra), 360, RA_STEP)) + list(
-    #             range(0, ra2tile(max_ra) + RA_STEP, 30)
-    #         )
-
-    #     # here we could cache when implemented as Joc component
-    #     ras, decs, mags = np.array([]), np.array([]), np.array([])
-    #     for ra in ra_tiles:
-    #         for dec in dec_tiles:
-    #             #dat = np.load(os.path.join(star_db, 'r{:}_d{:}.npz'.format(ra, dec)))
-    #             quad = 'r{:}_d{:}_'.format(ra, dec)
-    #             ras = np.append(ras, self.db[quad+'ra'])
-    #             decs = np.append(decs, self.db[quad+'dec'])
-    #             mags = np.append(mags, self.db[quad+'mag']/100.) # mags are ints * 100
-
-    #     # restrict to tile
-    #     if min_ra < max_ra:
-    #         locs = (
-    #             (ras >= min_ra) & (ras < max_ra) & (decs >= min_dec) & (decs < max_dec)
-    #         )
-    #     else:
-    #         locs = (
-    #             ((ras >= min_ra) | (ras < max_ra))
-    #             & (decs >= min_dec)
-    #             & (decs < max_dec)
-    #         )
-    #     return ras[locs], decs[locs], mags[locs]
-
     def degrees_per_pixel(self):
         arcsec_pp = (
             self.binning
             * (self.pixel_height * 1e-6 / (self.focal_length / 1000))
             * (206265)
         )
-        #  self.info('{:4.2f}"/pixel'.format(arcsec_pp))
         return arcsec_pp / 3600

@@ -3,14 +3,8 @@
 
 import math
 from math import radians
-from functools import partial
 
-from kivy.app import App
-from kivy.core.window import Window
-from kivy.clock import Clock
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.popup import Popup
 from kivy.lang import Builder
 from kivy.uix.label import Label
 from kivy.properties import (
@@ -21,15 +15,14 @@ from kivy.properties import (
     ListProperty,
 )
 from kivy.uix.button import Button
-from kivy.uix.bubble import Bubble, BubbleButton
 from kivy.uix.togglebutton import ToggleButton
+from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
 from kivy.graphics.transformation import Matrix
-from kivy.metrics import dp
+from kivymd.uix.button import MDIconButton
 
 from jocular.utils import angle360
-from jocular.metrics import Metrics
 
 Builder.load_string(
     '''
@@ -57,9 +50,12 @@ Builder.load_string(
     #         pos: self.pos
     #         size: self.size
     size_hint: None, None
-    highlight_color: app.highlight_color
+    # highlight_color: app.highlight_color
+    highlight_color: app.theme_cls.accent_palette
     background_color: .6, 0, .6, 0
     color: app.lowlight_color
+    # color: app.theme_cls.primary_color
+    disabled_color: .1, .1, .1, 1   
     markup: True
     halign: 'center'
     valign: 'middle'
@@ -67,7 +63,6 @@ Builder.load_string(
     font_size: app.ring_font_size
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
-    disabled_color: 0, 0, 0, 1
 
 <JFilterButton>:
     canvas.before:
@@ -88,10 +83,11 @@ Builder.load_string(
     color: app.lever_color
 
 <JIconButton>:
-    text: self.icon
+    text: self.myicon
 
 <JToggleButton>:
-    color: app.highlight_color if self.state == 'down' else app.lowlight_color
+    # color: app.highlight_color if self.state == 'down' else app.lowlight_color
+    color: app.theme_cls.accent_color if self.state == 'down' else app.lowlight_color
 
 <ELabel>:
     size_hint: 1, None
@@ -107,6 +103,7 @@ Builder.load_string(
         halign: 'left'
         text_size: self.size
         color: app.lowlight_color
+        # color: app.theme_cls.primary_color
         font_size: app.info_font_size
         background_color: .6, 0, .6, 0
         width: dp(65)
@@ -119,13 +116,82 @@ Builder.load_string(
         halign: 'left'
         text_size: self.size
         color: app.lowlight_color
+        #color: app.theme_cls.primary_color
         font_size: app.info_font_size
         background_color: .6, 0, .6, 0
         width: dp(220)
         text: '{:}'.format(root.value)
 
+<Panel>:
+    canvas:
+        Color:
+            rgba: .2, .2, .2, .8
+        Rectangle:
+            pos: self.pos
+            size: self.width, self.height
+    padding: 20, 20
+    orientation: 'vertical'
+    size_hint: None, None
+    size: dp(450), dp(450)
+    pos_hint: {'center_x': 10, 'center_y': .5}
+
+
+<LabelR>:
+    halign: 'right'
+    valign: 'middle'
+    text_size: self.size
+    padding: [dp(7), 0]
+
+<LabelL>:
+    halign: 'left'
+    valign: 'middle'
+    text_size: self.size
+    padding: [dp(7), 0]
+
+# vertically aligned text box
+<TextInputC>:
+    padding: [5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines)]
+
+
+<WarningBanner>:
+    right_action: ['CLOSE', lambda x: None]
+
 '''
 )
+
+
+class TextInputC(TextInput):
+    pass
+
+class LabelR(Label): 
+    pass
+
+class LabelL(Label): 
+    pass
+
+class Panel(BoxLayout):
+    ''' Represents the centre panel used for config/choosers etc
+    '''
+
+    def show(self, *args):
+        self.on_show()
+        self.pos_hint = {'center_x': .5, 'center_y': .5}       
+
+    def hide(self, *args):
+        self.on_hide()
+        self.pos_hint = {'center_x': 10, 'center_y': .5}       
+
+    def on_show(self):
+        pass
+
+    def on_hide(self):
+        pass
+
+    def toggle(self, *args):
+        if self.pos_hint['center_x'] > 1:
+            self.show()
+        else:
+            self.hide()
 
 
 class ParamValue(BoxLayout):
@@ -227,34 +293,30 @@ class Rotatable(Widget, Polar):
 class JWidget(Widget):
     pass
 
-
 class JRotWidget(JWidget, Rotatable):
     pass
-
 
 class JLabel(JRotWidget, Label):
     pass
 
-
 class JToggleButton(ToggleButton, JRotWidget):
     pass
-
 
 class JButton(Button, JRotWidget):
     pass
 
-
 class JIconTextButton(JButton, JRotWidget):
     pass
-
 
 class JFilterButton(Rotatable, Button):
     filter_color = ListProperty([0.2, 0.2, 0.2, 1])
 
-
 class JIconButton(JButton, JRotWidget):
-    icon = StringProperty('')
+    myicon = StringProperty('')
 
+
+class JMDIconButton(MDIconButton, Rotatable):
+    pass
 
 class JMulti(JButton):
     def __init__(self, values=None, **kwargs):
@@ -293,9 +355,7 @@ class JLever(JRotWidget, Label):
     value = NumericProperty(0.0)
     disabled = BooleanProperty(False)
 
-    def __init__(
-        self, value=0, values=[0, 1], angles=[0, 1], radial=True, springy=None, **kwargs
-    ):
+    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, springy=None, **kwargs):
 
         super().__init__(radial=radial, **kwargs)
         self.min_angle, self.max_angle = angles[0], angles[1]
@@ -367,158 +427,6 @@ class ELabel(Label):
     pass
 
 
-class JPopup(Popup):
-    def __init__(
-        self,
-        posn=None,
-        message=None,
-        actions=None,
-        show_for=None,
-        cancel_label=None,
-        show_title=True,
-        **args
-    ):
-
-        if 'size' not in args:
-            self.size = dp(300), dp(400)
-
-        # user has provided no explicit content, so build it up from message or actions
-        if 'content' not in args:
-            args['content'] = hl = BoxLayout(
-                size_hint=(1, None), height=dp(32), spacing=10
-            )
-
-            # use a simple label
-            if message is not None:
-                hl.add_widget(ELabel(text=message))
-                # self.size = dp(300), dp(200)
-
-            elif actions is not None:
-                for msg, action in actions.items():
-                    b = Button(text=msg)
-                    b.bind(on_press=partial(self.do_action, action))
-                    hl.add_widget(b)
-
-            self.size = dp(300), dp(150)
-
-            # add cancel if not provided
-            if cancel_label is not None:
-                hl.add_widget(Button(text=cancel_label, on_press=self.dismiss))
-
-        # now we have content, so place it in an anchor layout (we have to store size first)
-        content_width, content_height = args['content'].size
-        a = AnchorLayout(anchor_x='center', anchor_y='center')
-        a.add_widget(args['content'])
-        args['content'] = a
-
-        # generate popup
-        super().__init__(
-            title_align='center',
-            title_size='18sp' if show_title else '0sp',
-            separator_height='2dp' if show_title else '0dp',
-            size_hint=(None, None),
-            auto_dismiss=False,
-            separator_color=App.get_running_app().highlight_color,
-            **args
-        )
-
-        if 'size' not in args:
-            if content_width < 200:
-                self.width = content_width + dp(200)
-            else:
-                self.width = content_width + dp(100)
-            if show_title:
-                self.height = content_height + dp(120)
-            else:
-                self.height = content_height
-
-        if 'pos_hint' not in args:
-            if posn is None:
-                self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-            elif type(posn) == str:
-                if posn == 'bottom-left':
-                    self.pos_hint = {'x': 0, 'y': 0}
-                elif posn == 'bottom-middle':
-                    self.pos_hint = {'center_x': 0.5, 'y': 0}
-                elif posn == 'top-right':
-                    self.pos_hint = {'right': 1, 'top': 1}
-                elif posn == 'top-left':
-                    self.pos_hint = {'x': 0, 'top': 1}
-            else:
-                self.pos_hint = {
-                    'centre_x': posn[0] / Window.width,
-                    'center_y': posn[1] / Window.height,
-                }
-
-        if show_for is not None:
-            Clock.schedule_once(self.dismiss, show_for)
-
-    def do_action(self, action, *args):
-        action()
-        self.dismiss()
-
-
-class JBubble(Widget):
-    def __init__(
-        self, message=None, actions=None, show_for=2, loc='right', show_cancel=True
-    ):
-        super().__init__()
-
-        self.hide_bubble(0)
-
-        self.bubble = Bubble(
-            size_hint=(None, None),
-            orientation='vertical',
-            background_color=(0.2, 0.2, 0.2, 1),
-            background_image='',
-        )
-        self.message = message
-        self.loc = loc
-        self.show_for = show_for
-
-        if message is None:
-            if show_cancel and 'Cancel' not in actions:
-                actions['Cancel'] = self.hide_bubble
-            self.bubble.size = dp(140), dp(25 * len(actions))
-            for c, callback in actions.items():
-                bb = BubbleButton(text=c)
-                self.bubble.add_widget(bb)
-                bb.bind(on_press=partial(self.hide_bubble_and_respond, callback))
-        else:
-            self.bubble.add_widget(BubbleButton(text=message))
-            self.bubble.size = dp(10 * len(message)), dp(35)
-
-        cx, cy = Metrics.get('origin')
-        if loc == 'right':
-            self.bubble.center_y = cy
-            self.bubble.x = cx + Metrics.get('radius')
-            self.bubble.arrow_pos = 'left_mid'
-        elif loc == 'bottom':
-            self.bubble.center_x = cx
-            self.bubble.y = dp(60)
-            self.bubble.arrow_pos = 'bottom_mid'
-        elif loc == 'mouse':
-            x, y = Window.mouse_pos
-            self.bubble.x = x + dp(10)
-            self.bubble.center_y = y
-            self.bubble.arrow_pos = 'left_mid'
-        elif loc == 'center':
-            self.bubble.center_x = cx
-            self.bubble.center_y = cy
-
-    def open(self):
-        if self.message is not None:
-            self.clock_event = Clock.schedule_once(self.hide_bubble, self.show_for)
-        App.get_running_app().gui.add_widget(self.bubble)
-
-    def hide_bubble_and_respond(self, callback, *args):
-        self.hide_bubble(0)
-        callback(*args)
-
-    def hide_bubble(self, dt):
-        if hasattr(self, 'bubble') and (self.bubble is not None):
-            App.get_running_app().gui.remove_widget(self.bubble)
-
 
 joc_icons = {
     'pause': '3',
@@ -539,6 +447,7 @@ joc_icons = {
     'prev': 'F',
     'list': 'w',
     'lever': '1',
+    'dot': '1',
     'redo': 'h',  # was '4'
     'new': 'i',
     'warn': '!',
@@ -549,7 +458,10 @@ joc_icons = {
 }
 
 
-def jicon(nm, font_size=None):
+def jicon(nm, font_size=None, color=None):
     fs = '{:}sp'.format(font_size) if font_size else '16sp'
     icon = joc_icons.get(nm, 'm')
-    return "[font=Jocular][size={:}]{:}[/size][/font]".format(fs, icon)
+    if color is None:
+        return '[font=Jocular][size={:}]{:}[/size][/font]'.format(fs, icon)
+    color = {'r': 'ff0000', 'y': 'ffff00', 'g': '00ff00'}[color]
+    return '[font=Jocular][size={:}][color={:}]{:}[/color][/size][/font]'.format(fs, color, icon)

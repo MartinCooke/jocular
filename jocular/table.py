@@ -3,14 +3,13 @@
 
 import math
 import os
-import time
 import operator
 from functools import partial
 from datetime import datetime
 import numpy as np
+from loguru import logger
 
 from kivy.app import App
-from kivy.logger import Logger
 from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -38,7 +37,8 @@ Builder.load_string('''
     browser: None
     halign: 'center'
     background_color: .08, .08, .08, 1
-    color: app.highlight_color
+    # color: app.highlight_color
+    color: app.theme_cls.primary_color
 
 # row label
 <TableLabel>:
@@ -72,7 +72,8 @@ Builder.load_string('''
     browser: None
     halign: 'center'
     #background_normal: ''
-    color: app.highlight_color
+    # color: app.highlight_color
+    color: app.theme_cls.primary_color
     background_color: .06, .06, .06, 0
 
 <SearchBarTextInput@TextInput>:
@@ -145,7 +146,7 @@ Builder.load_string('''
                 width: root.width - dp(30)
                 orientation: 'vertical'
 
-            Slider:
+            MDSlider:
                 size_hint: None, 1
                 cursor_size: [dp(25), dp(25)]
                 width: dp(30)
@@ -428,7 +429,6 @@ class SearchBar(BoxLayout):
         pass
 
     def combine_results(self):
-        t0 = time.time()
         # these two lines ~ 10ms
         l = [s.filtered for s in self.filters]
         self.table.search_results = list(set.intersection(*l)) # causes update
@@ -635,8 +635,7 @@ class Table(FloatLayout):
         update_on_show=True, on_show_method=None, on_hide_method=None, 
         initial_sort_column=None, initial_sort_direction=None, **kwargs):
 
-
-        t0 = time.time()
+        logger.debug('Building {:}'.format(name))
         self.initialising = True  # to prevent redraw
         super().__init__(**kwargs)
 
@@ -676,7 +675,7 @@ class Table(FloatLayout):
         self.size = Window.size
         self.redraw()
         # the redraw takes the time
-        Logger.debug('Table: {:} built in {:.0f} ms'.format(name, 1000*(time.time() - t0)))
+        logger.debug('built')
 
 
     def redraw(self, *args):
@@ -684,7 +683,7 @@ class Table(FloatLayout):
         if self.initialising:
             return
 
-        t0 = time.time()
+        # t0 = time.time()
 
         self.redrawing = True
 
@@ -761,7 +760,7 @@ class Table(FloatLayout):
             if r in self.data:
                 self.rows[i].update_row(self.data[r], key=r)
             else:
-                Logger.debug('Table: cannot find {:} in table'.format(r))
+                logger.warning('cannot find {:} in table'.format(r))
 
         for j in range(last_row - self.current_row, self.n_rows):  # clear rest
             self.rows[j].update_row(self.empty_row, empty=True)

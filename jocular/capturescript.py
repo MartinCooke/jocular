@@ -1,358 +1,227 @@
-''' Handles the GUI elements of getting info about different capture scripts.
-    Capturing itself is done with the Capture component
+''' Handles capture script menu and script generators.
+
+    Important. Capture scripts are only altered by the user and
+    are not changed in response to either new subs coming from
+    the watcher, or from previous captures. Thus any subs with
+    strange exposures, for example, don't change the capture
+    script values. On the other hand, the GUI components for
+    exposure, filter and script *are* updated to reflect the 
+    most recent sub regardless of where it originates.
 '''
 
 import json
-import math
-from functools import partial
+from loguru import logger
 
 from kivy.app import App
-from kivy.properties import OptionProperty, ListProperty, NumericProperty, ObjectProperty, StringProperty, BooleanProperty
-from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.togglebutton import ToggleButton
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
+from kivy.clock import Clock
 from kivy.metrics import dp
+from kivy.properties import OptionProperty
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDTextButton
 
 from jocular.component import Component
-from jocular.widgets import JPopup
+from jocular.exposurechooser import exp_to_str
 
-Builder.load_string('''
-
-<MyLabel>:
-    size_hint: 1, None
-    height: dp(24)
-    text_size: self.size
-    markup: True
-    halign: 'left'
-
-<ExposureToggle>:
-    markup: True
-    background_color: 0, 0, 0, 0
-    color: app.highlight_color if self.state == 'down' else app.lowlight_color
-    font_size: '17sp'
-    group: 'expos'
-
-<FilterToggle>:
-    canvas.before:
-        Color:
-            rgba: .8, .8, .8, .5
-        Ellipse:
-            pos: self.pos
-            size: self.width, self.height
-        Color:
-            rgb: self.filter_color
-            a: 1 if self.state == 'down' else .3
-        Ellipse:
-            pos: self.x + 2, self.y + 2
-            size: self.width - 5, self.height - 5
-    markup: True
-    color: (1, 1, 1, 1) if self.state == 'down' else (0, 0, 0, 1)
-    background_color: 0, 0, 0, 0
-    size: dp(50), dp(50)
-    font_size: '18sp' if self.state == 'down' else '16sp'
-    size_hint: None, None
-
-<ChooseMultiple>:
-    orientation: 'vertical'
-    grid: _grid
-    size_hint: None, None
-    width: dp(240)
-    spacing: dp(0), dp(15)
-    height: _grid.height + _subs_box.height + _temp_box.height + _confirm_box.height + dp(10)
-
-    BoxLayout:
-        id: _grid
-        size_hint: 1, None
-        height: dp(280)
-
-    BoxLayout:
-        id: _subs_box
-        size_hint: 1, None
-        orientation: 'vertical'
-        height: dp(80) if root.show_subs else dp(0)
-        opacity: 1 if root.show_subs else 0
-        index: 1 if root.show_subs else 100
-        disabled: not root.show_subs
-
-        Label:
-            color: .5, .5, .5, 1
-            font_size: '20sp'
-            text: '{:} subs per filter'.format(_nsubs.value)
-
-        Slider:
-            size_hint: 1, None
-            height: dp(30)
-            id: _nsubs
-            min: 2
-            max: root.max_subs
-            value: root.capture.scripts[root.capture.current_script].get('nsubs', 0)
-            step: 1
-
-    BoxLayout:
-        id: _temp_box
-        size_hint: 1, None
-        height: dp(80) if root.show_temperature else dp(0)
-        opacity: 1 if root.show_temperature else 0
-        disabled: not root.show_temperature
-        orientation: 'vertical'
-
-        Label:
-            text: 'Temperature {:}\N{DEGREE SIGN}C'.format(_temperature.value) if _temperature.value > -26 else 'Temperature not set'
-            color: .5, .5, .5, 1
-            font_size: '20sp'
-        Slider:
-            size_hint: 1, None
-            height: dp(30)
-            id: _temperature
-            value: root.session.temperature if root.session.temperature is not None else -26
-            on_value: root.session.temperature = self.value if self.value > -26 else None
-            min: -26
-            max: 40
-            step: 1
-            
-    BoxLayout:
-        id: _confirm_box
-        size_hint: 1, None
-        height: dp(40) # if root.show_confirm else dp(0)
-        opacity: 1     # if root.show_confirm else 0
-
-        Button:
-            text: 'Done'
-            size_hint: .5, .8
-            on_press: root.capture.exposure_done() if root.choice_type == 'exposure' else root.capture.filters_done(_nsubs.value)
-        Button:
-            text: 'Cancel'
-            size_hint: .5, .8
-            on_press: root.capture.cancel_multiple(root.choice_type)
-''')
-
-class FilterToggle(ToggleButton):
-    filter_color = ListProperty([1, 1, 1, 1])
-
-class ChooseMultiple(BoxLayout):
-    grid = ObjectProperty()
-    choice_type = StringProperty('exposure')
-    show_temperature = BooleanProperty(False)
-    show_subs = BooleanProperty(False)
-    subs = NumericProperty(2)
-    max_subs = NumericProperty(2)
-
-    def __init__(self, capture=None, session=None, choice_type=None, **kwargs):
-        script = capture.current_script
-        self.show_temperature = script == 'dark'
-        self.max_subs = 20
-        self.show_subs = script == 'seq'
-        self.capture = capture
-        self.session = session
-        self.choice_type = choice_type
-        super().__init__(**kwargs)
-
-class ExposureToggle(ToggleButton):
-    pass
-
-def exp_to_str(e):
-    if e < .1:
-        return '{:.0f} ms'.format(e*1000)
-    if e < 1:
-        return '{:.2f}s'.format(e)
-    if e < 10:
-        if abs(int(e) - e) < .0001:
-            return '{:.0f}s'.format(e)
-        return '{:.2f}s'.format(e)
-    return '{:.0f}s'.format(e)
-
-def str_to_exp(s):
-    s = s.strip()
-    try:
-        if s.endswith('ms'):
-            return float(s[:-2].strip()) / 1000
-        if s.endswith('s'):
-            return float(s[:-1].strip())
-        return float(s)
-    except:
-        raise Exception
+faf_scripts = ['align', 'focus', 'frame']
+light_scripts = ['light', 'seq']
+calibration_scripts = ['dark', 'bias', 'autoflat', 'flat']
+all_scripts = faf_scripts + light_scripts + calibration_scripts
 
 
 class CaptureScript(Component):
 
-    current_script = OptionProperty('frame', options=['light', 'frame', 'dark', 'flat', 'seq', 'bias'])    
+    current_script = OptionProperty('align', options=all_scripts)
+    capture_controls = {'devices', 'script_button', 'exposure_button', 'filter_button'}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, **args):
+        super().__init__(**args)
         self.app = App.get_running_app()
         try:
             with open(self.app.get_path('capture_scripts.json'), 'r') as f:
                 self.scripts = json.load(f)
         except:
-            # no capture scripts in user directory so use shipped version to start with
-            with open(self.app.get_path('shipped_capture_scripts.json'), 'r') as f:
-                self.scripts = json.load(f)
+            # any problem loading => set up afresh
+            self.scripts = {}
+            for s in all_scripts:
+                self.scripts[s] = {
+                    'exposure': .1 if s in faf_scripts else 1, 
+                    'filter': ['dark' if s in {'bias', 'dark'} else 'L']
+                    }
+            self.scripts['bias']['exposure'] = .001
+            self.scripts['seq']['nsubs'] = 4
+            self.scripts['seq']['filter'] = ['B', 'G', 'R', 'L']
+            self.save()
 
-        self.on_current_script()
+        self.chooser = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(100), dp(240)),
+            pos_hint={'center_x': 10, 'center_y': .5})
 
-    def on_close(self, *args):
-        with open(self.app.get_path('capture_scripts.json'), 'w') as f:
-            json.dump(self.scripts, f, indent=1)       
+        self.app.gui.add_widget(self.chooser)
 
-    def on_current_script(self, *args):
-        script = self.scripts[self.current_script]
-        self.set_exposure_button(script['exposure'])
-        self.app.gui.set('filter_button', script['filter'][0])
-        self.reset_generator()
-        self.app.gui.set('show_reticle', False, update_property=True)
-        self.app.gui.set('mean', True, update_property=True)
-        if self.current_script == 'flat':
-            self.app.gui.set('80', True, update_property=True)
-        elif self.current_script == 'frame':
-            self.app.gui.set('show_reticle', True, update_property=True)
+        self.script_buttons = {}
+        for s in all_scripts:
+            if s in faf_scripts:
+                col = .75, .65, .65, 1
+            elif s in light_scripts:
+                col = .75, .75, .65, 1
+            else:
+                col = .65, .75, .65, 1
+            but = self.script_buttons[s] = MDTextButton(
+                text=s, 
+                custom_color=col, 
+                font_size='18sp',
+                on_press=self.script_chosen)
+            self.chooser.add_widget(but)
 
-    def set_exposure_button(self, val):
-        self.app.gui.set('exposure_button', exp_to_str(val))
+        # initialise via current script once dependencies have been built
+        Clock.schedule_once(self.on_current_script, 0)
 
-    def get_current_exposure(self, sub_type):
-        if sub_type in self.scripts:
-            return self.scripts[sub_type]['exposure']
-        return None
 
-    def show_exposure_panel(self):
-        ''' New in v0.4.6: allow user to type exposure as well as presets
+    def show_menu(self, *args):
+        ''' display choice of next script, taking into account what is
+            compatible with current subs or not
         '''
 
-        if self.current_script in {'flat', 'bias'}:
-            return
+        if Component.get('Stacker').is_empty():
+            for v in self.script_buttons.values():
+                v.disabled = False
 
-        content = BoxLayout(size_hint=(None, None), size=(dp(240), dp(300)), 
-            orientation='vertical',
-            spacing=(dp(0), dp(20))
-            )
-
-        grid = GridLayout(size_hint=(None, None), size=(dp(240), dp(240)), cols=4,
-            spacing=(dp(5), dp(0)))
-
-        tinput = TextInput(
-            text=exp_to_str(self.scripts[self.current_script].get('exposure', 0)),
-            size_hint=(1, 1),
-            height=dp(24),
-            multiline=False,
-            font_size='19sp',
-            hint_text='type exposure or select preset',
-            background_color=[.8, .8, .8, 1])
-        tinput.valign = 'top'
-        tinput.bind(on_text_validate=self.exposure_selected_from_text)
-        content.add_widget(tinput)
-        content.add_widget(Label(size_hint=(None, None), size=(dp(240), dp(20))))
-        content.add_widget(grid)
-
-        script = self.scripts[self.current_script]
-
-        for e in script['expos']:
-            grid.add_widget(ExposureToggle(
-                text=exp_to_str(e), 
-                state='down' if e == script['exposure'] else 'normal',
-                on_press=partial(self.exposure_selected, e, tinput)))
-
-        if self.current_script == 'dark':
-            panel_content = ChooseMultiple(choice_type='exposure', capture=self, session=Component.get('Session'))
-            panel_content.grid.add_widget(content)
-            self.popup = JPopup(title='Choose exposure and temperature', content=panel_content)
         else:
-            self.popup = JPopup(title='Choose exposure', content=content)
+            if self.current_script in calibration_scripts:
+                for k in light_scripts + calibration_scripts:
+                    self.script_buttons[k].disabled = True
+                self.script_buttons[self.current_script].disabled = False
 
-        self.popup.open()
+            elif self.current_script in light_scripts:
+                for k in calibration_scripts:
+                    self.script_buttons[k].disabled = True
+       
+        self.chooser.pos_hint = {'right': .95, 'center_y': .5}
 
+    def script_chosen(self, item):
+        ''' user has selected script, so update and close menu
+        '''
+        self.current_script = item.text
+        self.chooser.pos_hint = {'center_x': 10, 'center_y': .5}
 
-    def exposure_selected_from_text(self, textinput):
+    def save(self, *args):
+        ''' save capture scripts
+        '''
         try:
-            expo = str_to_exp(textinput.text)
-            self.app.gui.set('exposure_button', exp_to_str(expo))
-            self.scripts[self.current_script]['exposure'] = expo
-            # don't dismiss popup if dark as user has opportunity to select temperature too
-            if self.current_script != 'dark':
-                self.exposure_done()
+            with open(self.app.get_path('capture_scripts.json'), 'w') as f:
+                json.dump(self.scripts, f, indent=1)
         except Exception as e:
-            textinput.foreground_color[0] = 1
+            logger.exception('Unable to save capture_scripts.json ({:})'.format(e))
+
+    def on_new_object(self, *args):
+        ''' default to framing at start
+        '''
+        self.app.gui.enable(self.capture_controls)
+        self.current_script = 'frame'
+        self.on_current_script()
+
+    def on_previous_object(self, *args):
+        ''' don't allow user to perform captures when loading previous object
+        '''
+        self.app.gui.disable(self.capture_controls)
+
+    def on_current_script(self, *args):
+        ''' carry out any special actions when certain scripts are selected
+        '''
+        logger.debug('Changed script to {:}'.format(self.current_script))
+        self.app.gui.set('script_button', self.current_script)
+        self.update()
+        if self.current_script == 'align':
+            Component.get('View').fit_to_window(zero_orientation=False)
+        self.app.gui.set('show_reticle', self.current_script == 'align', update_property=True)
+        self.app.gui.set('80' if self.current_script == 'flat' else 'mean' , 
+            True, update_property=True)
+
+    def filterwheel_changed(self):
+        ''' when filterwheel changes we need to change the available
+            filters in the capture scripts and therefore update the scripts
+        '''        
+        state = Component.get('FilterWheel').get_state()
+        filts = list(state['filtermap'].keys())
+        logger.debug('filters available in new filterwheel {:}'.format(filts))
+        default = ['L'] if 'L' in filts else [f for f in filts if f != '-']
+        logger.debug('Default filter is {:}'.format(default))
+        if len(default) == 0:
+            default = 'L'
+        for k, v in self.scripts.items():
+            v['filter'] = [f for f in v['filter'] if f in filts]
+            if len(v['filter']) == 0:
+                v['filter'] = default if k not in {'dark', 'bias'} else ['dark']
+        logger.debug('scripts changed to accommodate new filterwheel')
+        self.update()
+
+    def update(self):
+        ''' update panel, gui elements and save capture script details
+        ''' 
+        script = self.scripts[self.current_script]
+        self.app.gui.set('exposure_button', exp_to_str(script['exposure']))
+        self.app.gui.set('filter_button', ''.join(script['filter']))
+        self.save()
+        self.reset_generator()
+
+    def get_exposure(self):
+        ''' called by ExposureChooser, and also by Watcher to get 
+            exposure in case user wishes to override
+        '''
+        return self.scripts[self.current_script]['exposure']
+
+    def get_sub_type(self):
+        ''' called by Watcher and Capture
+        '''
+        if self.current_script in {'seq', 'light'}:
+            return 'light'
+        if self.current_script in {'flat', 'autoflat'}:
+            return 'flat'
+        return self.current_script
+
+    def get_filters(self):
+        ''' called by FilterChooser
+        '''
+        return self.scripts[self.current_script]['filter']
+
+    def get_nsubs(self):
+        ''' called by FilterChooser
+        '''
+        return self.scripts[self.current_script].get('nsubs', 1)
+
+    def exposure_changed(self, exposure):
+        ''' called by exposure chooser
+        '''
+        self.scripts[self.current_script]['exposure'] = exposure
+        self.update()
+
+    def filter_changed(self, filt, nsubs=None):
+        ''' called by filter chooser
+        '''
+        self.scripts[self.current_script]['filter'] = filt
+        if nsubs is not None:
+            self.scripts['seq']['nsubs'] = nsubs
+        self.update()
 
     def set_external_details(self, exposure=None, sub_type=None, filt=None):
-        self.current_script = sub_type
-        script = self.scripts[self.current_script]
-        if exposure is not None:
-            script['exposure'] = exposure
-            self.app.gui.set('exposure_button', exp_to_str(exposure))
-        if filt is not None:
-            self.app.gui.set('filter_button', filt)
+        ''' Set the details on the interface regardless of what the scripts say. Used
+            for previous captures and watched captures.
+        '''
+        if type(filt) == list:
+            filt = ''.join(filt)
+        self.app.gui.set('exposure_button', '?' if exposure is None else exp_to_str(exposure))
+        self.app.gui.set('filter_button', '?' if filt is None else filt)
+        self.app.gui.set('script_button', '?' if sub_type is None else sub_type)
 
-    def exposure_selected(self, expo, tinput, expo_toggle=None):
-        self.app.gui.set('exposure_button', exp_to_str(expo))
-        self.scripts[self.current_script]['exposure'] = expo
-        tinput.text = exp_to_str(expo)
-        # don't dismiss popup if dark as user has opportunity to select temperature too
-        if self.current_script != 'dark':
-            self.exposure_done()
 
-    def exposure_done(self, *args):
-        # user has provided exposure
-        self.reset_generator()
-        self.popup.dismiss()
-        # tell stack about this setting so that it can propagate to subs where required
-        Component.get('Stacker').exposure_provided_manually(self.scripts[self.current_script]['exposure'])
+    ''' define scripts using generators
+    '''
 
-    def filters_done(self, nsubs=None, *args):
-        script = self.scripts[self.current_script]
-        script['nsubs'] = nsubs
-        self.reset_generator()
-        self.popup.dismiss()
-
-    def cancel_multiple(self, typ=None, *args):
-        self.popup.dismiss()
-
-    def show_filter_panel(self):
-
-        fw = Component.get('FilterWheel')
-        non_empties = {f for f in fw.filters if f != 'empty'}
-
-        if len(non_empties) < 2:
-            return
-        if self.current_script in {'dark', 'bias'}:
-            return
-
-        script = self.scripts[self.current_script]
-
-        fw_layout = FloatLayout(size_hint=(None, None), size=(dp(240), dp(240)))
-        rads = math.pi / 180
-        for ang, f in zip([0, 40, 80, 120, 160, 200, 240, 280, 320], fw.filters):
-            fw_layout.add_widget(FilterToggle(text=f, filter_color=fw.get_color(f),
-                on_press=partial(self.filter_selected, f),
-                state='down' if f in script['filter'] else 'normal',
-                pos_hint={
-                    'center_x': ( .8 * math.cos(ang * rads) + 1 ) / 2, 
-                    'center_y': ( .8 * math.sin(ang * rads) + 1 ) / 2}))
-
-        if self.current_script != 'seq':
-            self.popup = JPopup(title='Choose filter', content=fw_layout)
-        else:
-            content = ChooseMultiple(choice_type='filter', capture=self, session=Component.get('Session'))
-            content.grid.add_widget(fw_layout)
-            self.popup = JPopup(title='Choose multiple filters', content=content)
-        self.popup.open()
-
-    def filter_selected(self, f, filter_toggle):
-        if f == '-':
-            return
-        script = self.scripts[self.current_script]
-        if self.current_script != 'seq':
-            self.app.gui.set('filter_button', f)
-            script['filter'] = [f]
-            self.reset_generator()
-            self.popup.dismiss()
-        else:
-            if filter_toggle.state == 'down':
-                script['filter'].append(f)
-            else:
-                script['filter'].remove(f)
+    def reset_generator(self):
+        logger.debug('reset {:} generator'.format(self.current_script))
+        self.generator = getattr(self, '{:}_generator'.format(self.current_script))()
 
     def light_generator(self):
         script = self.scripts['light']
@@ -365,14 +234,29 @@ class CaptureScript(Component):
         script = self.scripts['seq']
         yield 'set exposure', script['exposure']
         while True:
-            for f in Component.get('FilterWheel').order_by_transmission(script['filter']):
+            for f in Component.get('FilterChooser').order_by_transmission(script['filter']):
                 yield 'set filter', f
                 for i in range(script['nsubs']):
                     yield 'expose long'
 
     def frame_generator(self):
-        yield 'set filter', 'L'
-        yield 'set exposure', self.scripts['frame']['exposure']
+        script = self.scripts['frame']
+        yield 'set filter', script['filter'][0]
+        yield 'set exposure', script['exposure']
+        while True:
+            yield 'expose short'
+
+    def focus_generator(self):
+        script = self.scripts['focus']
+        yield 'set filter', script['filter'][0]
+        yield 'set exposure', script['exposure']
+        while True:
+            yield 'expose short'
+
+    def align_generator(self):
+        script = self.scripts['align']
+        yield 'set filter', script['filter'][0]
+        yield 'set exposure', script['exposure']
         while True:
             yield 'expose short'
 
@@ -388,12 +272,16 @@ class CaptureScript(Component):
         while True:
             yield 'expose bias'
 
-    def flat_generator(self):
-        yield 'set filter', self.scripts['flat']['filter'][0]
+    def autoflat_generator(self):
+        yield 'set filter', self.scripts['autoflat']['filter'][0]
         yield 'autoflat'
         while True:
             yield 'expose long'
 
-    def reset_generator(self):
-        self.generator = getattr(self, '{:}_generator'.format(self.current_script))()
+    def flat_generator(self):
+        script = self.scripts['flat']
+        yield 'set filter', script['filter'][0]
+        yield 'set exposure', script['exposure']
+        while True:
+            yield 'expose long'
 

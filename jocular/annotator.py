@@ -4,7 +4,7 @@
 import numpy as np
 
 from kivy.app import App
-from kivy.logger import Logger
+from loguru import logger
 from kivy.properties import (
     NumericProperty,
     StringProperty,
@@ -19,6 +19,9 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 
 from jocular.hoverable import HoverBehavior
+
+# from kivymd.uix.behaviors import HoverBehavior
+
 from jocular.metrics import Metrics
 from jocular.component import Component
 from jocular.uranography import make_tile
@@ -315,7 +318,7 @@ class DSOPopup(BoxLayout):
             self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
             self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
         except Exception as e:
-            Logger.debug('Annotator: DSOPopup.display ({:})'.format(e))
+            logger.debug('DSOPopup.display issue ({:})'.format(e))
 
     def hide(self):
         self.x = 10 * Window.width
@@ -475,7 +478,8 @@ class Annotator(Component):
                 ]
 
         # create annotation labels
-        mapping = Component.get('View').to_parent
+        mapping = Component.get('View').scatter.to_parent
+        # mapping = Component.get('View').to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2
         gui = App.get_running_app().gui
@@ -493,7 +497,8 @@ class Annotator(Component):
         if not self.has_annotations():
             return
 
-        mapping = Component.get('View').to_parent
+        # mapping = Component.get('View').to_parent
+        mapping = Component.get('View').scatter.to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2
         for annot in self.annotations:

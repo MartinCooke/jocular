@@ -4,7 +4,8 @@
 import os
 import numpy as np
 from scipy.stats import trimboth
-from kivy.logger import Logger
+from loguru import logger 
+from pathlib import Path
 
 def angle360(angle):
     if angle < 0:
@@ -24,12 +25,36 @@ def unique_member(l):
     else:
         return None
 
+def get_datadir():
+    ''' Read datadir name from .jocular in home; if .jocular doesn't exist,
+        or if the datadir doesn't exist, caller will deal with it
+    '''
+    try:
+        with open(os.path.join(str(Path.home()), '.jocular'), 'r') as f:
+            datadir = f.read().strip()
+        if os.path.exists(datadir):
+            return datadir
+        return None
+    except:
+        return None
+
 def add_if_not_exists(path):
     if not os.path.exists(path):
         try:
             os.mkdir(path)
         except FileExistsError:
             raise FileExistsError
+
+def start_logging(path):
+    ''' start logging on given path
+    '''
+
+    logger.remove()
+    fmt = "{time: DMMMYY HH:mm:ss.SSS} | {level: <8} | {name: <25} | {function: <26} | {line: >4} | {message}"
+    logger.add(os.path.join(path, 'jocular.log'), mode='a', format=fmt, rotation='200KB', retention=5)
+    logger.info('')
+    logger.info('--------------------------')
+    logger.info('Started logging')
 
 def make_unique_filename(path):
     if not os.path.exists(path):
@@ -94,4 +119,4 @@ def move_to_dir(frompath, topath):
         os.rename(frompath, dest)        
 
     except Exception as e:
-        Logger.error('Utils: problem moving {:} to {:} ({:})'.format(frompath, topath, e))
+        logger.exception('problem moving {:} to {:} ({:})'.format(frompath, topath, e))

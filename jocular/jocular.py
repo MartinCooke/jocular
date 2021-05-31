@@ -1,217 +1,168 @@
-''' Main app, called after some checks by startjocular
+''' Main app. Mainly used for marshalling resource provision.
 '''
 
 import os
 import json
 import sys
-from pathlib import Path
 
-from kivy.app import App
-from kivy.logger import Logger
-from kivy.properties import (
-    ListProperty,
-    NumericProperty,
-    ConfigParserProperty,
-    OptionProperty,
-    StringProperty,
-)
-from kivy.uix.settings import SettingsWithSidebar
+from kivymd.app import MDApp
+
+from kivy.metrics import dp
+from kivy.config import Config
+from loguru import logger
+
+from kivy.properties import ListProperty, NumericProperty, OptionProperty, StringProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.core.text import LabelBase
 
 from jocular import __version__
-
 from jocular.component import Component
 from jocular.gui import GUI
+from jocular.utils import get_datadir, start_logging
 
+from jocular.appearance import sat_to_hue
 
-class Jocular(App):
+class Jocular(MDApp):
 
     showing = OptionProperty(
         'main', options=['main', 'observing list', 'calibration', 'observations']
     )
 
-    highlight_color = ListProperty([1, 1, 1, 1])
     lowlight_color = ListProperty([0.5, 0.5, 0.5, 1])
     hint_color = ListProperty([0.25, 0.25, 0.25, 1])
     lever_color = ListProperty([0.32, 0.32, 0.32, 1])
     background_color = ListProperty([0.06, 0.06, 0.06, 0])  # was 1 transp
     line_color = ListProperty([0.3, 0.3, 0.3, 1])  # used in Obj and Table only
 
+    ring_font_size = StringProperty('14sp')
+    info_font_size = StringProperty('14sp')
+    form_font_size = StringProperty('15sp')
+
     data_dir = StringProperty(None)
 
-    # quick way to ensure there is a Startup section
-    dummy_startup = ConfigParserProperty('dummy', 'Startup', 'dummy', 'app')
+    subdirs = {'captures', 'calibration', 'snapshots', 'deleted', 
+        'exports', 'catalogues', 'settings', 'logs'}
 
     brightness = NumericProperty(1)
     transparency = NumericProperty(0)
 
-    color_codes = {
-        'white': [0.8, 0.8, 0.79, 1],
-        'red': [0.74, 0.25, 0.3, 1],
-        'blue': [0.57, 0.66, 0.82, 1],
-        'green': [0.53, 0.69, 0.29, 1],
-        'yellow': [0.94, 0.76, 0.31, 1],
-    }
-
-    def get_application_config(self):
-        return super(Jocular, self).get_application_config(
-            os.path.join(self.data_dir, '%(appname)s.ini')
-        )
+    def get_dir_in_datadir(self, name):
+        path = os.path.join(self.data_dir, name)
+        try:
+            if not os.path.exists(path):
+                logger.debug('Jocular: creating path {:} -> {:}'.format(name, path))
+                os.mkdir(path)
+            return os.path.join(self.data_dir, name)
+        except Exception as e:
+            logger.exception('Cannot create path {:} ({:})'.format(path, e))
+            sys.exit('Cannot create subdirectory of Jocular data directory')
 
     def get_path(self, name):
         # centralised way to handle accessing resources Jocular needs
 
         #  if path, return path to data dir, else return path to resource
-        if name in [
-            'captures',
-            'calibration',
-            'snapshots',
-            'watched',
-            'deleted',
-            'exports',
-            'catalogues',
-        ]:
-            path = os.path.join(self.data_dir, name)
-            try:
-                if not os.path.exists(path):
-                    Logger.debug('Jocular: creating path {:} -> {:}'.format(name, path))
-                    os.mkdir(path)
-                return os.path.join(self.data_dir, name)
-            except Exception as e:
-                sys.exit('Cannot create path {:} ({:})'.format(path, e))
+        if name in self.subdirs:
+            return self.get_dir_in_datadir(name)
+
+        # jocular's own resources
+
         elif name == 'dsos':
             return os.path.join(self.directory, 'dsos')
-        elif name in [
-            'observing_list.json',
-            'observing_notes.json',
-            'last_session.json',
-            'capture_scripts.json',
-            'previous_observations.json'
-        ]:
+
+        elif name in {'configurables.json', 'gui.json', 'object_types.json'}:
+            return os.path.join(self.directory, 'resources', name)
+
+        # user-accessible settings
+        elif name in {'observing_list.json', 'observing_notes.json', 'previous_observations.json'}:
             return os.path.join(self.data_dir, name)
-        elif name == 'shipped_capture_scripts.json':
-            return os.path.join(self.directory, 'resources', 'capture_scripts.json')
+
+        # jocular settings
+        elif name.endswith('.json'):
+            return os.path.join(self.get_dir_in_datadir('settings'), name)
+
+        # specific files
         elif name == 'libusb':
             return os.path.join(self.directory, 'resources', 'libusb-1.0.dll')
         elif name == 'star_db':
             return os.path.join(self.data_dir, 'platesolving', 'star_tiles.npz')
         elif name == 'dso_db':
             return os.path.join(self.data_dir, 'platesolving', 'dso_tiles')
+
+        # everything else is in jocular's own resources
         else:
             return os.path.join(self.directory, 'resources', name)
 
     def on_brightness(self, *args):
-        for c in [
-            'hint_color',
-            'highlight_color',
-            'lowlight_color',
-            'line_color',
-            'lever_color',
-        ]:
+        for c in ['hint_color', 'lowlight_color', 'line_color', 'lever_color']:
             getattr(self, c)[-1] = self.brightness
 
-    def build_config(self, config):
-        # NB this is called before build
-
-        # get user data directory
-        try:
-            with open(os.path.join(str(Path.home()), '.jocular'), 'r') as f:
-                self.data_dir = f.read().strip()
-        except Exception as e:
-            Logger.exception('Jocular: problem reading user data dir ({:})'.format(e))
-            sys.exit()
-
-        self.use_kivy_settings = False
-
-        try:
-            with open(self.get_path('configurables.json'), 'r') as f:
-                self.configurables = json.load(f)
-        except Exception as e:
-            Logger.exception('Jocular: cannot read configurables.json ({:})'.format(e))
-            sys.exit()
-
-        #  extract all defaults and delete them so settings panel works
-        defaults = {}
-        for v in self.configurables.values():
-            for l in v:
-                if ('section' in l) and ('default' in l):
-                    sec = l['section']
-                    if sec in defaults:
-                        defaults[sec][l['key']] = l['default']
-                    else:
-                        defaults[sec] = {l['key']: l['default']}
-                    del l['default']
-                if 'component' in l:
-                    del l['component']
-
-        for k, v in defaults.items():
-            config.setdefaults(k, v)
-
-    def build_settings(self, settings):
-        for panel, subsettings in self.configurables.items():
-            settings.add_json_panel(panel, self.config, data=json.dumps(subsettings))
-
-    def on_config_change(self, config, section, key, val):
-        self.set_param(section, key, val)
-
-    # initially we will call this with all params to handle settings
-    def set_param(self, section, key, val=None):
-
-        if val == None:
-            val = self.config.get(section, key)
-
-        if section == 'Font sizes':
-            setattr(self, '{:}_font_size'.format(key), '{:}sp'.format(val))
-
-        elif section == 'Colours and graylevels':
-            if key in ['lowlight_color', 'lever_color']:
-                lg = max(30, min(int(val), 100)) / 100
-                setattr(self, key, [lg, lg, lg, 1])
-            elif key == 'highlight_color':
-                self.highlight_color = self.color_codes.get(val, 'white')
-
-        elif section == 'Geometry':
-            Window.size = (
-                int(self.config.get(section, 'initial_width')),
-                int(self.config.get(section, 'initial_height')),
-            )
-
-        elif section == 'Filters':
-            Component.get('FilterWheel').update_filter(key, val)
-
+    @logger.catch()
     def build(self):
 
+        self.data_dir = get_datadir()
+        if self.data_dir is not None:
+            start_logging(self.get_path('logs'))
 
         self.title = 'Jocular v{:}'.format(__version__)
+        self.theme_cls.theme_style = "Dark"     
 
         LabelBase.register(name='Jocular', fn_regular=self.get_path('jocular4.ttf'))
 
-        self.settings_cls = SettingsWithSidebar
+        try:
+            with open(self.get_path('Appearance.json'), 'r') as f:
+                settings = json.load(f)
+        except:
+            # set up initial values for settings
+            settings = {'highlight_color': 'Blue',  'colour_saturation': 50}
 
-        #  apply settings
-        for fs in ['ring', 'info', 'form']:
-            self.set_param('Font sizes', fs)
+        # apply setings      
+        for p, v in settings.items():
+            if p == 'highlight_color':
+                self.theme_cls.accent_palette = v
+                self.theme_cls.primary_palette = v
+            elif p.endswith('_color'):
+                lg = v / 100
+                setattr(self, p, [lg, lg, lg, 1])
+            elif p.endswith('font_size'):
+                setattr(self, p, '{:}sp'.format(v))
+            elif p == 'transparency':
+                self.transparency = int(v) / 100
+            elif p == 'colour_saturation':
+                self.theme_cls.accent_hue = sat_to_hue(v)
 
-        for fs in ['lowlight_color', 'lever_color', 'highlight_color']:
-            self.set_param('Colours and graylevels', fs)
-
-        self.set_param('Geometry', 'initial_width')
-
-        # generate GUI so that it exists before we add components
-        self.gui = GUI(self.config)
+        self.gui = GUI()
 
         # draw GUI
         Clock.schedule_once(self.gui.draw, -1)
 
         return self.gui
 
+
+    @logger.catch()
     def on_stop(self):
+        # save width and height
+        Config.set('graphics', 'width', str(int(Window.width/ dp(1))))
+        Config.set('graphics', 'height', str(int(Window.height/dp(1))))
+        Config.write()
         Component.close()
         self.gui.on_close()
-        self.config.write()
 
     # reset showing to main when any table is hidden
     def table_hiding(self, *args):
         self.showing = 'main'
+
+
+def startjocular():
+
+    # remove possibiity of exiting with escape key
+    Config.set('kivy', 'log_level', 'error')
+    Config.set('kivy', 'exit_on_escape', '0')
+    Config.write()
+
+    # start app
+    try:
+        Jocular().run()
+    except Exception as e:
+        sys.exit('Jocular failed with error {:}'.format(e))
+

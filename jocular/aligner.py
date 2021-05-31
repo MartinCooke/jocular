@@ -9,24 +9,33 @@ from skimage.measure import ransac
 from skimage.transform import EuclideanTransform, matrix_transform, warp
 from skimage.feature import blob_dog
 
-from kivy.properties import ConfigParserProperty
-from kivy.logger import Logger
+from kivy.properties import BooleanProperty, NumericProperty
+from loguru import logger
 
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 from jocular.gradient import estimate_background, estimate_gradient
 
 
-class Aligner(Component):
+class Aligner(Component, Settings):
 
-    do_align = ConfigParserProperty(1, 'Aligner', 'do_align', 'app', val_type=int)
-    smooth_edges = ConfigParserProperty(1, 'Aligner', 'smooth_edges', 'app', val_type=int)
-    ideal_star_count = ConfigParserProperty(30, 'Aligner', 'ideal_star_count', 'app', val_type=int)
+    do_align = BooleanProperty(True)
+    ideal_star_count = NumericProperty(30)
+
+    configurables = [
+        ('do_align', {'name': 'align?', 'switch': '',
+            'help': 'Switching align off can help diagnose tracking issues'}),
+        ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
+            'help': 'Find an appropriate threshold to detect this many stars on the first sub',
+            'fmt': '{:.0f} stars'})
+        ]
 
     def __init__(self):
         super().__init__()
         self.min_sigma = 3
         self.max_sigma = 5
         self.min_stars = 5
+        self.smooth_edges = True
         self.centroid_radius = 8
         r = self.centroid_radius
         patch_size = 2 * r + 1
@@ -42,12 +51,7 @@ class Aligner(Component):
         self.warp_model = None
         self.align_count = 0
         self.starcounts = []
-        self.info('reset')
-
-    def update_status(self):
-        sc = np.array(self.starcounts)
-        self.info('{:}/{:} | stars {:}-{:}, mu:{:3.0f}'.format(
-            self.align_count, len(sc), np.min(sc), np.max(sc), np.mean(sc)))
+        self.info('')
     
     def align(self, sub, centroids):
         # Align sub to current keystars, updating its status.
@@ -128,8 +132,6 @@ class Aligner(Component):
             else:
                 sub.status = 'nalign'
 
-        self.update_status()
-
 
     def extract_stars(self, im):
         # Extracts star coordinates. Return array of x, y coordinates.
@@ -182,7 +184,6 @@ class Aligner(Component):
                     threshold=est, 
                     overlap=0)[:, [1, 0]])
 
-                # Logger.debug('Aligner: iteration {:} nstars (slow method) {:}'.format(its, nstars))
                 # stop when within crit percent of required
                 if abs(nstars - self.ideal_star_count) / self.ideal_star_count < crit:
                     break
@@ -192,7 +193,7 @@ class Aligner(Component):
                     lo = est
                 est = (hi + lo) / 2
 
-        Logger.info('Aligner: bkgd {:6.4f} threshold {:6.4f} after {:} iterations'.format(t0, est, its))
+        logger.info('bkgd {:6.4f} threshold {:6.4f} after {:} iterations'.format(t0, est, its))
         return est
 
 
@@ -246,12 +247,15 @@ class Aligner(Component):
         self.starcounts += [len(centroids)]
 
         if len(centroids) == 0:
-            # no stars so don't do anything
-            pass
+            sub.status = 'nalign'
         elif self.keystars is None:
             # first sub with stars so set keystars
             self.keystars = centroids
             self.align_count = 1
         else:
             self.align(sub, centroids)
+
+        sc = np.array(self.starcounts)
+        self.info('aligned {:}/{:} | stars {:}-{:}, mu:{:3.0f}'.format(
+            self.align_count, len(sc), np.min(sc), np.max(sc), np.mean(sc)))
             

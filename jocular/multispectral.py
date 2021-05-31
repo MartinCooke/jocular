@@ -7,9 +7,11 @@ import numpy as np
 from scipy.stats import trimboth
 from skimage.color import rgb2lab, lab2rgb
 from skimage.transform import resize, rescale
-from kivy.properties import ConfigParserProperty, NumericProperty
+
+from kivy.properties import BooleanProperty, NumericProperty
 from jocular.gradient import estimate_gradient, estimate_background
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 
 def bin_image(im, binfac=2, rescale_to_orig=True):
     ''' bin and rescale to original size; 
@@ -49,13 +51,25 @@ def modify_hue(x, shift):
     x = x + shift
     return x
 
-class MultiSpectral(Component):
-
-    colour_binning = ConfigParserProperty(
-        1, 'Colour', 'colour_binning', 'app', val_type=int)
-    subtract_colour_gradients = ConfigParserProperty(
-        1, 'Colour', 'subtract_colour_gradients', 'app', val_type=int)
+class MultiSpectral(Component, Settings):
     
+    save_settings = ['saturation', 'colour_stretch', 'redgreen', 'yellowblue']
+
+    bin_colour = BooleanProperty(True)
+    subtract_gradients = BooleanProperty(True)
+
+    tab_name = 'LAB Colour'
+    configurables = [
+        ('bin_colour', {
+            'name': 'bin colour?', 
+            'switch': '',
+            'help': 'Binning the colour channels helps reduce colour noise'}),
+        ('subtract_gradients', {
+            'name': 'subtract colour gradients?', 
+            'switch': '',
+            'help': 'Automatically estimate and remove colour gradients in each channel'})
+        ]
+
     saturation = NumericProperty(0)
     colour_stretch = NumericProperty(.5)
     redgreen = NumericProperty(0)
@@ -155,10 +169,10 @@ class MultiSpectral(Component):
         else:            
             Component.get('View').display_image(lum)
 
-    def on_colour_binning(self, *args):
+    def on_bin_colour(self, *args):
         self.create_LAB()
 
-    def on_subtract_colour_gradients(self, *args):
+    def on_subtract_gradients(self, *args):
         self.create_LAB()
 
     ''' Colour processes are daisy-chained and intermediate representations cached for speed        
@@ -172,10 +186,6 @@ class MultiSpectral(Component):
     def create_LAB(self):
         # Initial stage of LAB image creation from RGB stacks
 
-        # def bin_image(im, binfac=2):
-        #     im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
-        #     return resize(im2, im.shape, anti_aliasing=False, mode='constant')
-
         def _limit(im):
             im[im < 0] = 0
             im[im > 1] = 1
@@ -187,12 +197,12 @@ class MultiSpectral(Component):
         ims = [self.R, self.G, self.B]
 
         # binning ~ 70 ms
-        if self.colour_binning:
+        if self.bin_colour:
             ims = [bin_image(im) for im in ims]
 
         # alternative approach to test
         # might also add option to not subtract anything.... just to test
-        if self.subtract_colour_gradients:
+        if self.subtract_gradients:
             ims = [im - estimate_gradient(im) for im in ims]
         else:
             ims = [im - estimate_background(im)[0] for im in ims]

@@ -1,57 +1,67 @@
-''' Handles calibration library and actual calibration of subs.
+''' Handles calibration library and calibration of subs.
 '''
 
 import os.path
-import shutil
 import numpy as np
-from datetime import datetime
 from scipy.stats import trimboth
 
 from kivy.app import App
-from kivy.logger import Logger
-from kivy.properties import BooleanProperty, DictProperty, ConfigParserProperty
+from loguru import logger
+from kivy.properties import BooleanProperty, DictProperty, NumericProperty
 from kivy.core.window import Window
 
 from jocular.table import Table
-from jocular.utils import add_if_not_exists, make_unique_filename
+from jocular.utils import make_unique_filename
 from jocular.component import Component
+from jocular.settingsmanager import Settings
 from jocular.image import Image, save_image, fits_in_dir
 
 date_time_format = '%d %b %y %H:%M'
 
-class Calibrator(Component):
+class Calibrator(Component, Settings):
+
+    save_settings = ['apply_dark', 'apply_flat', 'apply_bias']
 
     masters = DictProperty({})
     apply_flat = BooleanProperty(False)
     apply_dark = BooleanProperty(False)
     apply_bias = BooleanProperty(False)
-    use_l_filter = ConfigParserProperty(1, 'Flats', 'use_l_filter', 'app', val_type=int)
-    temperature_tol = ConfigParserProperty(5, 'Darks', 'temperature_tol', 'app', val_type=float)
-    exposure_tol = ConfigParserProperty(5, 'Darks', 'exposure_tol', 'app', val_type=float)
-    dark_days_tol = ConfigParserProperty(1, 'Darks', 'dark_days_tol', 'app', val_type=float)
-    flat_days_tol = ConfigParserProperty(30, 'Flats', 'flat_days_tol', 'app', val_type=float)
+
+    use_l_filter = BooleanProperty(True)
+    exposure_tol = NumericProperty(5)
+    temperature_tol = NumericProperty(5)
+    dark_days_tol = NumericProperty(1)
+    flat_days_tol = NumericProperty(60)
+
+    tab_name = 'Calibration'
+
+    configurables = [
+        ('use_l_filter', {'name': 'use light flat?', 'switch': '',
+                'help': 'If there is no flat for the given filter, use a light flat if it exists'}),
+        ('exposure_tol', {'name': 'exposure tolerance', 'float': (0, 30, 1), 
+            'fmt': '{:.0f} seconds',
+            'help': 'When selecting a dark, select those within this exposure tolerance'}),
+        ('temperature_tol', {'name': 'temperature tolerance', 'float': (0, 40, 1),
+            'fmt': '{:.0f} degrees',
+            'help': 'When selecting a dark, restrict to those within this temperature tolerance'}),
+        ('dark_days_tol', {'name': 'dark age tolerance', 'float': (0, 300, 1),
+            'fmt': '{:.0f} days',
+            'help': 'Maximum age of darks to use if no temperature was specified'}),
+        ('flat_days_tol', {'name': 'flat age tolerance', 'float': (0, 300, 1),
+            'fmt': '{:.0f} days',
+            'help': 'Maximum age of flats to use'}),
+    ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.calibration_dir = self.app.get_path('calibration')
-        self.load_masters()
 
-    def new_master_from_watcher(self, m):
-        # construct unique/sensible name
-        dest = make_unique_filename(os.path.join(self.calibration_dir, m.name))
-        try:
-            os.rename(m.path, dest)
-            m.path = dest
-            m.name = os.path.basename(dest)
-            self.add_to_library(m)
-        except Exception as e:
-            Logger.error('Calibrator: cannot move {:} ({:})'.format(m.path, e))
-
-    def load_masters(self):
-        # construct metadata by reading and validating FITs in calibration dir
-        self.masters = {}
-        self.library = {}
+        self.masters = {}   # map from name to FITs Image instance
+        self.library = {}   # map from name to calibration table info
+ 
+        ''' construct above dicts from calibration FITs in calibration directory
+        '''
         for f in fits_in_dir(self.calibration_dir):
             path = os.path.join(self.calibration_dir, f)
             try:
@@ -59,14 +69,20 @@ class Calibrator(Component):
                 if s.is_master:
                     self.add_to_library(s)
             except Exception as e:
-                Logger.warn('Calibrator: unable to parse calibration {:} ({:})'.format(f, e))
+                logger.warning('Calibrator: unable to parse calibration {:} ({:})'.format(f, e))
+
+
+    def on_new_object(self, *args):
+        self.info('')
 
     def add_to_library(self, m):
-        # m is a validated masters, so just pick off required fields
-        name = m.name
-        self.masters[name] = m
-        self.library[name] = {
-            'name': name,
+        ''' called on initialisation and when we save a new master
+        '''
+
+        # keys are full names so they can be reliably deleted
+        self.masters[m.fullname] = m
+        self.library[m.fullname] = {
+            'name': m.name,
             'type': m.sub_type,
             'exposure': str(m.exposure) if m.exposure is not None else '???',
             'temperature': str(m.temperature) if m.temperature is not None else '???',
@@ -78,41 +94,58 @@ class Calibrator(Component):
         }
 
 
-    def save_master(self, sub_type=None, exposure=None, temperature=None, filt=None):
-        # Save master from existing stack, applying any required post-processing
-        # masters are saved to watched directory so that processing is uniform re external captures
+    def create_master(self, sub_type=None, exposure=None, temperature=None, filt=None):
+        ''' Called by ObjectIO to save an existing stack capture by Jocular as a calibration master
+        '''
 
-        # generate master from stack
+        logger.info('save master type {:} expo {:} temp {:} filt {:}'.format(
+            sub_type, exposure, temperature, filt))
+
         stacker = Component.get('Stacker')
 
         # force the use of method that the user has chosen or set up by default for this type of calib
         master = stacker.get_stack(filt, calibration=True)
 
-        # apply bad pixel mapping to calibration frames
-        # if dark, find hot pixels in master and remove, otherwise use existing BPM
-        # not yet tested
+        ''' Apply bad pixel mapping to calibration frames
+            If dark, find hot pixels in master and remove, otherwise use existing BPM
+            NB not fully tested
+        '''
         bpm = Component.get('BadPixelMap')
         if sub_type == 'dark':
             master = bpm.do_bpm(master, bpm.find_hot_pixels(master))
+            logger.debug('created BPM from darks and applied it')
         else:
             master = bpm.do_bpm(master)
+            logger.debug('applied BPM to master')
 
-        # flats were divided thru by their robust mean to account for level differences 
-        # but then scaled to 50% to enable B/W controls; so multiply by 2
+        ''' Flats were divided thru by their robust mean to account for level differences 
+            but then scaled to 50% to enable B/W controls; so multiply by 2
+        '''
         if sub_type == 'flat':
             master = 2 * master
 
-        # save calibration master to Watched so that it is processed in the same way as when user drops master)
-        save_image(data=master,
-            path=os.path.join(self.app.get_path('watched'), 'master{:}.fit'.format(sub_type)),
-            exposure=exposure,
-            filt=filt,
-            temperature=temperature,
-            sub_type='master ' + sub_type,
-            nsubs=stacker.get_selected_sub_count())
+        self.save_master(data=master, exposure=exposure, filt=filt, temperature=temperature, 
+            sub_type=sub_type, nsubs=stacker.get_selected_sub_count())
 
         # add to notes field of current DSO
         Component.get('Notes').notes = 'exposure {:} filter {:} temperature {:}'.format(exposure, filt, temperature)
+
+
+    def save_master(self, data=None, exposure=None, filt=None, temperature=None, sub_type=None, nsubs=None):
+        ''' Save master and add to library to make it available immediately. Called both by
+            create_master above and by the Watched camera for any alien master subs. The difference is
+            that create_master above does BPM/flat handling etc so only applies to natively-captured
+            calibration masters.
+        '''
+
+        logger.info('new master type {:} expo {:} temp {:} filt {:} nsubs {:}'.format(
+            sub_type, exposure, temperature, filt, nsubs))
+
+        name = 'master{:}.fit'.format(sub_type)
+        path = make_unique_filename(os.path.join(self.calibration_dir, name))
+        save_image(data=data, path=path, exposure=exposure, filt=filt, temperature=temperature,
+            sub_type='master ' + sub_type, nsubs=nsubs)
+        self.add_to_library(Image(path))
 
     def calibrate(self, sub):
         # Given a light sub, apply calibration. Fails silently if no suitable calibration masters. 
@@ -122,12 +155,15 @@ class Calibrator(Component):
         if not self.library: 
             return
 
+        if not (self.apply_dark or self.apply_bias or self.apply_flat):
+            return
+
         # get all masters (check speed, but should be quick)
         dark = self.get_dark(sub)
         flat = self.get_flat(sub)
         bias = self.get_bias(sub)
 
-        # Logger.debug('Calibrator: D {:} F {:} B {:}'.format(dark, flat, bias))
+        logger.debug('D {:} F {:} B {:}'.format(dark, flat, bias))
 
         D = self.get_master(dark)
         # if D is not None:
@@ -140,6 +176,7 @@ class Calibrator(Component):
         #     print('{:} min {:} max {:} median {:} mean {:}'.format(bias, np.min(B), np.max(B), np.median(B), np.mean(B)))
 
         im = sub.get_image()
+
         if self.apply_dark and self.apply_flat:
             if dark is not None and flat is not None:
                 im = (im - D) / F
@@ -183,7 +220,7 @@ class Calibrator(Component):
         if applied:
             self.info('applied ' + applied)
         else:
-            self.info('none')
+            self.info('')
 
     def get_dark(self, sub):
         # Find suitable dark for this sub given its parameters
@@ -254,7 +291,7 @@ class Calibrator(Component):
         if name is None:
             return None
         # Retrieve image (NB loaded on demand, so effectively a cache)
-        return self.masters[name].get_master_data()
+        return self.masters[name].get_image()
 
     def _most_subs(self, cands):
         c = {k: cands[k]['nsubs'] for k in cands.keys()}
@@ -269,8 +306,6 @@ class Calibrator(Component):
         '''
 
         im = sub.get_image()
-        #print('before calibration min {:} max {:} median {:}'.format(
-        #    np.min(im), np.max(im), np.median(im)))
 
         # subtract bias if available
         bias = self.get_bias(sub)
@@ -278,29 +313,21 @@ class Calibrator(Component):
             #print('subtracting bias')
             im = im - self.get_master(bias)
 
-        #print('after bias min {:} max {:} median {:}'.format(
-        #    np.min(im), np.max(im), np.median(im)))
-
         # normalise by mean of image in central 3rd zone 
         perc = 75  # retain central 75% of points when computing mean 
         w, h = im.shape
         w1, w2 = int(w / 3), int(2 * w / 3)
         h1, h2 = int(h / 3), int(2 * h / 3)
         imr = im[h1: h2, w1: w2]
-        # imr = im[(h // 2 - r):(h // 2 + r), (w // 2 - r):(w // 2 + r)]
         robust_mean = np.mean(trimboth(np.sort(imr.ravel(), axis=0), 
             (100 - perc)/100, axis=0), axis=0)
-        #print('robust mean in w {:}-{:}, h {:}-{:} is {:}'.format(
-        #    w1, w2, h1, h2, robust_mean))
 
         sub.image = .5 * im / robust_mean
-        #print('after bias min {:} max {:} median {:}'.format(
-        #    np.min(sub.image), np.max(sub.image), np.median(sub.image)))
 
-
-    # calibration table handling ---------------------------------------------------------------------
-
+    
     def build_calibrations(self):
+        ''' Contruct table from library
+        '''
 
         return Table(
             size=Window.size,
@@ -314,7 +341,7 @@ class Calibrator(Component):
                 'Temp. C': {'w': 80, 'field': 'temperature', 'type': str},
                 'Filter': {'w': 80, 'field': 'filter'},
                 'Created': {'w': 180, 'field': 'created', 'sort': {'DateFormat': date_time_format}},
-                'Size': {'w': 70, 'field': 'shape_str'},
+                'Size': {'w': 110, 'field': 'shape_str'},
                 'Age': {'w': 50, 'field': 'age', 'type': int},
                 'Subs': {'w': 50, 'field': 'nsubs', 'type': int}
                 },
@@ -323,7 +350,8 @@ class Calibrator(Component):
             )
 
     def show_calibration_table(self, *args):
-        '''Called from menu'''
+        ''' Called when user clicks 'library' on GUI
+        '''
 
         if not hasattr(self, 'calibration_table'):
             self.calibration_table = self.build_calibrations()
@@ -336,17 +364,11 @@ class Calibrator(Component):
         self.calibration_table.show()    
 
     def move_to_delete_folder(self, *args):
-        add_if_not_exists('deleted')
+        objio = Component.get('ObjectIO')
         for nm in self.calibration_table.selected:
             if nm in self.library:
-                to_path = os.path.join('deleted', nm + datetime.now().strftime('%d_%b_%y_%H_%M_%S'))
-                from_path = os.path.join(self.calibration_dir, nm)
-                try:
-                    shutil.move(from_path, to_path)
-                    del self.library[nm]
-                    del self.masters[nm]
-                except Exception as e:
-                    self.error('problem moving master')
-                    Logger.error('Calibrator: problem moving master to {:} ({:})'.format(to_path, e))
+                objio.delete_file(os.path.join(self.calibration_dir, nm))
+                del self.library[nm]
+                del self.masters[nm]
+        logger.info('deleted {:} calibration masters'.format(len(self.calibration_table.selected)))
         self.calibration_table.update()
-

@@ -1,8 +1,9 @@
 ''' Convenient place to support ring metrics.
 '''
 
+from loguru import logger
+
 from kivy.metrics import dp
-from kivy.logger import Logger
 from kivy.core.window import Window
 
 class Metrics():
@@ -19,7 +20,7 @@ class Metrics():
         if p in cls.metrics:
             return cls.metrics[p]
         else:
-            Logger.error('Metrics: no such metric {:}'.format(p))
+            logger.error('no such metric {:}'.format(p))
 
     @classmethod
     def update(cls):

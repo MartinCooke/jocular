@@ -1,159 +1,280 @@
-''' Filterwheel: represents collection of filters available as well 
-    as providing control of an electronic filter wheel (EFW) where 
-    available. All the individual filter information should reside 
-    here e.g. on-screen colour representations, transmissibilities 
-    if needed for ordering taking multiple flats.
-
-    Currently supports (hard-coded) the SX USB filter wheel only.
+''' Filterwheel device family
 '''
 
-# import hid   # human interface device, to allow access to SX EFW
-from kivy.app import App
-from kivy.logger import Logger
+from functools import partial
+from loguru import logger
+
 from kivy.clock import Clock
 from kivy.properties import StringProperty
+from kivymd.uix.button import MDFlatButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.toast.kivytoast import toast
+
 from jocular.component import Component
-from jocular.widgets import JPopup
+from jocular.devicemanager import DeviceFamily, Device
+
+_filter_types = ['L', 'R', 'G', 'B', 'Ha', 'OIII', 'SII', 'dark', 'spec', '-']
+
+class FilterWheel(Component, DeviceFamily):
+
+	modes = {
+		'Single': 'SingleFW',
+		'Simulator': 'SimulatorFW',
+		'Manual': 'ManualFW', 
+		'SX EFW': 'SXFW'
+	}
+
+	default_mode = 'Single'
+	family = 'FilterWheel'
+
+	current_filter = StringProperty('L')
+
+	def get_state(self):
+		return {
+			'current_filter': self.current_filter,
+			'filtermap': self.filtermap()}
+
+	def filtermap(self):
+		# create map from filtername to position e.g. {'L': 1, 'R': 2}
+		if self.device is None:
+			return {}
+		return {getattr(self.device, 'f{:}'.format(p)): p for p in range(1, 10)}
+
+	def select_filter(self, name='L', changed_action=None, not_changed_action=None):
+
+		logger.debug('trying to change to filter {:}'.format(name))
+		self.changed_action = changed_action
+		self.not_changed_action = not_changed_action
+
+		# no change of filter
+		if self.current_filter == name:
+			logger.debug('no need to change filter {:}'.format(name))
+			changed_action()
+			return
+
+		# filter not in wheel
+		if name not in self.filtermap():
+			# if we want dark or we currently have dark, special case
+			if name == 'dark' or self.current_filter == 'dark':
+				if name == 'dark':
+					title = 'Is scope capped for darks?'
+				else:
+					title = 'Is scope uncapped for lights?'
+				self.dialog = MDDialog(
+					auto_dismiss=False,
+					text=title,
+					buttons=[
+						MDFlatButton(text="DONE", 
+							text_color=self.app.theme_cls.primary_color,
+							on_press=partial(self.confirmed_fw_changed, name)),
+						MDFlatButton(
+							text="CANCEL", 
+							text_color=self.app.theme_cls.primary_color,
+							on_press=self.confirmed_fw_not_changed)
+					],
+				)
+				self.dialog.open()
+
+			else:
+				toast('Cannot find filter {:}'.format(name))
+				logger.warning('Cannot find filter {:} in current filterwheel'.format(name))
+				if not_changed_action is not None:
+					not_changed_action()
+		else:
+			# if we get here, we can go ahead
+			self.change_filter(name)
+
+	def confirmed_fw_changed(self, name, *args):
+		self.dialog.dismiss()
+		self.fw_changed(name)
+
+	def confirmed_fw_not_changed(self, *args):
+		self.dialog.dismiss()
+		self.fw_not_changed()
+
+	def change_filter(self, name, *args):
+		try:
+			self.device.select_position(
+				position=self.filtermap()[name], 
+				name=name, 
+				success_action=partial(self.fw_changed, name),
+				failure_action=self.fw_not_changed)
+		except Exception as e:
+			toast('problem moving EFW ({:})'.format(e))
+			if self.not_changed_action is not None:
+				self.not_changed_action()
+			return
+
+	def fw_changed(self, name, dt=None):
+		# change has been done
+		self.current_filter = name
+		logger.debug('Filter changed to {:}'.format(name))
+		if self.changed_action is not None:
+			self.changed_action()
+
+	def fw_not_changed(self):
+		logger.debug('Filter not changed')
+		if self.not_changed_action is not None:
+			self.not_changed_action()
+
+	def device_connected(self):
+		# called by DeviceFamily when a device connects
+		if self.device is not None:
+			self.device.settings_have_changed()
 
 
-class FilterWheel(Component):
+class GenericFW(Device):
 
-    filter_properties = {
-        "L": {"color": (0.7, 0.7, 0.7), "bg_color": (0.1, 0.1, 0.1, 0.5)},
-        "R": {"color": (1, 0, 0), "bg_color": (1, 0, 0, 0.6)},
-        "G": {"color": (0, 1, 0), "bg_color": (0, 1, 0, 0.5)},
-        "B": {"color": (0, 0, 1), "bg_color": (0, 0, 1, 0.5)},
-        "dark": {"color": (0.1, 0.1, 0.1), "bg_color": (0, 0, 0, 0)},
-        "Ha": {"color": (0.8, 0.3, 0.3), "bg_color": (1, 0.6, 0.6, 0.5)},
-        "OIII": {"color": (0.2, 0.6, 0.8), "bg_color": (0, 0, 0, 0)},
-        "SII": {"color": (0.1, 0.8, 0.4), "bg_color": (0, 0, 0, 0)},
-        "spec": {"color": (0.7, 0.6, 0.2), "bg_color": (0, 0, 0, 0)},
-        "-": {"color": (0.3, 0.3, 0.3), "bg_color": (0, 0, 0, 0)},
-    }
+	family = StringProperty('FilterWheel')
 
-    current_filter = StringProperty("L")
+	f1 = StringProperty('-')
+	f2 = StringProperty('-')
+	f3 = StringProperty('-')
+	f4 = StringProperty('-')
+	f5 = StringProperty('-')
+	f6 = StringProperty('-')
+	f7 = StringProperty('-')
+	f8 = StringProperty('-')
+	f9 = StringProperty('-')
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # form array of filters
-        config = App.get_running_app().config
-        self.filters = [
-            config.get("Filters", "filter{:}".format(i + 1)) for i in range(9)
-        ]
+	configurables = [
+		('f1', {'name': 'position 1', 'options': _filter_types}),
+		('f2', {'name': 'position 2', 'options': _filter_types}),
+		('f3', {'name': 'position 3', 'options': _filter_types}),
+		('f4', {'name': 'position 4', 'options': _filter_types}),
+		('f5', {'name': 'position 5', 'options': _filter_types}),
+		('f6', {'name': 'position 6', 'options': _filter_types}),
+		('f7', {'name': 'position 7', 'options': _filter_types}),
+		('f8', {'name': 'position 8', 'options': _filter_types}),
+		('f9', {'name': 'position 9', 'options': _filter_types})
+		]
 
-    def on_new_object(self):
-        self.connected = False
-        self.connect()
-        if self.connected:
-            self.info("connected")
-        else:
-            self.info("not connected")
+	def settings_have_changed(self):
+		
+		# only transmit changes for connected devices
+		if not self.connected:
+			return
+		
+		# remove duplicates
+		logger.debug('Checking for and removing duplicates')
+		filts = set({})
+		for pos in range(1, 10):
+			fname = 'f{:}'.format(pos)
+			f = getattr(self, fname)
+			if f in filts:
+				setattr(self, fname, '-')
+			else:
+				filts.add(f)
+		Component.get('CaptureScript').filterwheel_changed()
 
-    def on_current_filter(self, *args):
-        App.get_running_app().gui.set("filter_button", self.current_filter)
-        self.info("{:} filter".format(self.current_filter))
 
-    def update_filter(self, fnum, ftype):
-        # called when config changes in jocular itself
-        if fnum.startswith("filter"):
-            findex = int(fnum[6:]) - 1
-            self.filters[findex] = ftype
+class SingleFW(GenericFW):
 
-    # methods for other components to access things like filter colours
-    def get_color(self, name="L"):
-        if name in self.filter_properties:
-            return self.filter_properties[name]["color"]
-        else:
-            # mid-grey
-            if name != "empty":
-                self.warn("no filter called {:}".format(name))
-            return 0.5, 0.5, 0.5, 1
+	def connect(self):
+		self.connected = True
+		self.status = 'Single filter connected'
 
-    def on_close(self):
-        if self.connected and self.efw:
-            self.efw.close()
+	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+		if success_action is not None:
+			success_action()
 
-    def connect(self):
-        # Try to connect
 
-        if self.connected:
-            return
+class SimulatorFW(GenericFW):
 
-        self.connected = False
+	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+		if success_action is not None:
+			success_action()
 
-        try:
-            import hid
-        except Exception as e:
-            Logger.warn("FilterWheel: cannot import HID ({:})".format(e))
-            return
-        try:
-            if hasattr(self, "efw"):
-                if self.efw:
-                    self.efw.close()
-            else:
-                self.efw = hid.device()
-        except Exception as e:
-            Logger.warn("FilterWheel: failed to get HID device ({:})".format(e))
-            return
+	def connect(self):
+		self.connected = True
+		self.status = 'Filterwheel simulator active'
 
-        # note that if we open when already open, it fails
-        try:
-            self.efw.open(0x1278, 0x0920)
-            self.connected = True
-            Logger.info("FilterWheel: connected!")
-        except Exception as e:
-            Logger.trace("FilterWheel: failed to open device ({:})".format(e))
-            self.connected = False
 
-    def order_by_transmission(self, filts):
-        #  need to add others to this and perhaps do it via filter_properties
-        if type(filts) != list:
-            filts = [filts]
-        t_order = ["Ha", "B", "G", "R", "L"]
-        return [f for f in t_order if f in filts]
+class ManualFW(GenericFW):
 
-    #  since filter change takes some seconds, we use callbacks to control actions
-    #  once the filterwheel is in position; in simple cases where there are no filters
-    #  or user is requesting same filter, no need for callbacks -- up to the caller
+	def connect(self):
+		self.connected = True
+		self.status = 'Manual filterwheel'
 
-    def select_filter(self, name="L", changed_action=None, not_changed_action=None):
-        """Connect to filter by name if possible, calling appropriate callback if provided"""
+	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+		self.dialog = MDDialog(
+			auto_dismiss=False,
+			text='Change filter to {:} in position {:}'.format(name, position),
+			buttons=[
+				MDFlatButton(text="DONE", 
+					text_color=self.app.theme_cls.primary_color,
+					on_press=partial(self.post_dialog, success_action)),
+				MDFlatButton(
+					text="CANCEL", 
+					text_color=self.app.theme_cls.primary_color,
+					on_press=partial(self.post_dialog, failure_action))
+			],
+		)
+		self.dialog.open()
 
-        Logger.info("FilterWheel: select filter {:}".format(name))
+	def post_dialog(self, action, *args):
+		''' close dialog and perform action (i.e. success or failure to change)
+		'''
+		self.dialog.dismiss()
+		if action is not None:
+			action()
 
-        # no change of filter so execute callback if it exists, or return otherwise
-        if self.current_filter == name:
-            if changed_action is not None:
-                changed_action()
-            return
+class SXFW(GenericFW):
 
-        # we need to change filter: does the filter exist?
-        if (name not in {"dark", "L"}) and name not in self.filters:
-            self.warn("Cannot find filter {:}".format(name))
-            if not_changed_action is not None:
-                not_changed_action()
-            return
+	def connect(self):
 
-        # if we have a filterwheel, then execute the change
-        if self.connected:
-            position = self.filters.index(name) + 1  # 1-indexed
-            try:
-                self.efw.write([position + 128, 0])
-                if changed_action is not None:
-                    Clock.schedule_once(changed_action, 3)
-                self.current_filter = name
-            except Exception as e:
-                Logger.error(
-                    "FilterWheel: exception moving filterwheel ({:})".format(e)
-                )
-                self.warn("problem moving EFW")
-                if not_changed_action is not None:
-                    not_changed_action()
-        # prompt user
-        else:
-            if name == "dark":
-                title = "Cap scope for darks"
-            else:
-                title = "Change filter to {:}".format(name)
-            self.current_filter = name
-            JPopup(title=title, actions={"Done": changed_action}).open()
+		if self.connected:
+			return
+
+		self.connected = False
+		logger.debug('importing HID')
+		try:
+			import hid
+		except Exception as e:
+			logger.warning('Cannot import HID ({:})'.format(e))
+			self.status = 'Cannot import HID'
+			return
+
+		try:
+			if hasattr(self, 'fw'):
+				if self.fw:
+					logger.debug('closing filterwheel')
+					self.fw.close()
+			else:
+				self.fw = hid.device()
+				logger.debug('got HID device')
+
+		except Exception as e:
+			logger.warning('Failed to get HID ({:})'.format(e))
+			self.status = 'Failed to get HID device'
+			return
+
+		# note that if we open when already open, it fails
+		try:
+			logger.debug('opening SX EFW')
+			self.fw.open(0x1278, 0x0920)
+			self.connected = True
+			self.status = 'SX filterwheel connected'
+			logger.debug('successful')
+		except Exception as e:
+			logger.warning('fw.open failed ({:})'.format(e))
+			self.status = 'fw.open failed'
+			self.connected = False
+
+
+	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+		try:
+			# move SX filterwheel
+			logger.debug('Moving SX EFW to position {:}'.format(position))
+			self.fw.write([position + 128, 0])
+			# wait three seconds before informing controller it has been done
+			logger.debug('success so setting up action {:}'.format(success_action))
+			Clock.schedule_once(success_action, 3)
+		except:
+			# controller will handle this
+			if failure_action is not None:
+				failure_action()
+
+	# def on_close(self):
+	#     if self.connected and self.efw:
+	#         self.efw.close()

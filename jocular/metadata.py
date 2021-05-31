@@ -3,11 +3,12 @@
 
 import os
 import json
-import platform
 from datetime import datetime
-from kivy.logger import Logger
-from jocular.image import fits_in_dir
+from loguru import logger
+
+from jocular.image import fits_in_dir, update_fits_header
 from jocular.component import Component
+# from jocular.image import Image, ImageNotReadyException, is_fit
 
 
 def remove_empties(d):
@@ -79,15 +80,25 @@ def get_metadata(path, simple=False):
     fits = fits_in_dir(path)
     md['nsubs'] = len(fits)
     if len(fits) > 0:
-        # v0.4.5 approach
-        # md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime(
-        #     '%d %b %y %H:%M'
-        md['session'] = datetime.fromtimestamp(creation_date(fits[0])).strftime(
+        md['session'] = datetime.fromtimestamp(os.path.getmtime(fits[0])).strftime(
             '%d %b %y %H:%M'
         )
 
-    # much of the time we just want metadata for observing list in
-    # simple format
+    # convert SQM to sky_brightness now we are handling NELM
+    if 'SQM' in md:
+        md['sky_brightness'] = md['SQM']
+        del md['SQM']
+
+    # handle some legacy changes
+    if 'OT' in md and 'Name' in md:
+        nm = md['Name'].upper()
+        if md['OT'].upper() == 'G+':
+            if nm.startswith('ARP') or nm.startswith('VV') or nm.startswith('AM '):
+                md['OT'] = 'PG'
+            elif nm[:3] in {'HIC', 'PCG', 'SHK'}:
+                md['OT'] = 'CG'
+
+    # often we want metadata for observing list in simple format
     if simple:
         return { 
             'Name': md.get('Name', ''),
@@ -100,39 +111,22 @@ def get_metadata(path, simple=False):
 
     return md
 
-
-def creation_date(path_to_file):
-    ''' Code from 
-        https://stackoverflow.com/questions/237079/how-to-get-file-creation-modification-date-times-in-python
-        Try to get the date that a file was created, falling back to when it was
-        last modified if that isn't possible.
-        See http://stackoverflow.com/a/39501288/1709587 for explanation.
-    '''
-    if platform.system() == 'Windows':
-        return os.path.getctime(path_to_file)
-    else:
-        stat = os.stat(path_to_file)
-        try:
-            return stat.st_birthtime
-        except AttributeError:
-            # We're probably on Linux. No easy way to get creation dates here,
-            # so we'll settle for when its content was last modified.
-            return stat.st_mtime
-
 class Metadata(Component):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.reset()
 
-    def reset(self):
+    def on_new_object(self):
         self.md = {}
+
+    def on_previous_object(self):
+        self.load(Component.get('ObjectIO').current_object_dir)
 
     def load(self, path):
         self.md = get_metadata(path)
 
-    def save(self, path):
+    def save(self, path, change_fits_headers=False):
         # Save metadata to path in above format
+
         self.md = remove_empties(self.md)
+
         if 'Name' not in self.md:
             self.md['Name'] = os.path.basename(path)
 
@@ -148,9 +142,16 @@ class Metadata(Component):
             with open(os.path.join(path, 'info3.json'), 'w') as f:
                 json.dump(self.md, f, indent=1)
         except Exception as e:
-            Logger.warn(
-                'Metadata: Problem saving info3.json to {:} ({:})'.format(path, e)
-            )
+            logger.warning('Problem saving info3.json to {:} ({:})'.format(path, e))
+
+        # change FITs header if requested
+        if change_fits_headers:
+            logger.debug('Changing fits headers')
+            for f in fits_in_dir(path):
+                update_fits_header(f, 
+                    exposure=self.md.get('exposure', None),
+                    sub_type=self.md.get('sub_type', None),
+                    temperature=self.md.get('temperature', None))
 
     def set(self, field, value=None):
         # set one or more fields of metadata
@@ -171,11 +172,3 @@ class Metadata(Component):
         else:
             return self.md.get(field, default)
 
-    def has_changed(self, md):
-        # compare md and self.md
-        for k, v in self.md.items():
-            if k not in md:
-                return True
-            if md[k] != v:
-                return True
-        return False

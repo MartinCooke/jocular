@@ -15,7 +15,6 @@ from jocular.gradient import estimate_gradient, estimate_background, image_stats
 from jocular.component import Component
 from jocular.metrics import Metrics
 
-
 class Monochrome(Component):
 
     redrawing = BooleanProperty(False)
@@ -32,6 +31,8 @@ class Monochrome(Component):
     fine = NumericProperty(0)
     autoblack = BooleanProperty(True)
     show_image_stats = BooleanProperty(False)
+
+    save_settings = ['gradient', 'white', 'black', 'p1', 'lift', 'noise_reduction', 'autoblack', 'show_image_stats', 'stretch']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -92,9 +93,10 @@ class Monochrome(Component):
         self._gradient = g - np.mean(g)
 
     def display_sub(self, im, do_gradient=False):
-        """Called by Stacker when user selects sub, and by Capture, when displaying short subs
-        Only compute gradient if light sub from stacker, not when calibration, nor when short
-        """
+        ''' Called by Stacker when user selects sub, and by Capture, when 
+            displaying short subsOnly compute gradient if light sub from stacker, 
+            not when calibration, nor when short
+        '''
 
         # ensure we are displaying subs
         if self.stacker.sub_or_stack == "stack":
@@ -109,8 +111,9 @@ class Monochrome(Component):
         self.view.display_image(self.luminance())
 
     def adjust_lum(self, *args):
-        """User has changed control position so generate luminance and either
-        display it (if sub or in mono mode) or advise multispectral of the update"""
+        ''' User has changed control position so generate luminance and either
+            display it (if sub or in mono mode) or advise multispectral of the update
+        '''
 
         lum = self.luminance()
         if self.stacker.sub_or_stack == "sub":
@@ -142,8 +145,6 @@ class Monochrome(Component):
             return
 
         im = self.mono
-
-
 
         # this is the point at which to compute image stats
         if self.show_image_stats:
@@ -196,7 +197,7 @@ class Monochrome(Component):
                 "99.99 percentile",
                 "max",
             ]:
-                self.image_stats_fields[s].text = "{:}: {:.10f}%".format(
+                self.image_stats_fields[s].text = "{:}: {:.1f}%".format(
                     s, 100 * stats[s]
                 )
 

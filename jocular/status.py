@@ -13,7 +13,7 @@ Builder.load_string('''
 
 <StatusLabel>:
     size_hint: 1, None
-    height: dp(20) 
+    height: dp(24) 
     halign: 'right'
     markup: True
     font_size: app.info_font_size
@@ -39,16 +39,14 @@ class StatusLabel(Label):
 class Status(BoxLayout, Component):
 
     show_status = BooleanProperty(False)
-    comps = ['Camera', 'FilterWheel', 'Capture', 'ObjectIO', 'BadPixelMap',   
-                'Calibrator', 'View', 'Observations',
-                'ObservingList', 'Aligner', 'Stacker', 'PlateSolver', 'Snapshotter']
+    comps = ['Capture', 'Calibrator', 'View', 'Aligner', 'Stacker', 'PlateSolver']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         App.get_running_app().gui.add_widget(self, index=2)
 
         # add a status label for each component where we are interested in status updates
-        self.labs = {c: StatusLabel(text=c) for c in self.comps}
+        self.labs = {c: StatusLabel(text='') for c in self.comps}
         for name, lab in self.labs.items():
             self.add_widget(lab)
 
