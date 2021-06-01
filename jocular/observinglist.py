@@ -90,7 +90,15 @@ class ObservingList(Component, Settings):
 
     def save_observing_list(self, *args):
         try:
-            ol = {v['Name']: v['Added'] for v in self.objects.values() if v['Added'] != ''}
+            ''' bug here: if self.objects is changed (with new objects) then
+                it won't have Added field. Temporary fix but needs migrationt
+                to Catalogues
+            '''
+            ol = {}
+            for v in self.objects.values():
+                if v.get('Added', ''):
+                    ol[v['Name']] = v['Added']
+            # ol = {v['Name']: v['Added'] for v in self.objects.values() if v['Added'] != ''}
             with open(self.app.get_path('observing_list.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
@@ -99,7 +107,11 @@ class ObservingList(Component, Settings):
 
     def save_notes(self, *args):
         try:
-            ol = {v['Name']: v['Notes'] for v in self.objects.values() if v['Notes'].strip() != ''}
+            ol = {}
+            for v in self.objects.values():
+                if v.get('Notes', '').strip():
+                    ol[v['Name']] = v['Notes']
+            #ol = {v['Name']: v['Notes'] for v in self.objects.values() if v['Notes'].strip() != ''}
             with open(self.app.get_path('observing_notes.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
@@ -167,6 +179,18 @@ class ObservingList(Component, Settings):
 
         # load DSOs
         try:
+            ''' self.objects is not a copy, so when user objects are added
+                in Catalogues.update_user_catalogue, they are also added
+                to self.objects. This causes issues because new objects
+                dont have all the augmented properties like Added let alone
+                transit information. 
+
+                Should migrate some of the functionality
+                of ObservingList and Catalogues to make it easier
+                to maintain consistency. In fact, all the lookups should
+                be done via Catalogues and not via ObservingList
+            '''
+
             self.objects = Component.get('Catalogues').get_basic_dsos()
         except Exception as e:
             logger.exception('problem loading DSOs ({:})'.format(e))
@@ -361,28 +385,15 @@ class ObservingList(Component, Settings):
 
     @logger.catch()
     def lookup_name(self, name, *args):
-        ''' name is of the form name/object type e.g. SHK 10/CG and will exist
-            either in self.objects or in catalogue objects (latter case for any
-            ojects added during the current session). Called either after looking
-            up object types (in dso.py), or when a user clicks on a row in the
+        ''' name is of the form name/object type e.g. SHK 10/CG. Called either after 
+            looking up object types (in dso.py), or when a user clicks on a row in the
             dso table (above)
         '''
         if not hasattr(self, 'objects'):
             self.load()
-        nm = name.upper()
 
         # most of the time the object is already in the table
-        if nm in self.objects:
-            dso = self.objects[nm]
-        else:
-            # if not, ought to be in the cataogue object structure
-            dso = Component.get('Catalogues').get_basic_dsos().get(nm, {})
-
-        # tidy it up to reduce any None and nan to empties
-        for k, v in dso.items():
-            if v is None or str(v) == 'nan':
-                dso[k] = ''
-        return dso
+        return self.objects.get(name.upper(), {})
 
     def lookup_OTs(self, name):
         ''' Find all OTs that have this name; note that keys in objects are stored
