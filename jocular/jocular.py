@@ -51,7 +51,7 @@ class Jocular(MDApp):
         path = os.path.join(self.data_dir, name)
         try:
             if not os.path.exists(path):
-                logger.debug('Jocular: creating path {:} -> {:}'.format(name, path))
+                logger.debug('Creating path {:}'.format(path))
                 os.mkdir(path)
             return os.path.join(self.data_dir, name)
         except Exception as e:

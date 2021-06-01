@@ -153,26 +153,24 @@ class Catalogues(Component, Settings):
                     self.dsos[nm] = d
             logger.info('loaded user DSOs')
 
-        # add any missing fields
+        # ensure all fields are present and consistent
         for v in self.dsos.values():
-            for p in self.props:
-                if p not in v:
-                    v[p] = ''
-
-        # convert all numeric cols to floats & ensure OTs/constellations are uppercase
-        for k, v in self.dsos.items():
             for col in ['RA', 'Dec', 'Mag', 'Diam']:
-                v[col] = float(v[col] if v[col] else math.nan)
+                val = v.get(col, '')
+                try:
+                    v[col] = float(val)
+                except:
+                    v[col] = math.nan
             for col in ['OT', 'Con']:
-                v[col] = v[col].upper()
+                v[col] = v.get(col, '').upper()
+            v['Other'] = v.get('Other', '')
 
 
     def update_user_catalogue(self, props):
-        ''' Update (or create new entry) for DSO defined by dict
-            props
+        ''' Update (or create new entry) for DSO defined by props
         '''
 
-        logger.debug('props {:}'.format(props))
+        logger.debug(props)
 
         # no name or empty name
         if props.get('Name', '').strip == '':
@@ -184,8 +182,6 @@ class Catalogues(Component, Settings):
         name = '{:}/{:}'.format(props['Name'], props['OT'])
 
         logger.info('Updating user objects with {:}'.format(name))
-
-        # 
 
 
         ''' check if we already have a user_objects files; create if not
@@ -207,7 +203,9 @@ class Catalogues(Component, Settings):
             odict[name.upper()] = props
 
             # update dsos
-            self.dsos[name.upper()] = props  
+            # this is the ONLY place where dsos is updated, and hence self.objects
+            # in ObservingList, and it causes issues until we migrate code
+            # self.dsos[name.upper()] = props  
 
             # write to csv
             with open(obj_file, 'w', newline='') as f:

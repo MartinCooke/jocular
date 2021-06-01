@@ -365,7 +365,7 @@ class Session(Component, Settings):
                 self.camera = session.get('camera', '')
         except Exception as e:
             # any problems we just start a fresh session
-            logger.debug('problem loading session data, so recreating {:}'.format(e))
+            logger.debug('problem loading session: recreating {:}'.format(e))
             self.create_empty_session()
 
         # create date and clock to update it

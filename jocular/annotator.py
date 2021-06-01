@@ -18,9 +18,9 @@ from kivy.metrics import dp
 from kivy.lang import Builder
 from kivy.core.window import Window
 
-from jocular.hoverable import HoverBehavior
-
-# from kivymd.uix.behaviors import HoverBehavior
+# used to use this version
+# from jocular.hoverable import HoverBehavior
+from kivymd.uix.behaviors import HoverBehavior
 
 from jocular.metrics import Metrics
 from jocular.component import Component
@@ -460,7 +460,6 @@ class Annotator(Component):
                         diam *= 1.5
 
                 # diam is in arcmin
-                # print('Obj: {:} OT {:} diam: {:}'.format(info['Name'], ot, diam))
                 pixel_rad = (((diam / (2 * 60.0)) / deg_per_pixel)) / 2**.5
 
                 self.annotations += [cls(
