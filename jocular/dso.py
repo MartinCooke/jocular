@@ -213,8 +213,11 @@ class DSO(Component):
         full_settings = Component.get('ObservingList').lookup_name(
             '{:}/{:}'.format(settings.get('Name', ''), settings.get('OT', '')))
 
-        # update DSO display
-        self.update_props(full_settings)
+        # update props if we managed a lookup, else use metadata values
+        if full_settings.get('Name', ''):
+            self.update_props(full_settings)
+        else:
+            self.update_props(settings)
 
         # store initial values so we can check for changes 
         self.initial_values = {p: getattr(self, p) for p in self.props}
@@ -433,7 +436,7 @@ class DSO(Component):
             {'Name': self.Name.strip(), 'OT': self.OT, 'Con': self.Con}
         )
 
-        ''' If there have been any changes update user objects catalogue
+        ''' If there have been any changes, update user objects catalogue
         '''
 
         props = {p: getattr(self, p) for p in self.props}
@@ -454,6 +457,8 @@ class DSO(Component):
 
 
     def current_object_coordinates(self):
+        ''' Called by platesolver
+        '''
         if self.RA and self.Dec:
             return (float(RA(self.RA)), float(Dec(self.Dec)))
         return None, None
