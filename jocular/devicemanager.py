@@ -64,7 +64,6 @@ class DeviceManager(Component, BoxLayout):
 		self.connect_dots = {}
 		self.size = Window.size
 		self.app.gui.add_widget(self)
-		#Clock.schedule_once(self.connect_devices, 0)
 
 	def show(self, *args):
 		Component.get('SettingsManager').hide()
@@ -148,17 +147,8 @@ class DeviceManager(Component, BoxLayout):
 
 		self.add_widget(Label(size_hint=(1, None), height=dp(90)))
 
-
 	def mode_changed(self, device, spinner, mode):
 		Component.get(device).set_mode(mode)
-
-	def connect_devices(self, dt=None):
-		logger.debug('Attempting to connect devices')
-		for d in self.devices.keys():
-			try:
-				Component.get(d).connect()
-			except Exception as e:
-				logger.exception(e)
 
 	def connect(self, device, widget=None):
 		try:
@@ -309,15 +299,6 @@ class DeviceFamily:
 		if self.device is None:
 			return False
 		return self.device.connected
-
-	# def on_new_object(self, *args):
-	# 	if self.connected():
-	# 		logger.info('connected, about to call device on new object')
-	# 		self.device.on_new_object()
-
-	# def on_previous_object(self, *args):
-	# 	if self.connected():
-	#		self.device.on_previous_object()
 
 	def device_connected(self):
 		pass

@@ -25,7 +25,7 @@ from jocular.utils import angle360
 from jocular.component import Component
 from jocular.metrics import Metrics
 from jocular.ring import Ring
-from jocular.reticle import Reticle
+# from jocular.reticle import Reticle
 from jocular.widgets import jicon
 from jocular.utils import get_datadir, start_logging
 
@@ -159,6 +159,7 @@ class GUI(FloatLayout):
 		orig_gui = OrderedDict()
 
 		Component.get('View')
+		reticle = Component.get('Reticle')
 
 		# handle rings first due to draw order
 		origin = Metrics.get('origin')
@@ -182,7 +183,8 @@ class GUI(FloatLayout):
 		# focus/alignment reticle
 		orig_gui['reticle'] = {
 			'control_type': 'Reticle',
-			'widget': Reticle(pos=origin, radius=radii['image'])
+			'widget': reticle
+			#'widget': Reticle(pos=origin, radius=radii['image'])
 		}
  
 		# load GUI spec and convert so widget names are keys
@@ -235,7 +237,7 @@ class GUI(FloatLayout):
 		for c in ['Status', 'Appearance', 'Metadata', 'Catalogues', 'Notes', 'DSO', 'Session', 'Stacker', 
 			'Capture', 'CaptureScript', 'Observations', 'ObservingList', 'Monochrome',
 			'MultiSpectral', 'ObjectIO', 'Aligner', 
-			'DeviceManager', 'Camera', 'FilterWheel', 'Telescope',
+			'DeviceManager', 'Camera', 'FilterWheel', 'Telescope', 
 			'ExposureChooser', 'FilterChooser', 'SettingsManager',
 			'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator']:
 			Component.get(c)

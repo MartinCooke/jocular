@@ -38,8 +38,24 @@ class Telescope(Component, DeviceFamily):
 			else:
 				toast('Cannot slew without coordinates')
 
+	def move(self, direction=None, rate=None):
+		if self.connected():
+			self.device.move(direction=direction, rate=rate)
+
+	def stop_moving(self):
+		if self.connected():
+			self.device.stop_moving()
+
+
+
 class GenericTelescope(Device):
 	family = StringProperty('Telescope')
+
+	def move(self, direction=None, rate=None):
+		logger.debug('moving {:} at rate {:}'.format(direction, rate))
+
+	def stop_moving(self):
+		logger.debug('stop moving')
 
 
 class ManualTelescope(GenericTelescope):
@@ -80,4 +96,30 @@ class ASCOMTelescope(GenericTelescope):
 	def slew(self, RA=None, Dec=None):
 		# don't forget to turn tracking on at some point...
 		pass
+
+	def move(self, direction=None, rate=None):
+
+		logger.debug('moving {:} at rate {:}'.format(direction, rate))
+		''' for ASCOM, negative rate implies moving in other direction
+			so need to convert directions up down etc
+			We will map left right to RA axis for Eq and to azimuth for altaz
+		''' 
+		# map left right to RA axis for Eq and to azimuth for altaz
+		axis = 0 if direction in {'left', 'right'} else 1
+
+		# map left/down to negative rates
+		rate = -rate if direction in {'left', 'down'} else rate
+
+		# check if we can move axis
+		if self.scope.CanMoveAxis(axis):
+			self.scope.MoveAxis(axis, rate)
+
+	def stop_moving(self):
+		logger.debug('stop moving')
+		if self.scope.CanMoveAxis(0):
+			self.scope.MoveAxis(axis, 0)
+		if self.scope.CanMoveAxis(1):
+			self.scope.MoveAxis(axis, 1)
+
+
 
