@@ -91,9 +91,14 @@ class ASCOMTelescope(GenericTelescope):
 		if self.connected:
 			self.driver = res.get('driver', self.driver)
 			self.scope = res['device']
+			# get slew rates etc
+			self.rates = self.scope.AxisRates
+			logger.info('scope slew rates: {:}'.format(self.rates))
 		else:
 			if 'exception' in res:
 				self.status += ' ({:})'.format(res['exception'])
+
+
 
 	def slew(self, RA=None, Dec=None):
 		# don't forget to turn tracking on at some point...
@@ -121,7 +126,7 @@ class ASCOMTelescope(GenericTelescope):
 		if self.scope.CanMoveAxis(0):
 			self.scope.MoveAxis(0, 0)
 		if self.scope.CanMoveAxis(1):
-			self.scope.MoveAxis(0, 1)
+			self.scope.MoveAxis(1, 0)
 
 
 
