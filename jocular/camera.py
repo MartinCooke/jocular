@@ -311,7 +311,8 @@ class ASCOMCamera(GenericCamera):
 
 	def disconnect(self):
 		logger.debug('closing ASCOM camera')
-		self.camera.connected = False
+		# self.camera.connected = False
+		self.camera.Connected = False  # closes ascom device
 
 	def connect(self):
 

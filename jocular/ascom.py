@@ -1,5 +1,6 @@
 import os
 
+
 def connect_to_ASCOM_device(device_type=None, driver=None):
 	''' Try to connect to ASCOM device; if driver is None, bring up chooser.
 		Return dictionary containing some or all of driver, status, device and exception

@@ -288,7 +288,7 @@ class ASCOMFW(GenericFW):
 
 	def disconnect(self):
 		logger.debug('closing ASCOM filterwheel')
-		self.fw.connected = False
+		self.fw.Connected = False
 
 	def connect(self):
 

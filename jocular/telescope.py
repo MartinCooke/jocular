@@ -76,8 +76,8 @@ class ASCOMTelescope(GenericTelescope):
 	driver = StringProperty(None)
 
 	def disconnect(self):
-		logger.debug('closing ASCOM filterwheel')
-		self.scope.connected = False
+		logger.debug('disconnecting AASCOM telescope')
+		self.scope.Connected = False
 
 	def connect(self):
 
@@ -117,9 +117,9 @@ class ASCOMTelescope(GenericTelescope):
 	def stop_moving(self):
 		logger.debug('stop moving')
 		if self.scope.CanMoveAxis(0):
-			self.scope.MoveAxis(axis, 0)
+			self.scope.MoveAxis(0, 0)
 		if self.scope.CanMoveAxis(1):
-			self.scope.MoveAxis(axis, 1)
+			self.scope.MoveAxis(0, 1)
 
 
 
