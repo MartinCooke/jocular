@@ -93,7 +93,7 @@ class ASCOMTelescope(GenericTelescope):
 			self.scope = res['device']
 			# get slew rates etc
 			self.rates0 = self.scope.AxisRates(0)
-			self.rates0 = self.scope.AxisRates(1)
+			self.rates1 = self.scope.AxisRates(1)
 			logger.info('scope slew rates: axis 0 {:} axis 1 {:}'.format(
 				self.rates0, self.rates1))
 			logger.info('current sidereal time  from scope {:}'.format(
