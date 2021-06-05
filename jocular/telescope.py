@@ -49,7 +49,7 @@ class ManualTelescope(GenericTelescope):
 		self.connected = True
 
 	def slew(self, RA=None, Dec=None):
-		toast('Slewing not possible for manual telescope')
+		toast('Slewing not possible for manual scope')
 
 class SimulatorTelescope(GenericTelescope):
 	pass
