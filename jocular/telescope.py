@@ -78,6 +78,8 @@ class ASCOMTelescope(GenericTelescope):
 	def disconnect(self):
 		logger.debug('disconnecting AASCOM telescope')
 		self.scope.Connected = False
+		self.connected = False
+		self.status = 'disconnected'
 
 	def connect(self):
 
