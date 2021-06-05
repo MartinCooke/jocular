@@ -23,6 +23,7 @@ from jocular.component import Component
 from jocular.devicemanager import Device, DeviceFamily
 from jocular.utils import move_to_dir
 from jocular.image import Image, ImageNotReadyException, is_fit
+from jocular.ascom import connect_to_ASCOM_device
 
 class Camera(Component, EventDispatcher, DeviceFamily):
 
@@ -306,65 +307,79 @@ class ASCOMCamera(GenericCamera):
 	driver = StringProperty(None)
 
 	def on_close(self):
-		# disconnect camera when closing Jocular
-		if self.connected:
-			logger.debug('closing ASCOM camera')
-			self.camera.connected = False
+		self.disconnect()
+
+	def disconnect(self):
+		logger.debug('closing ASCOM camera')
+		self.camera.connected = False
 
 	def connect(self):
 
 		if self.connected:
 			return
-		
-		self.connected = False
-		self.camera = None
 
-		if os.name != 'nt':
-			self.status = 'Only works on Windows'
-			return
+		res = connect_to_ASCOM_device(device_type='Camera', driver=self.driver)
+		self.connected = res.get('connected', False)
+		self.status = res['status']
+		if self.connected:
+			self.driver = res.get('driver', self.driver)
+			self.camera = res['device']
+			self.status += ': {:} x {:}'.format(
+				self.camera.CameraXSize, self.camera.CameraYSize)
 
-		if self.driver is not None:
-			# try to connect to the known driver
-			try:
-				self._connect(self.driver)
-				return
-			except Exception as e:
-				self.status = 'Cannot connect to driver'
-				logger.exception('Cannot connect to driver: ({:})'.format(e))
+		else:
+			if 'exception' in res:
+				self.status += ' ({:})'.format(res['exception'])
 
-		# that didn't work, or driver is None, so choose
-		try:
-			import win32com.client
-		except:
-			self.status = 'Cannot import win30com.client; is ASCOM installed?'
-			return
+		# self.connected = False
+		# self.camera = None
 
-		try:
-			chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
-			chooser.DeviceType = 'Camera'
-			self.driver = chooser.Choose(None)
-		except Exception as e:
-			self.status = 'Unable to choose driver'
-			logger.exception('Unable to choose driver ({:})'.format(e))
-			return
+		# if os.name != 'nt':
+		# 	self.status = 'Only works on Windows'
+		# 	return
 
-		# now try to connect to newly-chosen driver
-		try:
-			self._connect(self.driver)
-			# need to fix this save
-			# self.save()
-		except Exception as e:
-			self.status = 'Cannot connect: ({:})'.format(e)
-			self.driver = None
+		# if self.driver is not None:
+		# 	# try to connect to the known driver
+		# 	try:
+		# 		self._connect(self.driver)
+		# 		return
+		# 	except Exception as e:
+		# 		self.status = 'Cannot connect to driver'
+		# 		logger.exception('Cannot connect to driver: ({:})'.format(e))
 
-	def _connect(self, driver):
-		import win32com.client
-		self.camera = win32com.client.Dispatch(driver)
-		self.camera.Connected = True   # this is camera-specific prop (note upper case)
-		logger.info('set connected on driver to True')
-		self.connected = True    # note this is generic prop
-		self.status = '{:}: {:} x {:}'.format(driver,
-			self.camera.CameraXSize, self.camera.CameraYSize)
+		# # that didn't work, or driver is None, so choose
+		# try:
+		# 	import win32com.client
+		# except:
+		# 	self.status = 'Cannot import win30com.client; is ASCOM installed?'
+		# 	return
+
+		# try:
+		# 	chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
+		# 	chooser.DeviceType = 'Camera'
+		# 	self.driver = chooser.Choose(None)
+		# except Exception as e:
+		# 	self.status = 'Unable to choose driver'
+		# 	logger.exception('Unable to choose driver ({:})'.format(e))
+		# 	return
+
+		# # now try to connect to newly-chosen driver
+		# try:
+		# 	self._connect(self.driver)
+		# 	# need to fix this save
+		# 	# self.save()
+		# except Exception as e:
+		# 	self.status = 'Cannot connect: ({:})'.format(e)
+		# 	self.driver = None
+
+	# def _connect(self, driver):
+	# 	import win32com.client
+	# 	self.camera = win32com.client.Dispatch(driver)
+	# 	self.camera.Connected = True   # this is camera-specific prop (note upper case)
+	# 	logger.info('set connected on driver to True')
+	# 	self.connected = True    # note this is generic prop
+	# 	self.status = '{:}: {:} x {:}'.format(driver,
+	# 		self.camera.CameraXSize, self.camera.CameraYSize)
 
 	def capture(self, exposure=None, on_capture=None, on_failure=None,
 		binning=None, internal_timing=False, return_image=False, is_bias=False):
@@ -403,10 +418,8 @@ class ASCOMCamera(GenericCamera):
 	def get_camera_data(self):
 		# data is ready so get it, convert to correct size, and scale to range 0-1
 		# assumes 16 bits for now
-		im = np.array(self.camera.ImageArray)
-		shape = [self.camera.CameraXSize, self.camera.CameraYSize]
-		# needs to be transposed (to do)
-		return im.reshape(shape) / 2 ** 16
+		im = np.array(self.camera.ImageArray).as_type(np.uint16) / 2**16
+		return im.T
 
 	def stop_capture(self):
 		# Cancel any pending reads

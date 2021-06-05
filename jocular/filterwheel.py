@@ -12,6 +12,7 @@ from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
 from jocular.devicemanager import DeviceFamily, Device
+from jocular.ascom import connect_to_ASCOM_device
 
 _filter_types = ['L', 'R', 'G', 'B', 'Ha', 'OIII', 'SII', 'dark', 'spec', '-']
 
@@ -21,7 +22,8 @@ class FilterWheel(Component, DeviceFamily):
 		'Single': 'SingleFW',
 		'Simulator': 'SimulatorFW',
 		'Manual': 'ManualFW', 
-		'SX EFW': 'SXFW'
+		'SX EFW': 'SXFW',
+		'ASCOM': 'ASCOMFW'
 	}
 
 	default_mode = 'Single'
@@ -278,3 +280,41 @@ class SXFW(GenericFW):
 	# def on_close(self):
 	#     if self.connected and self.efw:
 	#         self.efw.close()
+
+
+class ASCOMFW(GenericFW):
+
+	driver = StringProperty(None)
+
+	def disconnect(self):
+		logger.debug('closing ASCOM filterwheel')
+		self.fw.connected = False
+
+	def connect(self):
+
+		if self.connected:
+			return
+
+		res = connect_to_ASCOM_device(device_type='FilterWheel', driver=self.driver)
+		self.connected = res.get('connected', False)
+		self.status = res['status']
+		if self.connected:
+			self.driver = res.get('driver', self.driver)
+			self.fw = res['device']
+		else:
+			if 'exception' in res:
+				self.status += ' ({:})'.format(res['exception'])
+
+	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+		try:
+			# move filterwheel
+			logger.debug('Moving ASCOM EFW to position {:}'.format(position))
+			self.fw.Position = position
+			# wait three seconds before informing controller it has been done
+			logger.debug('success so setting up action {:}'.format(success_action))
+			Clock.schedule_once(success_action, 3)
+		except:
+			# controller will handle this
+			if failure_action is not None:
+				failure_action()
+

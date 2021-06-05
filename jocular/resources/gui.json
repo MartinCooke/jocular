@@ -352,7 +352,9 @@
 			"color": [0.5, 0, 0, 1],
 			"radial": true,
 			"save": false
-		},
+		}
+	},
+	"Telescope": {
 		"slew": {
 			"angle": 39.5,
 			"location": "mid_ring",

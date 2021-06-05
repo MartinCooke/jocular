@@ -146,7 +146,7 @@ class Stacker(Component, Settings):
         cod = Component.get('ObjectIO').current_object_dir
         for s in self.subs:
             if s.status == 'reject':
-                move_to_dir(os.path.join(cod, s.name), 'rejects')
+                move_to_dir(os.path.join(cod, s.fullname), 'rejects')
 
     def is_empty(self):
         return len(self.subs) == 0

@@ -67,36 +67,6 @@ Builder.load_string('''
 		id: _message
 		text: ''
 
-# <Message>:
-# 	orientation: 'vertical'
-# 	padding: '8dp'
-# 	size_hint: None, None
-# 	size: "300dp", "300dp"
-# 	pos_hint: {'center_x': .5, 'center_y': .5}
-
-# 	MDLabel:
-# 		text: root.title
-# 		size_hint: 1, None
-# 		height: '60dp'
-# 		font_style: 'H5'
-# 		halign: 'center'
-# 		theme_text_color: 'Primary'
-# 		pos_hint: {'center_x': .5, 'top': 1}
-
-# 	MDLabel:
-# 		text: root.message
-# 		font_style: 'H6'
-# 		size_hint: 1, 1
-# 		halign: 'center'
-# 		valign: 'center'
-# 		theme_text_color: 'Secondary'
-# 		# pos_hint: {'center_x': .5, 'center_y': .5}
-
-# 	MDTextButton:
-# 		text: 'CLOSE'
-# 		on_release: root.hide()
-# 		pos_hint: {'x': 0, 'right': 1}
-
 ''')
 
 class Splash(BoxLayout):
@@ -208,7 +178,7 @@ class GUI(FloatLayout):
 					'widget': Ring(pos=origin, radius=r, thickness=thickness[nm], grey=greys[nm],
 						start_angle=start_angle.get(nm, 0), end_angle=end_angle.get(nm, 360))
 					} 
- 
+
 		# focus/alignment reticle
 		orig_gui['reticle'] = {
 			'control_type': 'Reticle',
@@ -244,10 +214,6 @@ class GUI(FloatLayout):
 				logger.info('GUI drawn')
 		except Exception as e:
 			logger.exception(e)
-
-		# test snackbar
-		# NB show should be changed to open when latest master branch is released on pip
-		# Snackbar(text='This is a snackbar').show()
 
 
 	def make_splash(self):
