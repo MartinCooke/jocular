@@ -92,8 +92,12 @@ class ASCOMTelescope(GenericTelescope):
 			self.driver = res.get('driver', self.driver)
 			self.scope = res['device']
 			# get slew rates etc
-			self.rates = self.scope.AxisRates
-			logger.info('scope slew rates: {:}'.format(self.rates))
+			self.rates0 = self.scope.AxisRates(0)
+			self.rates0 = self.scope.AxisRates(1)
+			logger.info('scope slew rates: axis 0 {:} axis 1 {:}'.format(
+				self.rates0, self.rates1))
+			logger.info('current sidereal time  from scope {:}'.format(
+				self.scope.SiderealTime))
 		else:
 			if 'exception' in res:
 				self.status += ' ({:})'.format(res['exception'])
