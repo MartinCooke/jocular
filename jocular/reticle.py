@@ -17,7 +17,10 @@ Builder.load_string('''
 #:set inner 10
 
 <Arrow>:
-    icon: 'arrow-{:}-thick'.format(root.direction)
+    text_color: app.theme_cls.primary_color
+    theme_text_color: "Custom"
+    #icon: 'arrow-{:}-thick'.format(root.direction)
+    icon: 'arrow-{:}'.format(root.direction)
     x: root.reticle.x + root.xoffset - self.width / 2
     y: root.reticle.y + root.yoffset - self.height / 2 if root.reticle.show and root.reticle.mount else -1000
 
@@ -46,8 +49,6 @@ Builder.load_string('''
 
 class Arrow(MDIconButton):
 
-    # direction = StringProperty('left')
-    # rate = NumericProperty(1)
     xoffset = NumericProperty(0)
     yoffset = NumericProperty(0)
     reticle = ObjectProperty(None)
@@ -94,10 +95,9 @@ class Reticle(Component, Widget):
             self.mount = Component.get('Telescope').connected()
 
     def move(self, direction, rate, widget):
-        Component.get('Telescope').move(direction=direction, rate=rate)
-        print('moving {:} at speed {:}, widget {:}'.format(
-            direction, rate, widget))
+        # supposedly rate is in degrees per second so reduce it as follows
+        ratemap = {1: .05, 2: 1, 3: 2}
+        Component.get('Telescope').move(direction=direction, rate=ratemap[rate])
 
     def stop_moving(self, *args):
         Component.get('Telescope').stop_moving()
-        print('stopping slew')
