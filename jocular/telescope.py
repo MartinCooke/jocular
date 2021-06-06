@@ -119,9 +119,6 @@ class ASCOMTelescope(GenericTelescope):
 		# map left/down to negative rates
 		rate = -rate if direction in {'left', 'down'} else rate
 
-		# convert rate to degs/sec
-		rate = {1: .1, 2: .5, 3: 1}[rate]
-
 		# check if we can move axis
 		if self.scope.CanMoveAxis(axis):
 			self.scope.MoveAxis(axis, rate)
