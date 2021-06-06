@@ -91,11 +91,6 @@ class ASCOMTelescope(GenericTelescope):
 		if self.connected:
 			self.driver = res.get('driver', self.driver)
 			self.scope = res['device']
-			# get slew rates etc
-			self.rates0 = self.scope.AxisRates(0)
-			self.rates1 = self.scope.AxisRates(1)
-			logger.info('scope slew rates: axis 0 {:} axis 1 {:}'.format(
-				self.rates0, self.rates1))
 			logger.info('current sidereal time  from scope {:}'.format(
 				self.scope.SiderealTime))
 		else:
@@ -120,6 +115,9 @@ class ASCOMTelescope(GenericTelescope):
 
 		# map left/down to negative rates
 		rate = -rate if direction in {'left', 'down'} else rate
+
+		# convert rate to degs/sec
+		rate = {1: .1, 2: .5, 3: 1}[rate]
 
 		# check if we can move axis
 		if self.scope.CanMoveAxis(axis):

@@ -96,8 +96,7 @@ class Reticle(Component, Widget):
 
     def move(self, direction, rate, widget):
         # supposedly rate is in degrees per second so reduce it as follows
-        ratemap = {1: .05, 2: 1, 3: 2}
-        Component.get('Telescope').move(direction=direction, rate=ratemap[rate])
+        Component.get('Telescope').move(direction=direction, rate=rate)
 
     def stop_moving(self, *args):
         Component.get('Telescope').stop_moving()
