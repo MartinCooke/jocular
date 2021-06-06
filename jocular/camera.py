@@ -470,10 +470,6 @@ class SXCamera(GenericCamera):
 		self.connected = False
 		self.lodestar = None
 
-		if os.name == 'nt':
-			self.status = 'not yet supported on Windows'
-			return
-
 		try:
 			import usb.core
 			import usb.util

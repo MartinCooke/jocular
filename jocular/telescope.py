@@ -114,7 +114,7 @@ class ASCOMTelescope(GenericTelescope):
 		axis = 0 if direction in {'left', 'right'} else 1
 
 		# convert rate to degs/sec
-		rate = {1: .1, 2: .5, 3: 1}[rate]
+		rate = {1: .1, 2: .2, 3: .3}[rate]
 
 		# map left/down to negative rates
 		rate = -rate if direction in {'left', 'down'} else rate
