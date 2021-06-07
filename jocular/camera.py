@@ -164,8 +164,7 @@ class SimulatorCamera(GenericCamera):
 				im = Image(impath)
 				return im.get_image() 
 			except Exception as e:
-				print(e)
-				pass
+				logger.exception(e)
 		# in the event of failure to get image, return noise
 		return min(1, (self.exposure / 10)) * np.random.random((500, 500))
 

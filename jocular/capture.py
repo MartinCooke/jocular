@@ -159,7 +159,6 @@ class Capture(Component):
                 self.stop_capture()
                 Component.get('CaptureScript').reset_generator()
 
-
     def on_exposure(self, *args):
         Component.get('CaptureScript').exposure_changed(self.exposure)        
 
@@ -178,15 +177,6 @@ class Capture(Component):
             self.capture()
         except Exception as e:
             logger.exception('problem send to display {:}'.format(e))
-
-    # def get_capture_details(self):
-    #     return {
-    #         'exposure': self.exposure,
-    #         #'exposure': Component.get('CaptureScript').get_exposure(),
-    #         'filter': Component.get('FilterWheel').current_filter,
-    #         'sub_type': Component.get('CaptureScript').get_sub_type(),
-    #         'temperature': Component.get('Session').temperature
-    #         }
 
     def save_capture(self, *args):
         ''' Called via camera when image is ready.

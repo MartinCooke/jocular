@@ -20,6 +20,7 @@ from jocular.gradient import estimate_background, estimate_gradient
 class Aligner(Component, Settings):
 
     do_align = BooleanProperty(True)
+    smooth_edges = BooleanProperty(False)
     ideal_star_count = NumericProperty(30)
 
     configurables = [
@@ -27,7 +28,9 @@ class Aligner(Component, Settings):
             'help': 'Switching align off can help diagnose tracking issues'}),
         ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
             'help': 'Find an appropriate threshold to detect this many stars on the first sub',
-            'fmt': '{:.0f} stars'})
+            'fmt': '{:.0f} stars'}),
+        ('smooth_edges', {'name': 'smooth edges?', 'switch': '',
+            'help': 'Switch on if you have platesolving issues'}),
         ]
 
     def __init__(self):
@@ -35,7 +38,6 @@ class Aligner(Component, Settings):
         self.min_sigma = 3
         self.max_sigma = 5
         self.min_stars = 5
-        self.smooth_edges = True
         self.centroid_radius = 8
         r = self.centroid_radius
         patch_size = 2 * r + 1
@@ -93,7 +95,8 @@ class Aligner(Component, Settings):
 
                 # new in v0.4: can sometimes get artefacts that screw up platesolving
                 # this is one way to handle them, but it isn't to all tastes and is slow
-                # so allow use not to do it
+                # so allow use not to do it; ideally DONT use as it also creates other
+                # artefacts
 
                 if self.smooth_edges:
                     # apply warp, ensuring values outside the range are filled with 

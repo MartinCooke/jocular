@@ -89,6 +89,18 @@ def get_metadata(path, simple=False):
         md['sky_brightness'] = md['SQM']
         del md['SQM']
 
+    # remove seeing and transparency words
+    for typ in ['seeing', 'transparency']:
+        wd = md.get(typ, '')
+        if wd == typ + ' unspecified':
+            del md[typ]
+        elif wd:
+            swords = wd.split()
+            if swords[0] == typ:
+                md[typ] = ' '.join(swords[1:]).strip()
+            elif swords[-1] == typ:
+                md[typ] = ' '.join(swords[:-1]).strip()
+
     # handle some legacy changes
     if 'OT' in md and 'Name' in md:
         nm = md['Name'].upper()

@@ -290,6 +290,8 @@ class ObjectIO(Component):
 
     def new_sub(self, data=None, name=None, 
         exposure=None, filt=None, temperature=None, sub_type=None):
+        ''' Called by Capture or WatchedCamera
+        '''
 
         if data is None or name is None:
             return

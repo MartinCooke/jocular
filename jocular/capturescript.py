@@ -175,9 +175,9 @@ class CaptureScript(Component):
     def get_sub_type(self):
         ''' called by Watcher and Capture
         '''
-        if self.current_script in {'seq', 'light'}:
+        if self.current_script  == 'seq':
             return 'light'
-        if self.current_script in {'flat', 'autoflat'}:
+        if self.current_script == 'autoflat':
             return 'flat'
         return self.current_script
 
@@ -206,8 +206,8 @@ class CaptureScript(Component):
         self.update()
 
     def set_external_details(self, exposure=None, sub_type=None, filt=None):
-        ''' Set the details on the interface regardless of what the scripts say. Used
-            for previous captures and watched captures.
+        ''' Display capture details on the interface. Used for previous captures 
+            and watched captures.
         '''
         if type(filt) == list:
             filt = ''.join(filt)

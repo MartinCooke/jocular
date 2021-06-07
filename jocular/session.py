@@ -183,6 +183,7 @@ class Session(Component, Settings):
     def describe(self):
         ''' return information for Snapshotter
         '''
+
         return [
             self.session, 
             self.formatted_sky_brightness,
@@ -257,7 +258,6 @@ class Session(Component, Settings):
                 bright = float(bright)
                 self.sky_brightness = bright if units == 'SQM' else SQM_to_NELM(bright)
         except Exception as e:
-            print(e)
             self.sky_brightness = None
         self.on_sky_brightness()
         self.check_for_change() 

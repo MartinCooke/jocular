@@ -510,7 +510,7 @@ class Stacker(Component, Settings):
 
     @logger.catch()
     def add_sub(self, sub):
-        ''' for sub coming from watcher
+        ''' called by ObjectIO.new_sub
         '''
 
         ''' check if sub is the same dims as existing stack, otherwise don't add; note
@@ -531,10 +531,14 @@ class Stacker(Component, Settings):
 
         self.app.gui.has_changed('Stacker', not self.is_empty())
 
-        Component.get('CaptureScript').set_external_details(
-            exposure=sub.exposure,
-            filt=''.join(sub.filter),
-            sub_type=sub.sub_type)
+        ''' I don't think we need to set the details here because it is done
+            both in WatchedCamera.save_mono for anything coming in from the watcher
+            and in on_previous_object here in Stacker for previous objects
+        '''
+        # Component.get('CaptureScript').set_external_details(
+        #     exposure=sub.exposure,
+        #     filt=''.join(sub.filter),
+        #     sub_type=sub.sub_type)
 
     def realign(self, *args):
         self.recompute(realign=True)
