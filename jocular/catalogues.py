@@ -167,7 +167,10 @@ class Catalogues(Component, Settings):
 
 
     def update_user_catalogue(self, props):
-        ''' Update (or create new entry) for DSO defined by props
+        ''' Update (or create new entry) for DSO defined by props. Note that any
+            changes here are not picked up again until next restart, it seems, most
+            likely due to commented out part below (will be fixed when part of this
+            code goes into DSO or vice versa)
         '''
 
         logger.debug(props)

@@ -176,6 +176,7 @@ class DSO(Component):
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
     show_DSO = BooleanProperty(False)
+    check_ambiguity = BooleanProperty(False) # check for ambiguous Names e.g. PN/GG
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -190,21 +191,13 @@ class DSO(Component):
         ''' Called when user clicks new
         '''
 
-        self.check_ambiguity = True
-
-        # empty DSO details
-        self.update_props({})
-
-        # store initial values so we can check for changes 
+        # empty DSO details & store initial values
+        self.update_props()
         self.initial_values = {p: getattr(self, p) for p in self.props}
-
 
     def on_previous_object(self):
         ''' Called when user selected object in observations table
         '''
-
-        # switch off ambiguity check because no ambiguity on previous object's OT
-        self.check_ambiguity = False
 
         # Data for new object is in Metadata
         settings = Component.get('Metadata').get({'Name', 'OT'})
@@ -215,15 +208,12 @@ class DSO(Component):
 
         # update props if we managed a lookup, else use metadata values
         if full_settings.get('Name', ''):
-            self.update_props(full_settings)
+            self.update_props(settings=full_settings)
         else:
-            self.update_props(settings)
+            self.update_props(settings=settings)
 
         # store initial values so we can check for changes 
         self.initial_values = {p: getattr(self, p) for p in self.props}
-
-        # switch back on in case user does wish to change OT after the event
-        self.check_ambiguity = True
 
 
     def new_DSO_name(self, settings):
@@ -232,14 +222,12 @@ class DSO(Component):
             change of name so that it can be confirmed on save.
         '''
 
-        self.check_ambiguity = False
-
         # lookup rest
         full_settings = Component.get('ObservingList').lookup_name(
             '{:}/{:}'.format(settings.get('Name', ''), settings.get('OT', '')))
 
         # update DSO properties
-        self.update_props(full_settings)
+        self.update_props(settings=full_settings)
 
         # if stack is empty, treat this as a new observation
         if Component.get('Stacker').is_empty():
@@ -248,15 +236,14 @@ class DSO(Component):
         else:
             logger.info('user changes DSO name {:}'.format(full_settings))
 
-        self.check_ambiguity = True
-
 
     @logger.catch()
     def Name_changed(self, val, *args):
         ''' Name is changed as soon as the text is altered to allow lookup
-            while other properties are changed on defocus
+            while other properties are changed on defocus.
         '''
 
+        # don't do any lookups if we are initialising 
         if not self.check_ambiguity:
             return
 
@@ -290,15 +277,21 @@ class DSO(Component):
             self.choose_OT.clear_widgets()
             del self.choose_OT
         logger.debug('Found match: {:}'.format(m))
-        self.update_props(Component.get('ObservingList').lookup_name(m), 
-            update_name_field=False)
+        self.update_props(settings=Component.get('ObservingList').lookup_name(m), 
+            update_name_field=False, initialising=False)
         self.new_values['Name'] = self.Name
         self.check_for_change()
 
     @logger.catch()
-    def update_props(self, settings, update_name_field=True):
+    def update_props(self, settings=None, update_name_field=True, initialising=True):
         ''' update DSO properties, causing display update
         '''
+
+        if initialising:
+            self.check_ambiguity = False
+
+        if settings is None:
+            settings = {}
 
         self.Name = settings.get('Name', '')
         self.RA = str(RA(settings.get('RA', math.nan)))
@@ -307,13 +300,15 @@ class DSO(Component):
         self.OT = settings.get('OT', '')
         self.Mag = float_to_str(settings.get('Mag', ''))
         self.Other = settings.get('Other', '')
+
         self.Diam = arcmin_to_str(str_to_arcmin(str(settings.get('Diam', ''))))
         # update new values to reflect changes
         self.new_values = {p: getattr(self, p) for p in self.props}
         if update_name_field:
             self.dso_panel.name_field.text = self.Name
-        # check for change at this point
         self.check_for_change()
+
+        self.check_ambiguity = True
 
     def OT_changed(self, widget):
         ''' For the moment we allow any object type but in the future
@@ -439,21 +434,24 @@ class DSO(Component):
         ''' If there have been any changes, update user objects catalogue
         '''
 
-        props = {p: getattr(self, p) for p in self.props}
+        for k, v in self.initial_values.items():
+            if k in self.new_values and self.new_values[k] != v:
+                props = {p: getattr(self, p) for p in self.props}
 
-        # convert RA/Dec etc
-        if 'RA' in props:
-            props['RA'] = RA.parse(props['RA'])
-        if 'Dec' in props:
-            props['Dec'] = Dec.parse(props['Dec'])
-        if 'Diam' in self.props:
-            try:
-                diam = str_to_arcmin(props['Diam'])
-            except:
-                diam = math.nan 
-            props['Diam'] = diam
+                # convert RA/Dec etc
+                if 'RA' in props:
+                    props['RA'] = RA.parse(props['RA'])
+                if 'Dec' in props:
+                    props['Dec'] = Dec.parse(props['Dec'])
+                if 'Diam' in self.props:
+                    try:
+                        diam = str_to_arcmin(props['Diam'])
+                    except:
+                        diam = math.nan 
+                    props['Diam'] = diam
 
-        Component.get('Catalogues').update_user_catalogue(props)
+                Component.get('Catalogues').update_user_catalogue(props)
+                return # exit loop
 
 
     def current_object_coordinates(self):
