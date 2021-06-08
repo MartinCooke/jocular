@@ -87,8 +87,8 @@ class ScatterView(Scatter):
 
     def on_touch_move(self, touch):
         #print('on touch move selected ring {:} image {:}'.format(
-            self.controller.ring_selected,
-            self.controller.image_selected))
+        #    self.controller.ring_selected,
+        #    self.controller.image_selected))
         if self.controller.ring_selected:
             x, y = touch.pos
             theta = math.atan2(y - self.yc, x - self.xc) / (math.pi / 180)
