@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 
 from kivy.app import App
-from kivy.properties import BooleanProperty, NumericProperty
+from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from kivymd.toast.kivytoast import toast
 
 from jocular.component import Component
@@ -21,10 +21,10 @@ from jocular.uranography import (
     make_tile,
     Eq2Cart,
     Cart2Eq,
-    spherical_distance,
-    compute_centroids,
+    spherical_distance
 )
 
+from jocular.aligner import star_centroids
 
 def select_stars_in_FOV(ras, decs, ra0, dec0, fov):
     #  filter ras, decs, mags to just return those in given region
@@ -115,6 +115,7 @@ class PlateSolver(Component, Settings):
     mag_range = NumericProperty(5)    # dont' allow user to set this
     first_match = BooleanProperty(False)
     binning = NumericProperty(1)
+    star_source = StringProperty('current sub')
 
     tab_name = 'Plate-solving'
 
@@ -154,6 +155,10 @@ class PlateSolver(Component, Settings):
             'name': 'return after finding', 
             'boolean': {'first match': True, 'best match': False},
             'help': 'tradeoff speed and accuracy'
+            }),
+        ('star_source', {
+            'name': 'get stars from', 
+            'options': ['first sub', 'current sub', 'stack'],
             })
         ]
 
@@ -176,17 +181,42 @@ class PlateSolver(Component, Settings):
             dpp = self.binning * (self.pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
             fov = self.h * dpp
 
-            #  extract image stars
-            star_thresh = 0.001
-            x, y, flux = compute_centroids(
-                self.im,
-                blob_dog(
-                    self.im, min_sigma=3, max_sigma=5, threshold=star_thresh, overlap=0
-                )[:, [1, 0]],
-            )
+            if self.star_source == 'first sub':
+                ''' use already extracted keystars and mags from first sub; appears to fail on 
+                    dense images
+                '''
+                aligner = Component.get('Aligner')
+                centroids = aligner.keystars
+                # do flips, though it would be good to get this working without flips in the future
+                view = Component.get('View')
+                x = self.w - centroids[:, 0] if view.flip_LR else centroids[:, 0]
+                y = self.h - centroids[:, 1] if view.flip_UD else centroids[:, 1]
+                flux = aligner.mags
+
+
+            elif self.star_source == 'current sub':
+                centroids = Component.get('Stacker').get_centroids_for_platesolving()
+                view = Component.get('View')
+                x = self.w - centroids[:, 0] if view.flip_LR else centroids[:, 0]
+                y = self.h - centroids[:, 1] if view.flip_UD else centroids[:, 1]
+                flux = centroids[:, 2]
+
+            else:
+                ''' alternative approach is to reanalyse (possible stacked) image to extract stars, but 
+                    field rotation artefacts can cause issues with star extraction
+                '''
+                star_thresh = 0.001
+                blobs = blob_dog(self.im, min_sigma=3, max_sigma=5, threshold=star_thresh, overlap=0)[:, [1, 0]]
+                centroids = star_centroids(self.im, blobs)
+                x = centroids[:, 0]
+                y = centroids[:, 1]
+                flux = centroids[:, 2]
 
             #  convert flux to relative magnitude
             mags = -2.5 * np.log10(flux / np.max(flux))
+
+            logger.debug('star source {:}; nstars = {:}; mag range {:.1f}'.format(
+                self.star_source, len(x), np.max(mags)))
 
             # select N-brightest
             inds = np.argsort(mags)[: self.n_stars_in_image]
@@ -263,15 +293,15 @@ class PlateSolver(Component, Settings):
                 str(RA(self.tile_ra0)),
                 str(Dec(self.tile_dec0)))
 
-            toast('Solved ({:} matched) {:}'.format(len(matches), desc))
+            toast('Solved ({:} matched)'.format(len(matches)), duration=1)
             logger.info(desc)
             self.info('{:.2f}\u00b0 x {:.2f}\u00b0 | {:} | {:}'.format(
                 self.FOV_w, self.FOV_h,
                 str(RA(self.tile_ra0)),
                 str(Dec(self.tile_dec0))))
 
-        except:
-            logger.warning('error in match')
+        except Exception as e:
+            logger.exception('error in match {:}'.format(e))
 
     def solve(self, *args):
         # called when user presses loc icon
@@ -287,8 +317,8 @@ class PlateSolver(Component, Settings):
             toast('Cannot solve: unknown DSO')
             return
 
-        # get current image (sub or stack)
-        self.im = Component.get('Stacker').get_image_for_platesolving()
+        # get current image
+        self.im = Component.get('Stacker').get_stack_for_platesolving()
         if self.im is None:
             toast('Cannot solve: no current image')
             # self.warn('no current image')
@@ -299,10 +329,7 @@ class PlateSolver(Component, Settings):
         future.add_done_callback(self.annotate)
 
     def annotate(self, *args):
-        if self.cart2pix is None:
-            toast('platesolving failed')
-            # self.warn('failed')
-        else:
+        if self.cart2pix is not None:
             Component.get('Annotator').annotate()
 
     def ra_dec_to_pixels(self, ra, dec):

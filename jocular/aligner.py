@@ -4,7 +4,6 @@
 import warnings
 import numpy as np
 
-from scipy import signal
 from skimage.measure import ransac
 from skimage.transform import EuclideanTransform, matrix_transform, warp
 from skimage.feature import blob_dog
@@ -14,7 +13,41 @@ from loguru import logger
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
-from jocular.gradient import estimate_background, estimate_gradient
+from jocular.gradient import estimate_background
+
+def star_centroids(im, stars, r=8):
+    ''' Compute accurate locations for stars based on star pixel coords
+        given in stars. Takes c 2-10 ms for a Lodestar image depending on star count
+    '''
+
+    grid_x, grid_y = np.meshgrid(np.arange(2 * r + 1), np.arange(2 * r + 1))
+    mask = np.sqrt((r - grid_x)**2 + (r - grid_y)**2) <= r
+
+    rows, cols = im.shape
+    star_data = np.zeros((len(stars), 3))
+    ptr = 0
+    for x, y in stars:
+        x, y = int(x), int(y)
+        if (x >= r) and (y >= r) and (x < (cols - r)) and (y < (rows - r)):
+            imfrag = im[(y - r):(y + r + 1), (x - r):(x + r + 1)].copy()
+            
+            # mean intensity within masked circle
+            mean_intensity = np.mean(imfrag[mask])
+    
+            # star pixels are in mask and above mean intensity
+            candidates = mask & (imfrag > mean_intensity)
+    
+            if candidates.any():
+                # estimate background and subtract from image
+                mean_background = np.mean(imfrag[np.logical_not(candidates)])
+                imfrag_sub = candidates * (imfrag - mean_background)       
+                wim = np.sum(imfrag_sub)
+                cx = np.sum(grid_x * imfrag_sub) / wim
+                cy = np.sum(grid_y * imfrag_sub) / wim
+                star_data[ptr, :] = [cx + x - r, cy + y - r, np.mean(imfrag_sub)]
+                ptr += 1                    
+    
+    return star_data[:ptr, :]
 
 
 class Aligner(Component, Settings):
@@ -22,6 +55,8 @@ class Aligner(Component, Settings):
     do_align = BooleanProperty(True)
     smooth_edges = BooleanProperty(False)
     ideal_star_count = NumericProperty(30)
+    min_sigma = NumericProperty(3)
+    max_sigma = NumericProperty(5)
 
     configurables = [
         ('do_align', {'name': 'align?', 'switch': '',
@@ -29,20 +64,15 @@ class Aligner(Component, Settings):
         ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
             'help': 'Find an appropriate threshold to detect this many stars on the first sub',
             'fmt': '{:.0f} stars'}),
-        ('smooth_edges', {'name': 'smooth edges?', 'switch': '',
-            'help': 'Switch on if you have platesolving issues'}),
+        ('min_sigma', {'name': 'min sigma', 'float': (1, 10, 1),
+            'fmt': '{:.0f}'}),
+        ('max_sigma', {'name': 'max sigma', 'float': (1, 10, 1),
+            'fmt': '{:.0f}'})
         ]
 
     def __init__(self):
         super().__init__()
-        self.min_sigma = 3
-        self.max_sigma = 5
         self.min_stars = 5
-        self.centroid_radius = 8
-        r = self.centroid_radius
-        patch_size = 2 * r + 1
-        self.grid_x, self.grid_y = np.meshgrid(np.arange(patch_size), np.arange(patch_size))
-        self.mask = np.sqrt((r - self.grid_x)**2 + (r - self.grid_y)**2) <= r
         self.star_intensity = None
 
     def on_new_object(self):
@@ -50,11 +80,13 @@ class Aligner(Component, Settings):
 
     def reset(self):
         self.keystars = None
+        self.mags = None
         self.warp_model = None
         self.align_count = 0
         self.starcounts = []
         self.info('')
     
+    @logger.catch()
     def align(self, sub, centroids):
         # Align sub to current keystars, updating its status.
         
@@ -92,41 +124,7 @@ class Aligner(Component, Settings):
             if (inliers is not None) and (sum(inliers) >= min_inliers):
                 # update warp model
                 self.warp_model = warp_model
-
-                # new in v0.4: can sometimes get artefacts that screw up platesolving
-                # this is one way to handle them, but it isn't to all tastes and is slow
-                # so allow use not to do it; ideally DONT use as it also creates other
-                # artefacts
-
-                if self.smooth_edges:
-                    # apply warp, ensuring values outside the range are filled with 
-                    # a known value to mitigate edge effects on platesolving
-                    sub.image = warp(sub.image, self.warp_model, order=3, 
-                        preserve_range=True, mode='constant', cval=0.0001)
-
-                    # identify unwarped points
-                    unwarped = sub.image < .001
-
-                    # grow these points inwards by convolution with block
-                    # 76 ms to convolve is quite slow
-                    unwarped = signal.convolve2d(unwarped, np.ones((9, 9)), mode='same')
-
-                    # find positive points, but none away from boundary
-                    pos = unwarped > 0
-                    npix = 100
-                    pos[npix:-npix, npix:-npix] = 0
-
-                    # fill these with noise: ~ 14ms
-                    bg_mu, bg_std = estimate_background(sub.image)
-                    grad = estimate_gradient(sub.image)
-                    # 10 ms
-                    noi = np.random.normal(bg_mu, bg_std, sub.image.shape) * grad / np.mean(grad)
-                    sub.image[pos] = noi[pos]
-
-                else:
-                    sub.image = warp(sub.image, self.warp_model, order=3, preserve_range=True)
-
-
+                sub.image = warp(sub.image, self.warp_model, order=3, preserve_range=True)
                 self.align_count += 1
 
                 # change to select if it was nalign before; if reject before, leave it as reject
@@ -135,9 +133,16 @@ class Aligner(Component, Settings):
             else:
                 sub.status = 'nalign'
 
+            # return inverse transform of centroids (for platesolver)
+            if self.warp_model:
+                return self.warp_model.inverse(centroids)
+            return None
+
+
 
     def extract_stars(self, im):
-        # Extracts star coordinates. Return array of x, y coordinates.
+        ''' Extracts star coordinates. Return array of x, y coordinates.
+        '''
 
         # if this is the first sub in the stack (perhaps after shuffle), find best intensity threshold
         if self.keystars is None:
@@ -153,6 +158,7 @@ class Aligner(Component, Settings):
                 overlap=0)[:, [1, 0]]
 
         # new for v2: order stars by decreasing intensity
+        # better to do this using mags after computing centroids (to do)
         intens = [im[int(y), int(x)] for x, y in stars]
         return np.array(stars)[[i for (v, i) in sorted((v, i) for (i, v) in enumerate(intens))][::-1]]
 
@@ -162,7 +168,6 @@ class Aligner(Component, Settings):
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            # image_cube = compute_image_cube(im, min_sigma=self.min_sigma, max_sigma=self.max_sigma)
             t0 , _ = estimate_background(im)
             # sometimes can fail due to background estimate being zero or too large
             if t0 < .001:
@@ -176,11 +181,6 @@ class Aligner(Component, Settings):
             maxits = 8
             while True and (its < maxits):
                 its += 1
-
-                # this approach appears to cause problems on Windows, so going back to the slower approach
-                # nstars = len(peak_local_max(image_cube, threshold_abs=est, footprint=np.ones((3,) * 3),
-                #     threshold_rel=0.0, exclude_border=(0,) * 3))
-
                 nstars = len(blob_dog(im, 
                     min_sigma=self.min_sigma, 
                     max_sigma=self.max_sigma, 
@@ -199,45 +199,6 @@ class Aligner(Component, Settings):
         logger.info('bkgd {:6.4f} threshold {:6.4f} after {:} iterations'.format(t0, est, its))
         return est
 
-
-    def compute_centroids(self, im, stars):
-        # extract info from all candidate stars and return centroids
- 
-        r = self.centroid_radius
-        rows, cols = im.shape
-        star_data = np.zeros((len(stars), 2))
-        ptr = 0
-        for x, y in stars:
-            x, y = int(x), int(y)
-            if (x >= r) and (y >= r) and (x < (cols - r)) and (y < (rows - r)):
-                imfrag = im[(y - r):(y + r + 1), (x - r):(x + r + 1)].copy()
-                cx, cy = self.compute_centroid(imfrag)
-                if cx > 0:
-                    star_data[ptr, :] = [cx + x - r, cy + y - r]
-                    ptr += 1
-
-        return star_data[:ptr, :]
-
-    def compute_centroid(self, imfrag):
-        # slightly more sophisticated approach
-        
-        # mean intensity within masked circle
-        mean_intensity = np.mean(imfrag[self.mask])
-        
-        # star pixels are in mask and above mean intensity
-        candidates = self.mask & (imfrag > mean_intensity)
-        
-        if candidates.any():
-            # estimate background and subtract from image
-            mean_background = np.mean(imfrag[np.logical_not(candidates)])
-            imfrag_sub = candidates * (imfrag - mean_background)       
-            wim = np.sum(imfrag_sub)
-            cx = np.sum(self.grid_x * imfrag_sub) / wim
-            cy = np.sum(self.grid_y * imfrag_sub) / wim
-            return cx, cy
-
-        return -1, -1
-
     def process(self, sub):
 
         if not self.do_align:
@@ -246,17 +207,24 @@ class Aligner(Component, Settings):
         # extract stars & compute centroids before aligning, if possible
         im = sub.get_image()
         raw_stars = self.extract_stars(im)
-        centroids = self.compute_centroids(im, raw_stars)
+        centroids = star_centroids(im, raw_stars)
+
+        # store centroids for later platematching
+        sub.centroids = centroids
         self.starcounts += [len(centroids)]
 
         if len(centroids) == 0:
             sub.status = 'nalign'
         elif self.keystars is None:
-            # first sub with stars so set keystars
-            self.keystars = centroids
+            # first sub with stars so save keystars & mags (latter for platesolving)
+            self.keystars = centroids[:, :2]
+            self.mags = centroids[:, 2]
             self.align_count = 1
         else:
-            self.align(sub, centroids)
+            warped = self.align(sub, centroids[:, :2])
+            if warped is not None:
+                sub.centroids[:, :2] = warped
+            # self.align(sub, centroids[:, :2])
 
         sc = np.array(self.starcounts)
         self.info('aligned {:}/{:} | stars {:}-{:}, mu:{:3.0f}'.format(

@@ -438,16 +438,23 @@ class Stacker(Component, Settings):
         self.update_stack_scroller()
 
 
-    def get_image_for_platesolving(self):
+    def get_stack_for_platesolving(self):
         ''' Currently gets displayed image on stack, but what if we 
             are framing etc?
         '''
         try:
-            if self.sub_or_stack == 'sub':
-                im = self.subs[self.selected_sub].get_image()
-            else:
-                im = self.get_stack()
+            # if self.sub_or_stack == 'sub':
+            #     im = self.subs[self.selected_sub].get_image()
+            # else:
+            im = self.get_stack()
             return Component.get('View').do_flips(im)
+        except:
+            logger.warning('no image for platesolving')
+            return None
+
+    def get_centroids_for_platesolving(self):
+        try:
+            return self.subs[self.selected_sub].centroids
         except:
             logger.warning('no image for platesolving')
             return None

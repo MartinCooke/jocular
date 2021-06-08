@@ -1,7 +1,7 @@
 ''' Basic class to draw reticle
 '''
 from functools import partial
-from kivy.properties import NumericProperty, BooleanProperty, StringProperty, ObjectProperty
+from kivy.properties import NumericProperty, BooleanProperty, ObjectProperty
 from kivy.lang import Builder
 from kivy.uix.widget import Widget
 from kivy.metrics import dp

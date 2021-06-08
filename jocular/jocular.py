@@ -4,9 +4,9 @@
 import os
 import json
 import sys
+import time
 
 from kivymd.app import MDApp
-
 from kivy.metrics import dp
 from kivy.config import Config
 from loguru import logger
@@ -19,6 +19,7 @@ from kivy.core.text import LabelBase
 from jocular import __version__
 from jocular.component import Component
 from jocular.gui import GUI
+
 from jocular.utils import get_datadir, start_logging
 
 from jocular.appearance import sat_to_hue
@@ -101,8 +102,10 @@ class Jocular(MDApp):
     def build(self):
 
         self.data_dir = get_datadir()
+        t0 = time.time()
         if self.data_dir is not None:
             start_logging(self.get_path('logs'))
+
 
         self.title = 'Jocular v{:}'.format(__version__)
         self.theme_cls.theme_style = "Dark"     

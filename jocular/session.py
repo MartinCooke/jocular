@@ -188,8 +188,8 @@ class Session(Component, Settings):
             self.session, 
             self.formatted_sky_brightness,
             self.formatted_temperature,
-            self.seeing if self.seeing else None,
-            self.transparency if self.transparency else None
+            'seeing {:}'.format(self.seeing) if self.seeing else None,
+            'transp {:}'.format(self.transparency) if self.transparency else None
             ]
 
     def temperature_changed(self, temp):
