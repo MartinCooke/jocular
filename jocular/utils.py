@@ -3,9 +3,25 @@
 
 import os
 import numpy as np
+import math
 from scipy.stats import trimboth
 from loguru import logger 
 from pathlib import Path
+
+# def remove_nulls_from_dict(d):
+#     return {k: v for k, v in d.items() \
+#         if not((v is None) or \
+#             (isinstance(v, str) and v.strip() == '') or  \
+#             (isinstance(v, float) and math.isnan(v)) or  \
+#             (isinstance(v, dict) and len(v) == 0) or \
+#             (isinstance(v, list) and len(v) == 0))}
+
+def is_null(v):
+    return (v is None) or \
+        (isinstance(v, str) and v.strip() == '') or  \
+        (isinstance(v, float) and math.isnan(v)) or  \
+        (isinstance(v, dict) and len(v) == 0) or \
+        (isinstance(v, list) and len(v) == 0)
 
 def angle360(angle):
     if angle < 0:

@@ -41,6 +41,7 @@ class Notes(MDBoxLayout, Component):
         self.app.gui.add_widget(self) 
 
     def on_new_object(self):
+        self.notes = ''
         self.orig_notes = Component.get('Metadata').get('Notes', default='')
         self.observing_notes.text = self.orig_notes
 

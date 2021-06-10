@@ -58,7 +58,7 @@ class SaveDialogContent(BoxLayout):
             'fmt': '{:.0f} C',
             'help': 'change if temperature is incorrect'}),
         ('change_fits_headers', {'name': 'change FITs?', 'switch': True, 
-            'help': 'permanently write new properties into FITs headers'}),
+            'help': 'permanently write new properties into FITs headers'})
         ]
 
     exposure = NumericProperty(0)
@@ -73,7 +73,6 @@ class SaveDialogContent(BoxLayout):
         self.temperature = -40 if temperature is None else temperature
         self.exposure = 0 if exposure is None else exposure
         self.save_master = self.sub_type in {'flat', 'dark', 'bias'}
-
         super().__init__(**kwargs)
 
         self.widgets = {}
@@ -128,8 +127,6 @@ class ObjectIO(Component):
 
         subs = Component.get('Stacker').subs
         self.change_fits_headers = False   # force user to set this to True
-
-
 
         # nowt to save
         if len(subs) == 0:

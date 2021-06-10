@@ -128,6 +128,12 @@ def float_to_str(x):
     except:
         return ''
 
+def str_to_float(s):
+    try:
+        return float(s)
+    except:
+        return math.nan
+
 @logger.catch()
 def str_to_arcmin(diam):
     ''' convert string representation of diameter to float, taking
@@ -158,6 +164,7 @@ def arcmin_to_str(diam):
     if diam < 1:
         return '{:.2f}"'.format(diam * 60)
     return "{:.2f}\'".format(diam)
+
 
 class DSO(Component):
 
@@ -407,9 +414,8 @@ class DSO(Component):
  
     @logger.catch()
     def check_for_change(self):
-        ''' Check if any property has changed and stack is not empty
+        ''' Check if any property has changed
         '''
-
         changes = []
         for k, v in self.initial_values.items():
             if k in self.new_values and self.new_values[k] != v:
@@ -421,37 +427,31 @@ class DSO(Component):
 
     @logger.catch()
     def on_save_object(self):
-
         ''' On saving we ensure that Name, OT and Con is saved as these 
             appear in the previous object table; other props don't need to
             be saved as they are looked up from the DSO database on each
             load.
         '''
-        Component.get('Metadata').set(
-            {'Name': self.Name.strip(), 'OT': self.OT, 'Con': self.Con}
-        )
 
-        ''' If there have been any changes, update user objects catalogue
-        '''
+        Component.get('Metadata').set({
+            'Name': self.Name.strip(), 
+            'OT': self.OT, 
+            'Con': self.Con
+            })
 
-        for k, v in self.initial_values.items():
-            if k in self.new_values and self.new_values[k] != v:
-                props = {p: getattr(self, p) for p in self.props}
+        # prepare props in canonical format
+        props = {
+            'Name': self.Name.strip(),
+            'OT': self.OT.strip(),
+            'Con': self.Con.strip(),
+            'RA': RA.parse(self.RA),
+            'Dec': Dec.parse(self.Dec),
+            'Diam': str_to_arcmin(self.Diam),
+            'Mag': str_to_float(self.Mag),
+            'Other': self.Other}
 
-                # convert RA/Dec etc
-                if 'RA' in props:
-                    props['RA'] = RA.parse(props['RA'])
-                if 'Dec' in props:
-                    props['Dec'] = Dec.parse(props['Dec'])
-                if 'Diam' in self.props:
-                    try:
-                        diam = str_to_arcmin(props['Diam'])
-                    except:
-                        diam = math.nan 
-                    props['Diam'] = diam
-
-                Component.get('Catalogues').update_user_catalogue(props)
-                return # exit loop
+        # get catalogue to check if anything has changed and update user objects if necc.
+        Component.get('Catalogues').check_update(props)
 
 
     def current_object_coordinates(self):

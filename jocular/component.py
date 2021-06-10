@@ -4,27 +4,16 @@
 
 import json
 import importlib
-import math
 from loguru import logger
 from collections import OrderedDict
 from kivy.app import App
 from kivy.event import EventDispatcher
 from kivy.properties import StringProperty, ListProperty
 
-def remove_nulls_from_dict(d):
-    return {k: v for k, v in d.items() \
-        if not((v is None) or \
-            (isinstance(v, str) and v.strip() == '') or  \
-            (isinstance(v, float) and math.isnan(v)) or  \
-            (isinstance(v, dict) and len(v) == 0) or \
-            (isinstance(v, list) and len(v) == 0))}
-
 class Component(EventDispatcher):
 
     components = OrderedDict()
     infoline = StringProperty('')   # ensures each component can signal its status for technical panel
-    #errors = NumericProperty(0)     # use these at some point
-    #warnings = NumericProperty(0)
     save_settings = ListProperty([])
 
     @classmethod

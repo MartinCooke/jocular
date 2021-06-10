@@ -248,9 +248,9 @@ class ObservingList(Component, Settings):
             'RA': {'w': 80, 'align': 'right', 'type': float, 'val_fn': lambda x: x * 15, 'display_fn': lambda x: str(RA(x))},
             'Dec': {'w': 85, 'align': 'right', 'type': float, 'display_fn': lambda x: str(Dec(x))},
             'Loc': {'w': 40, 'align': 'center', 'field': 'Quadrant'},
-            'Az': {'w': 40, 'align': 'center', 'type': int},
-            'Alt': {'w': 40, 'align': 'center', 'type': int},
-            'Max': {'w': 40, 'align': 'center', 'type': int, 'field': 'MaxAlt'},
+            'Az': {'w': 40, 'align': 'center', 'type': float},
+            'Alt': {'w': 40, 'align': 'center', 'type': float},
+            'Max': {'w': 40, 'align': 'center', 'type': float, 'field': 'MaxAlt'},
             'Transit': {'w': 60, 'align': 'right', 'type': float, 'display_fn': ToHM},
             'Mag': {'w': 50, 'align': 'right', 'type': float},
             'Diam': {'w': 50, 'align': 'right', 'type': float, 'display_fn': fmt_diam},
@@ -382,6 +382,50 @@ class ObservingList(Component, Settings):
         self.save_observing_list()
         self.table.update()
         self.table.deselect_all()
+
+    def update_DSO(self, props):
+        ''' update or add new DSO into observing list and update table
+            new: needs field testing
+        '''
+
+        # convert props into a form we can use in the DSO table
+        nums = ['RA', 'Dec', 'Mag', 'Diam']
+        for k, v in props.items():
+            if k in nums:
+                try:
+                    props[k] = float(v)
+                except:
+                    props[k] = math.nan
+
+        nm = '{:}/{:}'.format(props['Name'], props['OT']).upper()
+        if nm in self.objects:
+            orig = self.objects[nm]
+            logger.debug('updating {:} orig vals {:}'.format(nm, orig))
+            for k, v in props.items():
+                if k in orig:
+                    orig[k] = v
+        else:
+            logger.info('adding new object {:} into DSO table'.format(nm))
+            self.objects[nm] = {
+                'Name': props['Name'],
+                'OT': props['OT'],
+                'Con': props['Con'],
+                'RA': props['RA'],
+                'Dec': props['Dec'],
+                'Mag': props['Mag'],
+                'Diam': props['Diam'],
+                'Obs': 1,
+                'Added': '',
+                'List': '',
+                'Other': props['Other'],
+                'Notes': ''
+            }
+
+        try:
+            self.compute_transits()
+        except Exception as e:
+            logger.exception('problem computing transits ({:})'.format(e))
+
 
     @logger.catch()
     def lookup_name(self, name, *args):

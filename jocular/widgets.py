@@ -355,13 +355,12 @@ class JLever(JRotWidget, Label):
     value = NumericProperty(0.0)
     disabled = BooleanProperty(False)
 
-    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, springy=None, **kwargs):
+    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, **kwargs):
 
         super().__init__(radial=radial, **kwargs)
         self.min_angle, self.max_angle = angles[0], angles[1]
         self.min_value, self.max_value = values[0], values[1]
         self.font_size = '18sp'
-        self.springy = springy if springy else None
         self.value = value
         self.selected = False
         self._k = (self.max_angle - self.min_angle) / (self.max_value - self.min_value)
@@ -402,8 +401,6 @@ class JLever(JRotWidget, Label):
 
     def on_touch_up(self, touch):
         if self.selected:
-            if self.springy is not None:
-                self.update(self.value_to_angle(0))
             self.selected = False
 
     def update(self, angle, update_value=True):

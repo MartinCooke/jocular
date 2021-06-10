@@ -108,7 +108,7 @@
 	},
 	"MultiSpectral": {
 		"saturation": {
-			"angle": [282, 298],
+			"angle": [286, 304],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 0.6],
@@ -125,26 +125,6 @@
 			"text": "S",
 			"radial": true,
 			"initial": 0.5
-		},
-		"redgreen": {
-			"angle": [302, 309],
-			"location": "outer_ring",
-			"control_type": "JLever",
-			"values": [-2, 2],
-			"major": {"G": -1.9, "o": 0 ,"R": 1.7},
-			"groove": true,
-			"radial": false,
-			"initial": 0
-		},
-		"yellowblue": {
-			"angle": [313, 320],
-			"location": "outer_ring",
-			"control_type": "JLever",
-			"values": [-2, 2],
-			"major": {"B": -1.8, "o": 0, "Y": 1.6},
-			"groove": true,
-			"radial": false,
-			"initial": 0
 		}
 	},
 	"Monochrome": {
@@ -206,18 +186,6 @@
 			"radial": true,
 			"text": "S",
 			"initial": 0.65
-		},
-		"fine": {
-			"angle": [217, 143],
-			"location": "fine_control",
-			"control_type": "JLever",
-			"values": [-0.0001, 0.0001],
-			"radial": true,
-			"initial": 0,
-			"text": "fine",
-			"font_size": "14sp",
-			"springy": true,
-			"save": false 
 		},
 		"autoblack": {
 			"angle": 215,

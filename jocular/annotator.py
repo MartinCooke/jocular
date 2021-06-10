@@ -129,7 +129,7 @@ Builder.load_string(
             a: 1 if self.visible else 0
         Line:
             points: [self.sx - self.length/2, self.sy, self.sx + self.length/2, self.sy]
-            width: 1
+            width: 2
     color: .8, .8, .8, 1
 
 '''
@@ -359,6 +359,11 @@ class Annotator(Component):
             for annot in self.annotations:
                 annot.display = False
             mesg = 'off'
+        # just keep scale marker
+        elif ml <= -3:
+            for annot in self.annotations:
+                annot.display = annot.info.get('Name', '') == 'FOV'
+            mesg = 'fov'
         # if below 0, just turn on pinned annotations
         elif ml < 0:
             for annot in self.annotations:
@@ -413,12 +418,14 @@ class Annotator(Component):
         self.annotations = [
             AnnotFOV(
                 text="1'",
-                info={'Name': ''},
-                color=[0.6, 0.6, 0.6, 1],
+                info={'Name': 'FOV'},
+                color=[0.4, 0.4, 0.4, 1],
                 px=0,
                 py=0,
                 bx=1 / (3600 * deg_per_pixel),
                 by=0,
+                mag=-3,
+                pinned=True
             )
         ]
 

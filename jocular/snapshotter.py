@@ -137,7 +137,7 @@ class Snapshotter(Component, Settings):
         if dso.Mag:
             obj_details += ['mag {:}'.format(dso.Mag)]
         if dso.Diam:
-            obj_details += ["diam {:}'".format(dso.Diam)]
+            obj_details += ["diam {:}".format(dso.Diam)]
 
         return obj_details
 

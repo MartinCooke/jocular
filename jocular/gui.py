@@ -367,8 +367,7 @@ class GUI(FloatLayout):
 			w = JLever(angles=angle, origin=orig, radius=rad, value=initial_value, 
 					values=spec['values'], 
 					text=spec.get('text', jicon('lever', font_size=19)),
-					radial=spec.get('radial', True),
-					springy=spec.get('springy', False))
+					radial=spec.get('radial', True))
 
 			self.add_widget(w)  # added here to get depth order right
 

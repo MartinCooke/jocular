@@ -538,8 +538,6 @@ class SearchFilter(SearchBarTextInput):
                     objs = {k: v.lower() for k, v in objs.items()}
                     value = value.lower()
 
-                    # to do: had ! or != for not equal
-
                     # use wildcard syntax, and = for exact match
                     if value[0] == '*':
                         if len(value) > 1:
@@ -575,6 +573,7 @@ class SearchFilter(SearchBarTextInput):
 
                     # can use x,y >x, <y =x, !x (not equal)
                     ops = parse_args(value)
+                    print(ops)
                     for k, v in ops.items():
                         #ops[k] = self.column_type(v)
                         ops[k] = float(v)
@@ -613,7 +612,8 @@ class SearchFilter(SearchBarTextInput):
             # also does the redraw so quite expensive
             self.table.searchbar.combine_results()
 
-        except Exception:
+        except Exception as e:
+            print(e)
             pass
 
 #-------------------------------------------------------------------------------------------

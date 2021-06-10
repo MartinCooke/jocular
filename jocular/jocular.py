@@ -4,7 +4,6 @@
 import os
 import json
 import sys
-import time
 
 from kivymd.app import MDApp
 from kivy.metrics import dp
@@ -89,6 +88,15 @@ class Jocular(MDApp):
             return os.path.join(self.data_dir, 'platesolving', 'star_tiles.npz')
         elif name == 'dso_db':
             return os.path.join(self.data_dir, 'platesolving', 'dso_tiles')
+        elif name == 'ASI':
+            # NB these need keeping up to date
+            if sys.platform.startswith('linux'):
+                asi = 'libASICamera2.so.1.18'
+            elif sys.platform.startswith('darwin'):
+                asi = 'libASICamera2.dylib.1.18'
+            else:
+                asi = 'ASICamera2.dll'
+            return os.path.abspath(os.path.join(self.directory, 'resources', asi))
 
         # everything else is in jocular's own resources
         else:
@@ -102,10 +110,8 @@ class Jocular(MDApp):
     def build(self):
 
         self.data_dir = get_datadir()
-        t0 = time.time()
         if self.data_dir is not None:
             start_logging(self.get_path('logs'))
-
 
         self.title = 'Jocular v{:}'.format(__version__)
         self.theme_cls.theme_style = "Dark"     

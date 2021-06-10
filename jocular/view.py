@@ -55,16 +55,12 @@ class ScatterView(Scatter):
         xc, yc = Metrics.get('origin')
         r = (((xc - x) ** 2 + (yc - y) ** 2) ** .5) / Metrics.get('inner_radius')
 
-        #print('Checking touch in scatter')
-
         # touch is not in the eyepiece
         if r  >  .98:
             return False
 
         # in image
         in_image = self.collide_point(*touch.pos)
-
-        #print('in image', in_image)
 
         # is it in the outer zone of the image, or not touching image, rotate
         if not in_image or r > .8:
@@ -86,9 +82,6 @@ class ScatterView(Scatter):
         return False
 
     def on_touch_move(self, touch):
-        #print('on touch move selected ring {:} image {:}'.format(
-        #    self.controller.ring_selected,
-        #    self.controller.image_selected))
         if self.controller.ring_selected:
             x, y = touch.pos
             theta = math.atan2(y - self.yc, x - self.xc) / (math.pi / 180)
@@ -99,10 +92,8 @@ class ScatterView(Scatter):
             x, y = touch.pos
             delta_x = (x - self.last_x)
             delta_y = (y - self.last_y)
-            #print('dx {:.2f} dy {:.2f}'.format(delta_x, delta_y))
             self.x += delta_x
             self.y += delta_y
-            #print('scatter x {:.2f} y {:.2f}'.format(self.x, self.y))
             self.last_x = x
             self.last_y = y
             Component.get('Annotator').update()
