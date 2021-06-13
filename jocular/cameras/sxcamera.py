@@ -225,7 +225,11 @@ class SXCamera(GenericCamera):
 			self.exposure_command(rows='odd')
 
 		logger.trace('getting odd pixels')
-		odds = self.sxcamera.read(0x82, self.height * self.width, timeout)
+		''' we get a timeout on Windows, presumably because it is missing one
+			element -- super-annoying; we could e.g. always read 1 fewer element
+		'''
+		odds = self.sxcamera.read(0x82, self.height * self.width - 1, timeout)
+		# odds = self.sxcamera.read(0x82, self.height * self.width, timeout)
 
 		# we can get a few more frames per second by copying even and odd
 		if self.params['is_faf'] and self.fast:
@@ -234,7 +238,8 @@ class SXCamera(GenericCamera):
 		# read even immediately (ie no new exposure)
 		self.exposure_command(rows='even')
 		logger.trace('getting even pixels')
-		evens = self.sxcamera.read(0x82, self.height * self.width, timeout)
+		# evens = self.sxcamera.read(0x82, self.height * self.width, timeout)
+		evens = self.sxcamera.read(0x82, self.height * self.width - 1, timeout)
 		return self.interlace(odds, evens)
 
 	def interlace(self, odd8, even8):
