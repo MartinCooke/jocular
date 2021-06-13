@@ -18,7 +18,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivymd.uix.slider import MDSlider
 from kivy.uix.label import Label
 from kivy.metrics import dp
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings

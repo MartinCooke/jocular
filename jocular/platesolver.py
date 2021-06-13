@@ -11,7 +11,11 @@ from loguru import logger
 
 from kivy.app import App
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
+
+# use the new toast for platesolve to check if the old
+# toast approach was responsible for intermittent scatter bug
 from kivymd.toast.kivytoast import toast
+# from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings

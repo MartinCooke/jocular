@@ -54,8 +54,8 @@ class SimulatorCamera(GenericCamera):
 		self.connected = True
 		self.on_new_object()
 
-	def capture(self, exposure=None, on_capture=None, on_failure=None,
-		binning=None, internal_timing=False, return_image=False, is_bias=False):
+	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
+		binning=None, return_image=False, is_bias=False):
 		logger.info('Capturing in simulator expo {:}'.format(exposure))
 
 		self.exposure = exposure

@@ -13,7 +13,8 @@ from kivy.properties import (BooleanProperty, NumericProperty, OptionProperty,
 from kivy.clock import Clock
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings

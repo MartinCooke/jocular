@@ -70,7 +70,8 @@ class CaptureScript(Component):
                 col = .65, .75, .65, 1
             but = self.script_buttons[s] = MDTextButton(
                 text=s, 
-                custom_color=col, 
+                text_color=col,
+                theme_text_color='Custom',
                 font_size='18sp',
                 on_press=self.script_chosen)
             self.chooser.add_widget(but)
@@ -215,6 +216,8 @@ class CaptureScript(Component):
         self.app.gui.set('filter_button', '?' if filt is None else filt)
         self.app.gui.set('script_button', '?' if sub_type is None else sub_type)
 
+    def faffing(self):
+        return self.current_script in faf_scripts
 
     ''' define scripts using generators
     '''

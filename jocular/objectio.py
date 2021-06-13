@@ -12,11 +12,12 @@ from kivy.app import App
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.label import Label
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.utils import add_if_not_exists, generate_observation_name, unique_member, move_to_dir
@@ -27,7 +28,8 @@ Builder.load_string('''
 
 <SaveDialogContent>:
     orientation: 'vertical'
-    height: '340dp'
+    adaptive_height: True
+    # height: '340dp'
 
     MDLabel:
         id: text
@@ -41,7 +43,7 @@ Builder.load_string('''
 
 ''')
 
-class SaveDialogContent(BoxLayout):
+class SaveDialogContent(MDBoxLayout):
     ''' Save dialog options to allow user to change exposure, temperature, 
         or sub_type
     '''
@@ -87,10 +89,10 @@ class SaveDialogContent(BoxLayout):
                 textwidth=dp(150),
                 widgetwidth=dp(100))
 
-        self.add_widget(Label(size_hint=(1, 1)))  # spacer
+        self.add_widget(Label(size_hint=(1, None), height='50dp'))  # spacer
         for widget in self.widgets.values():
             self.add_widget(widget)
-        self.add_widget(Label(size_hint=(1, 1)))  # spacer
+        self.add_widget(Label(size_hint=(1, None), height='50dp'))  # spacer
         self.widgets['save_master'].disabled = sub_type == 'light'
 
     def setting_changed(self, name, value, spec, *args):

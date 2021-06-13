@@ -13,7 +13,8 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.properties import OptionProperty, BooleanProperty, NumericProperty
 from kivy.metrics import Metrics as KivyMetrics
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings

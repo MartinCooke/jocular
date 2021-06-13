@@ -10,7 +10,8 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import NumericProperty, BooleanProperty
 from kivy.clock import Clock
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.gradient import image_stats
@@ -40,6 +41,7 @@ class Capture(Component):
     def reset(self, stop_capturing=True):
         logger.debug('stop capturing? {:}'.format(stop_capturing))
         self.series_number = None
+        self.fps = 0
         if stop_capturing:
             self.stop_capture()
 
@@ -85,10 +87,6 @@ class Capture(Component):
             toast('Capture problem: {:}'.format(message))
         self.info('')
 
-    # this will go to mount class soon
-    def slew(self, *args):
-        logger.info('slew not implemented yet')
-
     def capture(self, *args):
         # generator yields next command to execute
 
@@ -104,7 +102,7 @@ class Capture(Component):
         if len(op) == 2:
             op, param = op
 
-        # automatically change filter wheel, or request user to do so
+        # change filter
         if op == 'set filter':
             Component.get('FilterWheel').select_filter(name=param, 
                 changed_action=self.capture,
@@ -117,7 +115,7 @@ class Capture(Component):
         # carry out a normal exposure
         elif op == 'expose long':
             try:
-                self.info('capturing ...')
+                self.start_capture_time = time.time()
                 Component.get('Camera').capture_sub(
                     exposure=self.exposure, 
                     on_capture=self.save_capture,
@@ -126,29 +124,29 @@ class Capture(Component):
                     self.expo = self.exposure
                     self.exposure_start_time = time.time()
                     Clock.schedule_once(self.tick, 0)
-                self.info('capturing')
+                self.info('+capturing [{:.1f} fps]'.format(self.fps))
             except Exception as e:
                 logger.exception('problem in expose long {:}'.format(e))
 
         elif op == 'expose short':
-            # we update info twice to ensure display updates...
             try:
-                self.info('capturing ...')
+                self.start_capture_time = time.time()
                 Component.get('Camera').capture_sub(
                     exposure=self.exposure, 
                     on_capture=self.send_to_display,
                     on_failure=self.stop_capture,
-                    internal_timing=self.exposure < 1)
-                self.info('capturing')
+                    is_faf=True)
+                self.info('+capturing [{:.1f} fps]'.format(self.fps))
             except Exception as e:
                 logger.exception('problem in expose short {:}'.format(e))
 
         elif op == 'expose bias':
+            self.start_capture_time = time.time()
             Component.get('Camera').capture_sub(
                 on_capture=self.save_capture,
                 on_failure=self.stop_capture,
                 is_bias=True)
-            self.info('capturing bias')
+            self.info('+capturing bias [{:.1f} fps]'.format(self.fps))
 
         elif op == 'autoflat':
             auto_expo = self.get_flat_exposure()
@@ -167,11 +165,12 @@ class Capture(Component):
         '''
         dur = time.time() - self.exposure_start_time
         if self.capturing:
-            self.info('Exposing {:2.0f}s'.format(dur))
+            self.info('Exposing {:2.0f}s [{:.1f} fps]'.format(dur, self.fps))
             Clock.schedule_once(self.tick, 1)
 
     def send_to_display(self, *args):
         # send short subs directly to display
+        self.fps = 1 / (time.time() - self.start_capture_time)
         try:
             Component.get('Monochrome').display_sub(Component.get('Camera').get_image())
             self.capture()
@@ -181,6 +180,13 @@ class Capture(Component):
     def save_capture(self, *args):
         ''' Called via camera when image is ready.
         '''
+
+        self.fps = 1 / (time.time() - self.start_capture_time)
+
+        # temporarily added these 2 lines while sorting out camera stop issue
+        # but think this thru as it might mean last thing doesn't get saved
+        #if not self.capturing:
+        #    return 
 
         im = Component.get('Camera').get_image()
 
@@ -219,9 +225,9 @@ class Capture(Component):
         '''
         im = Component.get('Camera').capture_sub(exposure=expo, 
             return_image=True,
-            internal_timing=True,
             on_failure=self.stop_capture)
         return image_stats(im)['central 75%']
+
 
     def get_flat_exposure(self):
         # make a series of test exposures to get ADU just over half-way (0.5)

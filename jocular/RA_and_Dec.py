@@ -37,7 +37,7 @@ class RA(float):
                 mins = int(mins)
                 secs = float(secs)
                 if (hrs >= 0) & (hrs < 24) & (mins >=0) & (mins < 60) & (secs >= 0) & (secs < 60):
-                    return hrs*15 + mins/4 + secs/240 
+                    return float(hrs*15 + mins/4 + secs/240 )
             return None
         except Exception as e:
             logger.warning('Problem parsing RA {:} ({:})'.format(s, e))
@@ -87,8 +87,8 @@ class Dec(float):
                 secs = float(secs)
                 if (degs >= -90) & (degs < 90) & (mins >=0) & (mins < 60) & (secs >= 0) & (secs < 60):
                     if degs >= 0:
-                        return degs + mins/60 + secs/3600
-                    return degs - mins/60 - secs/3600 
+                        return float(degs + mins/60 + secs/3600)
+                    return float(degs - mins/60 - secs/3600)
             return None
         except Exception as e:
             logger.warning('Problem parsing Dec {:} ({:})'.format(s, e))

@@ -11,21 +11,20 @@ Builder.load_string('''
 <Notes>:
     observing_notes: _notes
     adaptive_height: True
-    adaptive_width: True
+    #adaptive_width: True
     pos_hint: {'top': .99, 'right': .99} if root.show_notes else {'top': .99, 'right': 0} 
     size_hint: None, None
     width: dp(200) 
 
-    MDTextField:
+    JTextField:
         id: _notes
+        width: dp(200)
         multiline: True
         hint_text: 'Observing notes'
         helper_text: ''
         helper_text_mode: 'on_focus'
-        current_hint_text_color: app.hint_color        
-        color_mode: 'accent'
         on_focus: root.notes_changed() if not self.focus else None
-        font_size: app.form_font_size # '20sp'
+        font_size: app.form_font_size
 ''')
 
 

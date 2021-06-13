@@ -21,6 +21,7 @@ from kivy.uix.widget import Widget
 from kivy.vector import Vector
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
+from kivymd.uix.textfield import MDTextField
 
 from jocular.utils import angle360
 
@@ -50,11 +51,9 @@ Builder.load_string(
     #         pos: self.pos
     #         size: self.size
     size_hint: None, None
-    # highlight_color: app.highlight_color
     highlight_color: app.theme_cls.accent_palette
     background_color: .6, 0, .6, 0
     color: app.lowlight_color
-    # color: app.theme_cls.primary_color
     disabled_color: .1, .1, .1, 1   
     markup: True
     halign: 'center'
@@ -64,21 +63,6 @@ Builder.load_string(
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
 
-<JFilterButton>:
-    canvas.before:
-        Color:
-            rgb: self.filter_color
-            a: .9
-        Ellipse:
-            pos: self.pos
-            size: self.size
-    markup: True
-    color: (.1, .1, .1, 1)
-    background_color: 0, 0, 0, 0
-    size: dp(28), dp(28)
-    font_size: '16sp'
-    size_hint: None, None
-
 <JLever>:
     color: app.lever_color
 
@@ -86,41 +70,7 @@ Builder.load_string(
     text: self.myicon
 
 <JToggleButton>:
-    # color: app.highlight_color if self.state == 'down' else app.lowlight_color
     color: app.theme_cls.accent_color if self.state == 'down' else app.lowlight_color
-
-<ELabel>:
-    size_hint: 1, None
-    markup: True
-    text_size: self.size
-
-<ParamValue>:
-    size_hint: 1, None
-    height: dp(20)
-    Button:
-        size_hint: None, 1
-        markup: True
-        halign: 'left'
-        text_size: self.size
-        color: app.lowlight_color
-        # color: app.theme_cls.primary_color
-        font_size: app.info_font_size
-        background_color: .6, 0, .6, 0
-        width: dp(65)
-        padding: dp(3), dp(1)
-        text: '[b]{:}[/b]'.format(root.param)
-        on_press: root.callback() if root.callback else root.null_action()
-    Button:
-        size_hint: None, 1
-        markup: True
-        halign: 'left'
-        text_size: self.size
-        color: app.lowlight_color
-        #color: app.theme_cls.primary_color
-        font_size: app.info_font_size
-        background_color: .6, 0, .6, 0
-        width: dp(220)
-        text: '{:}'.format(root.value)
 
 <Panel>:
     canvas:
@@ -134,7 +84,6 @@ Builder.load_string(
     size_hint: None, None
     size: dp(450), dp(450)
     pos_hint: {'center_x': 10, 'center_y': .5}
-
 
 <LabelR>:
     halign: 'right'
@@ -152,12 +101,50 @@ Builder.load_string(
 <TextInputC>:
     padding: [5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines)]
 
-
-<WarningBanner>:
-    right_action: ['CLOSE', lambda x: None]
-
+<JTextField>:
+    size_hint: (None, None)
+    height: '28dp'
+    width: '100dp'
+    #color: app.theme_cls.accent_color
+    color: app.theme_cls.primary_color
+    font_size: app.form_font_size # '20sp'
+    current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text) else app.hint_color
+    on_text: root.invalid = False
+    #color_mode: "accent"
+    #color_mode: "primary"
 '''
 )
+
+from kivy.animation import Animation
+
+class JTextField(MDTextField):
+    invalid = BooleanProperty(False)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.theme_cls.bind()
+
+    # override method from kivmd v0.4.2 to enable text color to be set
+    def _anim_get_has_error_color(self, color=None):
+        # https://github.com/HeaTTheatR/KivyMD-data/raw/master/gallery/kivymddoc/_get_has_error.png
+        if not color:
+            line_color = self.line_color_focus
+            hint_text_color = (
+                self.theme_cls.disabled_hint_text_color
+                if not self.current_hint_text_color
+                else self.current_hint_text_color
+            )
+            right_lbl_color = (0, 0, 0, 0)
+        else:
+            line_color = color
+            #hint_text_color = color
+            right_lbl_color = color
+        Animation(
+            duration=0.2,
+            _current_line_color=line_color,
+            #_current_hint_text_color=hint_text_color,
+            _current_right_lbl_color=right_lbl_color,
+        ).start(self)
 
 
 class TextInputC(TextInput):
@@ -192,17 +179,6 @@ class Panel(BoxLayout):
             self.show()
         else:
             self.hide()
-
-
-class ParamValue(BoxLayout):
-
-    param = StringProperty('')
-    value = StringProperty('')
-    callback = ObjectProperty(None)
-
-    def null_action(self, *args):
-        pass
-
 
 class Polar:
     def __init__(self, origin=[0, 0], angle=0, radius=0):
@@ -308,12 +284,8 @@ class JButton(Button, JRotWidget):
 class JIconTextButton(JButton, JRotWidget):
     pass
 
-class JFilterButton(Rotatable, Button):
-    filter_color = ListProperty([0.2, 0.2, 0.2, 1])
-
 class JIconButton(JButton, JRotWidget):
     myicon = StringProperty('')
-
 
 class JMDIconButton(MDIconButton, Rotatable):
     pass
@@ -418,11 +390,6 @@ class JLever(JRotWidget, Label):
 
         self.angle = angle
         self.on_angle()
-
-
-class ELabel(Label):
-    pass
-
 
 
 joc_icons = {

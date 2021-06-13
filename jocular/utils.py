@@ -67,7 +67,8 @@ def start_logging(path):
 
     logger.remove()
     fmt = "{time: DMMMYY HH:mm:ss.SSS} | {level: <8} | {name: <25} | {function: <26} | {line: >4} | {message}"
-    logger.add(os.path.join(path, 'jocular.log'), mode='a', format=fmt, rotation='500KB', retention=10)
+    logger.add(os.path.join(path, 'jocular.log'), mode='a', format=fmt, level='TRACE',
+        rotation='500KB', retention=10)
     logger.info('')
     logger.info('')
     logger.info('')

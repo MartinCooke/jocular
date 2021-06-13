@@ -125,7 +125,7 @@ class Jocular(MDApp):
             # set up initial values for settings
             settings = {'highlight_color': 'Blue',  'colour_saturation': 50}
 
-        # apply setings      
+        # apply settings      
         for p, v in settings.items():
             if p == 'highlight_color':
                 self.theme_cls.accent_palette = v
@@ -149,13 +149,18 @@ class Jocular(MDApp):
 
 
     @logger.catch()
-    def on_stop(self):
+    def on_stop(self, exception=None):
+        if exception is None:
+            logger.info('normal close down')
+        else:
+            logger.exception('root exception: {:}'.format(exception))
         # save width and height
         Config.set('graphics', 'width', str(int(Window.width/ dp(1))))
         Config.set('graphics', 'height', str(int(Window.height/dp(1))))
         Config.write()
         Component.close()
         self.gui.on_close()
+        logger.info('finished close down')
 
     # reset showing to main when any table is hidden
     def table_hiding(self, *args):
@@ -164,14 +169,19 @@ class Jocular(MDApp):
 
 def startjocular():
 
-    # remove possibiity of exiting with escape key
+    # remove possibility of exiting with escape key
     Config.set('kivy', 'log_level', 'error')
     Config.set('kivy', 'exit_on_escape', '0')
     Config.write()
 
     # start app
     try:
-        Jocular().run()
+        joc = Jocular()
+        joc.run()
     except Exception as e:
+        ''' any uncaught problems lead to a normal closedown to ensure 
+            devices are disconnected, etc.
+        '''
+        joc.on_stop(exception=e)
         sys.exit('Jocular failed with error {:}'.format(e))
 

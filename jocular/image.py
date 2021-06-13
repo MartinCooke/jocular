@@ -47,8 +47,7 @@ def save_image(data=None, path=None, exposure=None, filt='L', sub_type='light',
         hdu.writeto(path, overwrite=True)
         logger.info('saved {:}'.format(path))
         for k, v in hdr.items():
-            logger.debug('{:9s} = {:}'.format(k, v))
-
+            logger.trace('{:9s} = {:}'.format(k, v))
     except Exception as e:
         logger.warning('unable to save to {:} ({:})'.format(path, e))
 

@@ -9,7 +9,8 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.clock import Clock
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.utils import move_to_dir
@@ -18,7 +19,6 @@ from jocular.cameras.genericcamera import GenericCamera
 
 
 class WatchedCamera(GenericCamera):
-
 
 	configurables = [
 		('watched_dir', {

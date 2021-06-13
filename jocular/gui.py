@@ -19,7 +19,7 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 
 from jocular.widgets import (JLabel, JToggleButton, JLever, JIconButton,
-	JButton, JMulti, JFilterButton)
+	JButton, JMulti)
 
 from jocular.utils import angle360
 from jocular.component import Component
@@ -326,8 +326,8 @@ class GUI(FloatLayout):
 		elif control_type == 'JButton':
 			w = JButton(angle=angle, origin=orig, radius=rad, text=text, radial=radial)
 
-		elif control_type == 'JFilterButton':
-			w = JFilterButton(angle=angle, origin=orig, radius=rad, text=text, radial=radial)
+		# elif control_type == 'JFilterButton':
+		# 	w = JFilterButton(angle=angle, origin=orig, radius=rad, text=text, radial=radial)
 
 		# to do: see if we can combine with JButton
 		elif control_type == 'JIconButton':

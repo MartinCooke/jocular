@@ -573,7 +573,6 @@ class SearchFilter(SearchBarTextInput):
 
                     # can use x,y >x, <y =x, !x (not equal)
                     ops = parse_args(value)
-                    print(ops)
                     for k, v in ops.items():
                         #ops[k] = self.column_type(v)
                         ops[k] = float(v)
@@ -613,7 +612,6 @@ class SearchFilter(SearchBarTextInput):
             self.table.searchbar.combine_results()
 
         except Exception as e:
-            print(e)
             pass
 
 #-------------------------------------------------------------------------------------------

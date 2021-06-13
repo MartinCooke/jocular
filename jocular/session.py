@@ -10,7 +10,6 @@ from kivy.app import App
 from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 from kivy.clock import Clock
 from kivy.lang import Builder
-
 from kivymd.uix.boxlayout import MDBoxLayout
 
 from jocular.component import Component
@@ -18,15 +17,6 @@ from jocular.settingsmanager import Settings
 
 
 Builder.load_string('''
-
-<SessionTextField@MDTextField>:
-    current_hint_text_color: app.hint_color
-    size_hint: (None, None)
-    height: '28dp'
-    width: '100dp'
-    helper_text_mode: 'on_focus'        
-    color_mode: 'accent'
-    font_size: app.form_font_size
 
 <MyBoxLayout@BoxLayout>:
     size_hint: (1, None)
@@ -44,7 +34,7 @@ Builder.load_string('''
         size_hint: (1, None)
         height: '48dp'
 
-        SessionTextField:
+        JTextField:
             width: '150dp'
             height: '32dp'
             helper_text: ''
@@ -52,7 +42,7 @@ Builder.load_string('''
             text: root.session.session
 
     MyBoxLayout:
-        SessionTextField:
+        JTextField:
             hint_text: 'transparency'
             width: '250dp'
             helper_text: 'e.g. high clouds, good'
@@ -61,7 +51,7 @@ Builder.load_string('''
 
 
     MyBoxLayout:
-        SessionTextField:
+        JTextField:
             hint_text: 'seeing'
             width: '250dp'
             helper_text: 'e.g. poor, excellent'
@@ -69,27 +59,27 @@ Builder.load_string('''
             text: root.session.seeing
 
     MyBoxLayout:
-        SessionTextField:
+        JTextField:
             hint_text: 'temperature'
             helper_text: 'e.g. 5C or 45F'
             on_focus: root.session.temperature_changed(self.text) if not self.focus else None
             text: root.session.formatted_temperature
 
-        SessionTextField:
+        JTextField:
             hint_text: 'brightness'
             helper_text: 'e.g. 19.23 or 4.5'
             on_focus: root.session.sky_brightness_changed(self.text) if not self.focus else None
             text: root.session.formatted_sky_brightness
 
     MyBoxLayout:
-        SessionTextField:
+        JTextField:
             width: '150dp'
             hint_text: 'scope'
             helper_text: ''
             on_focus: root.session.telescope_changed(self.text) if not self.focus else None
             text: root.session.telescope
 
-        SessionTextField:
+        JTextField:
             width: '150dp'
             hint_text: 'camera'
             helper_text: ''
@@ -99,8 +89,7 @@ Builder.load_string('''
     BoxLayout:
         size_hint: (1, None)
         height: '72dp'
-
-        SessionTextField:
+        JTextField:
             id: _name
             width: '400dp'
             height: '64dp'
@@ -133,6 +122,7 @@ class SessionInfo(MDBoxLayout):
     def __init__(self, session, **kwargs):
         self.session = session
         super().__init__(**kwargs)
+
 
 class Session(Component, Settings):
 
@@ -191,6 +181,9 @@ class Session(Component, Settings):
             'seeing {:}'.format(self.seeing) if self.seeing else None,
             'transp {:}'.format(self.transparency) if self.transparency else None
             ]
+
+    def theme_changed(self, *args):
+        self.session_info.theme_changed()
 
     def temperature_changed(self, temp):
         ''' called when temperature field is altered; parse various formats

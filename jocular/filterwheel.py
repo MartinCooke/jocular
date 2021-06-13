@@ -8,7 +8,8 @@ from kivy.clock import Clock
 from kivy.properties import StringProperty
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.devicemanager import DeviceFamily, Device

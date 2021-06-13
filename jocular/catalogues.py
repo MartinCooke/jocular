@@ -16,7 +16,7 @@ from kivy.properties import BooleanProperty
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.utils import is_null
-# from jocular.RA_and_Dec import RA, Dec
+from jocular.RA_and_Dec import RA, Dec
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
@@ -190,13 +190,26 @@ class Catalogues(Component, Settings):
         orig = {k: '' if is_null(v) else v for k, v in orig.items()}
         props = {k: '' if is_null(v) else v for k, v in props.items()}
 
+        # convert RA and Dec to string to check if same or not
+        if str(RA(orig.get('RA', math.nan))) == str(RA(props.get('RA', math.nan))):
+            props['RA'] = orig['RA']
+        if str(Dec(orig.get('Dec', math.nan))) == str(Dec(props.get('Dec', math.nan))):
+            props['Dec'] = orig['Dec']
+        # convert diam & mag to 2 decimals to check if same or not
+        if '{:.2f}'.format(orig.get('Diam', 0)) == '{:.2f}'.format(props.get('Diam', 0)):
+            props['Diam'] = orig['Diam']
+        if '{:.2f}'.format(orig.get('Mag', 0)) == '{:.2f}'.format(props.get('Mag', 0)):
+            props['Mag'] = orig['Mag']
+
+
         if orig == props:
             logger.debug('no change in properties')
             return
 
         try:
-            print('orig', orig)
-            print('prop', props)
+            logger.debug('properties have changed')
+            logger.debug('orig: {:}'.format(orig))
+            logger.debug(' new: {:}'.format(props))
             obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
             if not os.path.exists(obj_file):
                 logger.info('Creating user_objects.csv')

@@ -7,7 +7,8 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import StringProperty, NumericProperty
 from kivy.clock import Clock
-from kivymd.toast.kivytoast import toast
+#from kivymd.toast.kivytoast import toast
+from jocular.oldtoast import toast
 
 from jocular.cameras.genericcamera import GenericCamera
 
@@ -101,8 +102,8 @@ class ASICamera(GenericCamera):
 			logger.exception('error getting camera sensor size ({:})'.format(e))
 
 
-	def capture(self, exposure=None, on_capture=None, on_failure=None,
-		binning=None, internal_timing=False, return_image=False, is_bias=False):
+	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
+		binning=None, return_image=False, is_bias=False):
 
 		if is_bias:
 			self.exposure = .001

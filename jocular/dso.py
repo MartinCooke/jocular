@@ -10,7 +10,6 @@ from kivy.app import App
 from kivy.properties import StringProperty, BooleanProperty, DictProperty
 from kivy.lang import Builder
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.textfield import MDTextField
 from kivymd.uix.stacklayout import MDStackLayout
 from kivymd.uix.button import MDTextButton
 
@@ -18,20 +17,6 @@ from jocular.component import Component
 from jocular.RA_and_Dec import RA, Dec
 
 Builder.load_string('''
-
-<MyTextField>:
-    current_hint_text_color: app.hint_color
-    size_hint: (None, None)
-    height: '28dp'
-    width: '100dp'
-    helper_text_mode: 'on_focus'        
-    color_mode: 'accent'
-    #foreground_color: app.hint_color    
-    #color_mode: 'custom'
-    font_size: app.form_font_size # '20sp'
-    current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text)  else app.hint_color
-    on_text: root.invalid = False
-
 
 <DSOBoxLayout@BoxLayout>:
     size_hint: (1, None)
@@ -49,8 +34,7 @@ Builder.load_string('''
     BoxLayout:
         size_hint: (1, None)
         height: '48dp'
-
-        MyTextField:
+        JTextField:
             id: _name
             width: '300dp'
             height: '32dp'
@@ -60,44 +44,44 @@ Builder.load_string('''
             font_size: '{:}sp'.format(int(app.form_font_size[:-2]) + 8) # 28sp
 
     DSOBoxLayout:
-        MyTextField:
+        JTextField:
             hint_text: 'type'
             helper_text: 'e.g. PN, GX'
             on_focus: root.dso.OT_changed(self) if not self.focus else None
             text: root.dso.OT
-        MyTextField:
+        JTextField:
             hint_text: 'con'
             helper_text: 'e.g. PER'
             on_focus: root.dso.Con_changed(self) if not self.focus else None
             text: root.dso.Con
 
     DSOBoxLayout:
-        MyTextField:
+        JTextField:
             hint_text: 'RA'
             helper_text: "e.g. 21h30'42"
             on_focus: root.dso.RA_changed(self) if not self.focus else None
             text: '' if root.dso.RA == 'nan' else root.dso.RA
-        MyTextField:
+        JTextField:
             hint_text: 'dec'
             helper_text: "-3 21' 4"
             on_focus: root.dso.Dec_changed(self) if not self.focus else None
             text: '' if root.dso.Dec == 'nan' else root.dso.Dec
 
     DSOBoxLayout:
-        MyTextField:
+        JTextField:
             hint_text: 'diam'
             helper_text: "e.g. 21'"
             on_focus: root.dso.Diam_changed(self) if not self.focus else None
             text: root.dso.Diam
 
-        MyTextField:
+        JTextField:
             hint_text: 'mag'
             helper_text: "e.g. 14.1"
             on_focus: root.dso.Mag_changed(self) if not self.focus else None
             text: root.dso.Mag
 
     DSOBoxLayout:
-        MyTextField:
+        JTextField:
             width: '200dp'
             hint_text: 'other'
             helper_text: ""
@@ -106,8 +90,7 @@ Builder.load_string('''
 ''')
 
 
-class MyTextField(MDTextField):
-    invalid = BooleanProperty(False)
+
 
 class DSO_panel(MDBoxLayout):
     ''' visual representation of editable DSO properties
@@ -317,11 +300,13 @@ class DSO(Component):
 
         self.check_ambiguity = True
 
+
     def OT_changed(self, widget):
         ''' For the moment we allow any object type but in the future
             could check if one of known types and allow user to
             introduce a new type via a dialog
         '''
+
         widget.current_hint_text_color = self.app.hint_color
         ot = widget.text.upper()
         if len(ot) > 3:

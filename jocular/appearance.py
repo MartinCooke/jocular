@@ -90,6 +90,7 @@ class Appearance(Component, Settings):
 
     def on_colour_saturation(self, *args):
         self.app.theme_cls.accent_hue = sat_to_hue(self.colour_saturation)
+        self.app.theme_cls.primary_hue = sat_to_hue(self.colour_saturation)
 
     def on_lowlight_color(self, *args):
         # hues = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', 'A100', 'A200', 'A400', 'A700']

@@ -51,8 +51,8 @@ class ASCOMCamera(GenericCamera):
 				logger.exception('ascom connect problem ({:})'.format(res['exception']))
 
 
-	def capture(self, exposure=None, on_capture=None, on_failure=None,
-		binning=None, internal_timing=False, return_image=False, is_bias=False):
+	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
+		binning=None, return_image=False, is_bias=False):
 
 		self.exposure = exposure
 		self.on_failure = on_failure
