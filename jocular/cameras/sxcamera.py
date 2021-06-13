@@ -242,8 +242,17 @@ class SXCamera(GenericCamera):
 			reading delays (de-zebra)
 		'''
 		# convert uint8 arrays to uint16 and reshape
-		odd = np.frombuffer(odd8, dtype='uint16').reshape(self.half_height, self.width)
-		even = np.frombuffer(even8, dtype='uint16').reshape(self.half_height, self.width)
+		# on Windows, occasionally we are missing a single uint8 -- annoying!
+		odd16 = np.frombuffer(odd8, dtype='uint16')
+		odd = np.zeros(self.half_height * self.width)
+		odd[:len(odd16)] = odd16
+		odd = odd.reshape(self.half_height, self.width)
+
+		even16 = np.frombuffer(even8, dtype='uint16')
+		even = np.zeros(self.half_height * self.width)
+		even[:len(even16)] = even16
+		even = even.reshape(self.half_height, self.width)
+
 		pix = np.zeros((self.height, self.width))
 		pix[::2, :] = odd
 		pix[1::2, :] = even * (np.mean(odd) / np.mean(even))

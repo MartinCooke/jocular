@@ -19,8 +19,6 @@ class Component(EventDispatcher):
     @classmethod
     def get(cls, name):
         # Returns component whose class is identified by name; loads if not found
-
-        logger.trace(name)
         if name in cls.components:
             return cls.components[name]
         try:
