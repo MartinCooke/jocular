@@ -12,7 +12,6 @@ from kivy.properties import (
     ObjectProperty,
     BooleanProperty,
     StringProperty,
-    ListProperty,
 )
 from kivy.uix.button import Button
 from kivy.uix.togglebutton import ToggleButton
@@ -22,6 +21,9 @@ from kivy.vector import Vector
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.textfield import MDTextField
+from kivymd.uix.behaviors import HoverBehavior
+from kivy.uix.behaviors import ToggleButtonBehavior
+from kivymd.uix.button import MDRectangleFlatButton
 
 from jocular.utils import angle360
 
@@ -60,7 +62,7 @@ Builder.load_string(
     valign: 'middle'
     size: self.texture_size
     font_size: app.ring_font_size
-    text_size: None, None  # forces size to be that of text
+    text_size: None, None  # forces size to be that of text
     padding: 2, 2
 
 <JLever>:
@@ -97,55 +99,46 @@ Builder.load_string(
     text_size: self.size
     padding: [dp(7), 0]
 
-# vertically aligned text box
+# vertically aligned text box
 <TextInputC>:
     padding: [5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines)]
 
 <JTextField>:
     size_hint: (None, None)
-    height: '28dp'
-    width: '100dp'
-    #color: app.theme_cls.accent_color
-    color: app.theme_cls.primary_color
+    # height: '40dp'
+    width: '140dp'
+    #helper_text_mode: "on_error"
+    line_color_normal: 0, 0, 0, 0
+    text_color: app.theme_cls.accent_color
+    text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text) else app.theme_cls.accent_color
+    #text_color_normal: app.theme_cls.accent_color
     font_size: app.form_font_size # '20sp'
-    current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text) else app.hint_color
+    #current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text) else app.hint_color
     on_text: root.invalid = False
-    #color_mode: "accent"
-    #color_mode: "primary"
-'''
-)
+    mode: 'fill'
 
-from kivy.animation import Animation
+# I can't get KivyMD toggle behavior to work so this is my implementation
+<JMDToggleButton>:
+    size_hint: 1, None 
+    # group: 'scripts'
+    height: dp(36) 
+
+''')
+
+class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior):
+    def on_state(self, widget, value):
+        if value == 'down':
+            widget.md_bg_color = .4, .4, .4, 1
+        else:
+            widget.md_bg_color = .17, .17, .17, 1
+
 
 class JTextField(MDTextField):
     invalid = BooleanProperty(False)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.theme_cls.bind()
-
-    # override method from kivmd v0.4.2 to enable text color to be set
-    def _anim_get_has_error_color(self, color=None):
-        # https://github.com/HeaTTheatR/KivyMD-data/raw/master/gallery/kivymddoc/_get_has_error.png
-        if not color:
-            line_color = self.line_color_focus
-            hint_text_color = (
-                self.theme_cls.disabled_hint_text_color
-                if not self.current_hint_text_color
-                else self.current_hint_text_color
-            )
-            right_lbl_color = (0, 0, 0, 0)
-        else:
-            line_color = color
-            #hint_text_color = color
-            right_lbl_color = color
-        Animation(
-            duration=0.2,
-            _current_line_color=line_color,
-            #_current_hint_text_color=hint_text_color,
-            _current_right_lbl_color=right_lbl_color,
-        ).start(self)
-
+    # def __init__(self, **kwargs):
+    #     super().__init__(**kwargs)
+    #     self.theme_cls.bind()
 
 class TextInputC(TextInput):
     pass
@@ -156,7 +149,7 @@ class LabelR(Label):
 class LabelL(Label): 
     pass
 
-class Panel(BoxLayout):
+class Panel(BoxLayout, HoverBehavior):
     ''' Represents the centre panel used for config/choosers etc
     '''
 
@@ -173,6 +166,9 @@ class Panel(BoxLayout):
 
     def on_hide(self):
         pass
+
+    def on_leave(self, *args):
+        self.hide()
 
     def toggle(self, *args):
         if self.pos_hint['center_x'] > 1:

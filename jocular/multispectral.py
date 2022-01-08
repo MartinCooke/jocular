@@ -154,7 +154,7 @@ class MultiSpectral(Component, Settings):
             Component.get('Stacker').get_stack(filt='all'))
 
     def luminance_updated(self, lum):
-        # called from monochrome if user updates luminance control e.g. white
+        # called from monochrome if user updates luminance control e.g. white
 
         self.lum = lum
         # we are in LRGB mode
@@ -196,7 +196,7 @@ class MultiSpectral(Component, Settings):
 
         ims = [self.R, self.G, self.B]
 
-        # binning ~ 70 ms
+        # binning ~ 70 ms
         if self.bin_colour:
             ims = [bin_image(im) for im in ims]
 
@@ -233,7 +233,7 @@ class MultiSpectral(Component, Settings):
         return all([hasattr(self, p) and getattr(self, p) is not None for p in props])
 
     def adjust_colour_stretch(self, *args):
-        # intercept LAB process here if we need to stretch colour
+        # intercept LAB process here if we need to stretch colour
 
         if self.avail('layer'):
             self.layer_stretch_changed()
@@ -245,7 +245,7 @@ class MultiSpectral(Component, Settings):
             self.adjust_saturation()
 
     def adjust_saturation(self, *args):
-        # Modify saturation and call next process
+        # Modify saturation and call next process
         
         if self.avail('layer'):
             self.layer_sat_changed()
@@ -256,12 +256,12 @@ class MultiSpectral(Component, Settings):
             self.adjust_hue() # next process in hue adjustment
 
     def adjust_hue(self, *args):
-        # Modify hue and generate RGB image
+        # Modify hue and generate RGB image
         
         if self.avail('A_sat'):
             self.A_hue = modify_hue(self.A_sat, self.redgreen)
             self.B_hue = modify_hue(self.B_sat, self.yellowblue)
-            self.create_RGB()  # next process
+            self.create_RGB()  # next process
 
     def create_RGB(self):
         ''' Combine L, A and B into RGB image. Called here when previous colour process

@@ -84,11 +84,11 @@ class Aligner(Component, Settings):
         self.warp_model = None
         self.align_count = 0
         self.starcounts = []
-        self.info('')
+        self.info('reset')
     
     @logger.catch()
     def align(self, sub, centroids):
-        # Align sub to current keystars, updating its status.
+        # Align sub to current keystars, updating its status.
         
         min_inliers = 4
 
@@ -107,20 +107,20 @@ class Aligner(Component, Settings):
             if i < nstars:
                 matched_stars[i, :] = centroids[np.argmin([(x1 - x2) ** 2 + (y1 - y2) ** 2 for x2, y2 in centroids])]
 
-        # do we have enough matched stars?
+        # do we have enough matched stars?
         if len(matched_stars) < self.min_stars:
             sub.status = 'nalign'
         else:            
 
-            # apply RANSAC to find which matching pairs best fitting Euclidean model
-            # can throw a warning in cases where no inliers (bug surely) which we ignore
+            # apply RANSAC to find which matching pairs best fitting Euclidean model
+            # can throw a warning in cases where no inliers (bug surely) which we ignore
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 warp_model, inliers = ransac(
                     (np.array(self.keystars[:nstars]), matched_stars),
                     EuclideanTransform, 4, .5, max_trials=100)
 
-            # managed to align
+            # managed to align
             if (inliers is not None) and (sum(inliers) >= min_inliers):
                 # update warp model
                 self.warp_model = warp_model
@@ -144,11 +144,12 @@ class Aligner(Component, Settings):
         ''' Extracts star coordinates. Return array of x, y coordinates.
         '''
 
-        # if this is the first sub in the stack (perhaps after shuffle), find best intensity threshold
+        # if this is the first sub in the stack (perhaps after shuffle), 
+        # find best intensity threshold
         if self.keystars is None:
             self.star_intensity = self.find_intensity_threshold(im)
 
-        # extract using this threshold
+        # extract using this threshold
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             stars = blob_dog(im, 
@@ -164,12 +165,14 @@ class Aligner(Component, Settings):
 
 
     def find_intensity_threshold(self, im):
-        # Binary search to find intensity threshold for star extraction producing ideal star count 
+        ''' Binary search to find intensity threshold for star extraction 
+            producing ideal star count 
+        '''
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             t0 , _ = estimate_background(im)
-            # sometimes can fail due to background estimate being zero or too large
+            # sometimes can fail due to background estimate being zero or too large
             if t0 < .001:
                 t0 = .1
             if t0 > .5:
@@ -204,12 +207,12 @@ class Aligner(Component, Settings):
         if not self.do_align:
             return
 
-        # extract stars & compute centroids before aligning, if possible
+        # extract stars & compute centroids before aligning, if possible
         im = sub.get_image()
         raw_stars = self.extract_stars(im)
         centroids = star_centroids(im, raw_stars)
 
-        # store centroids for later platematching
+        # store centroids for later platesolving
         sub.centroids = centroids
         self.starcounts += [len(centroids)]
 
@@ -227,6 +230,6 @@ class Aligner(Component, Settings):
             # self.align(sub, centroids[:, :2])
 
         sc = np.array(self.starcounts)
-        self.info('aligned {:}/{:} | stars {:}-{:}, mu:{:3.0f}'.format(
-            self.align_count, len(sc), np.min(sc), np.max(sc), np.mean(sc)))
+        self.info('{:}/{:} frames | {:}-{:} stars'.format(
+            self.align_count, len(sc), np.min(sc), np.max(sc)))
             

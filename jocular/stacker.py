@@ -139,11 +139,11 @@ class Stacker(Component, Settings):
         self.selected_sub = -1
         self.update_stack_scroller()
         self.set_to_subs()
-        Component.get('View').reset()  # might not be needed as View also does a reset!
-        self.info('')
+        Component.get('View').reset()  # might not be needed as View also does a reset!
+        self.info('reset')
 
     def on_save_object(self):
-        # move rejected subs to 'rejected'; we won't touch non-aligned as they are salvageable often
+        # move rejected subs to 'rejected'; we won't touch non-aligned as they are salvageable often
         cod = Component.get('ObjectIO').current_object_dir
         for s in self.subs:
             if s.status == 'reject':
@@ -155,7 +155,7 @@ class Stacker(Component, Settings):
     def update_status(self):
         d = self.describe()
         if d:
-            self.info('exposure {:} | {:}x{:} | {:}'.format(
+            self.info('{:} | {:}x{:} | {:}'.format(
                 s_to_minsec(d['total_exposure']), 
                 d['nsubs'], 
                 exp_to_str(d['sub_exposure']), 
@@ -340,7 +340,7 @@ class Stacker(Component, Settings):
             return
 
         # see if we can satisfy user's non-mono preferences and if not, drop thru to mono
-        # filters = self.get_filters()
+        # filters = self.get_filters()
 
         if self.spectral_mode == 'LRGB':
             Component.get('MultiSpectral').LRGB_changed(
@@ -362,7 +362,7 @@ class Stacker(Component, Settings):
 
  
     def update_stack_scroller(self, *args):
-        # sub_labels is array representing the stack
+        # sub_labels is array representing the stack
         # these are sub positions on the screen
 
         self.update_status()
@@ -439,19 +439,34 @@ class Stacker(Component, Settings):
         self.update_stack_scroller()
 
 
-    def get_stack_for_platesolving(self):
-        ''' Currently gets displayed image on stack, but what if we 
-            are framing etc?
+    def get_current_displayed_image(self, first_sub=False):
+        ''' Currently gets displayed image which might be short sub, sub, or stack
         '''
-        try:
-            # if self.sub_or_stack == 'sub':
-            #     im = self.subs[self.selected_sub].get_image()
-            # else:
+        if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
+            # currently using focus/align/frame
+            logger.info('getting last faf image')
+            im = Component.get('Capture').last_faf
+        elif first_sub:
+            im = self.subs[0].get_image()
+        elif self.sub_or_stack == 'sub':
+            logger.info('getting current sub')
+            im = self.subs[self.selected_sub].get_image()
+        else:
+            logger.info('getting current stack')
             im = self.get_stack()
-            return Component.get('View').do_flips(im)
-        except:
-            logger.warning('no image for platesolving')
+        if im is None:
             return None
+        return Component.get('View').do_flips(im)
+
+        # try:
+        #     # if self.sub_or_stack == 'sub':
+        #     #     im = self.subs[self.selected_sub].get_image()
+        #     # else:
+        #     im = self.get_stack()
+        #     return Component.get('View').do_flips(im)
+        # except:
+        #     logger.warning('no image for platesolving')
+        #     return None
 
     def get_centroids_for_platesolving(self):
         try:
@@ -470,7 +485,7 @@ class Stacker(Component, Settings):
         caching results to prevent expensive recomputes. For calibration, uses all subs.
         '''
 
-        # we have no subs
+        # we have no subs
         if not self.subs:
             return None
 
@@ -486,7 +501,7 @@ class Stacker(Component, Settings):
         else:
             stk = [s for s in subs if (s.status=='select') & (s.filter==filt)]
 
-        # none remain
+        # none remain
         if not stk:
             return None
 

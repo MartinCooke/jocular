@@ -117,7 +117,7 @@ class Snapshotter(Component, Settings):
         else:
             toast('no image to save')
 
-    # construct annotations
+    # construct annotations
 
     def DSO_details(self):
         dso = Component.get('DSO')

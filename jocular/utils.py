@@ -8,14 +8,6 @@ from scipy.stats import trimboth
 from loguru import logger 
 from pathlib import Path
 
-# def remove_nulls_from_dict(d):
-#     return {k: v for k, v in d.items() \
-#         if not((v is None) or \
-#             (isinstance(v, str) and v.strip() == '') or  \
-#             (isinstance(v, float) and math.isnan(v)) or  \
-#             (isinstance(v, dict) and len(v) == 0) or \
-#             (isinstance(v, list) and len(v) == 0))}
-
 def is_null(v):
     return (v is None) or \
         (isinstance(v, str) and v.strip() == '') or  \
@@ -35,7 +27,7 @@ def percentile_clip(a, perc=80):
     return np.mean(trimboth(np.sort(a, axis=0), (100 - perc)/100, axis=0), axis=0)    
 
 def unique_member(l):
-    # if list has a single unique member, return it, otherwise None
+    # if list has a single unique member, return it, otherwise None
     if len(set(l)) == 1:
         return l[0]
     else:
@@ -120,22 +112,22 @@ def s_to_minsec(s):
         return '{:d}m{:d}s'.format(mins, secs)
 
 def move_to_dir(frompath, topath):
-    # move from frompath to topath, making topath dir and creating unique name if necessary
+    # move from frompath to topath, making topath dir and creating unique name if necessary
 
     try:
         toparent, tobase = os.path.split(topath)
         fromparent, filename = os.path.split(frompath)
 
-        # empty parent implies use fromparent
+        # empty parent implies use fromparent
         if not toparent:
             # treat as subdirectory of from
             topath = os.path.join(fromparent, tobase)
         add_if_not_exists(topath)
 
-        # create unique filename
+        # create unique filename
         dest = make_unique_filename(os.path.join(topath, filename))
 
-        # move
+        # move
         os.rename(frompath, dest)        
 
     except Exception as e:

@@ -36,10 +36,11 @@ def stretch_main(x, method='linear', param=None):
         return np.arcsinh(c*x) / np.arcsinh(c + .0000001)
 
     if method == 'gamma':
-        # with noise reduction linear from x=0-a, with slope s
+        # with noise reduction, linear from x=0-a, with slope s
         y = x.copy()
         # g = .5 - .5 * param
-        g = .75 - .75 * param
+        # g = .75 - .75 * param
+        g = 1 - param
         a0 = .01
         s = g / (a0 * (g - 1) + a0 ** (1 - g))
         d = (1 / (a0 ** g * (g - 1) + 1)) - 1

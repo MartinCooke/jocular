@@ -6,16 +6,11 @@ import numpy as np
 from scipy.spatial.distance import cdist
 from skimage.feature import blob_dog
 from skimage.transform import estimate_transform
-from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 
 from kivy.app import App
-from kivy.properties import BooleanProperty, NumericProperty, StringProperty
-
-# use the new toast for platesolve to check if the old
-# toast approach was responsible for intermittent scatter bug
+from kivy.properties import BooleanProperty, NumericProperty
 from kivymd.toast.kivytoast import toast
-# from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
@@ -31,7 +26,7 @@ from jocular.uranography import (
 from jocular.aligner import star_centroids
 
 def select_stars_in_FOV(ras, decs, ra0, dec0, fov):
-    #  filter ras, decs, mags to just return those in given region
+    # filter ras, decs, mags to just return those in given region
     tile = make_tile(ra0, dec0, fov=fov)
     min_ra, max_ra = tile['min_ra'], tile['max_ra']
     min_dec, max_dec = tile['min_dec'], tile['max_dec']
@@ -64,7 +59,7 @@ def fastmatch(
     best_matches = None
     n_im, n_ref = len(im), len(ref)
     for i1 in range(0, n_im):
-        #  normalise image based on star index i1
+        # normalise image based on star index i1
         im1 = im - im[i1, :]
         for i2 in [i for i in range(i1 + 1, min(n_im, i1 + mag_range)) if i != i1]:
             # rotate and scale so i2 is at (1, 0)
@@ -86,7 +81,7 @@ def fastmatch(
                         ref2 = np.dot(ref1, np.array([[cos, -sin], [sin, cos]]).T) / d2
                         mind_x, mind_y = np.min(ref2, axis=0)
                         maxd_x, maxd_y = np.max(ref2, axis=0)
-                        #  don't check if anything outside range
+                        # don't check if anything outside range
                         if (
                             max_x < maxd_x
                             and max_y < maxd_y
@@ -116,10 +111,10 @@ class PlateSolver(Component, Settings):
     pixel_height = NumericProperty(8.4)
     n_stars_in_image = NumericProperty(30)
     min_matches = NumericProperty(10)
-    mag_range = NumericProperty(5)    # dont' allow user to set this
+    mag_range = NumericProperty(5)    # don't allow user to set this
     first_match = BooleanProperty(False)
     binning = NumericProperty(1)
-    star_source = StringProperty('current sub')
+    #star_source = StringProperty('current sub')
 
     tab_name = 'Plate-solving'
 
@@ -160,181 +155,190 @@ class PlateSolver(Component, Settings):
             'boolean': {'first match': True, 'best match': False},
             'help': 'tradeoff speed and accuracy'
             }),
-        ('star_source', {
-            'name': 'get stars from', 
-            'options': ['first sub', 'current sub', 'stack'],
-            })
+        # ('star_source', {
+        #     'name': 'get stars from', 
+        #     'options': ['first sub', 'current sub', 'stack', 'displayed image'],
+        #     })
         ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        self.can_solve = False
         self.cart2pix = None
 
     def on_new_object(self):
         self.cart2pix = None
         self.can_solve = Component.get('Catalogues').has_platesolving_db()
-        self.info('')
+        self.info('available' if self.can_solve else 'no db')
 
-    def match(self):
-        # runs in separate thread
-
-        try:
-            self.h, self.w = self.im.shape
-            # degrees per pixel
-            dpp = self.binning * (self.pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
-            fov = self.h * dpp
-
-            if self.star_source == 'first sub':
-                ''' use already extracted keystars and mags from first sub; appears to fail on 
-                    dense images
-                '''
-                aligner = Component.get('Aligner')
-                centroids = aligner.keystars
-                # do flips, though it would be good to get this working without flips in the future
-                view = Component.get('View')
-                x = self.w - centroids[:, 0] if view.flip_LR else centroids[:, 0]
-                y = self.h - centroids[:, 1] if view.flip_UD else centroids[:, 1]
-                flux = aligner.mags
-
-
-            elif self.star_source == 'current sub':
-                centroids = Component.get('Stacker').get_centroids_for_platesolving()
-                view = Component.get('View')
-                x = self.w - centroids[:, 0] if view.flip_LR else centroids[:, 0]
-                y = self.h - centroids[:, 1] if view.flip_UD else centroids[:, 1]
-                flux = centroids[:, 2]
-
-            else:
-                ''' alternative approach is to reanalyse (possible stacked) image to extract stars, but 
-                    field rotation artefacts can cause issues with star extraction
-                '''
-                star_thresh = 0.001
-                blobs = blob_dog(self.im, min_sigma=3, max_sigma=5, threshold=star_thresh, overlap=0)[:, [1, 0]]
-                centroids = star_centroids(self.im, blobs)
-                x = centroids[:, 0]
-                y = centroids[:, 1]
-                flux = centroids[:, 2]
-
-            #  convert flux to relative magnitude
-            mags = -2.5 * np.log10(flux / np.max(flux))
-
-            logger.debug('star source {:}; nstars = {:}; mag range {:.1f}'.format(
-                self.star_source, len(x), np.max(mags)))
-
-            # select N-brightest
-            inds = np.argsort(mags)[: self.n_stars_in_image]
-            x_im, y_im = x[inds], y[inds]
-
-            if len(x_im) < self.min_matches:
-                toast('Too few stars to platesolve (min: {:})'.format(len(x_im)))
-                return
-
-            # get reference stars for search field (NB larger fov is worse)
-            ras, decs, mags = Component.get('Catalogues').get_platesolving_stars(
-                make_tile(self.ra0, self.dec0, fov=2 * fov)
-            )
-
-            #  sort by magnitude and limit to N-brightest (should depend on area re stars extracted in central zone)
-            inds = np.argsort(mags)[:80]
-
-            #  convert to cartesian coords
-            ras, decs = Eq2Cart(ras[inds], decs[inds], self.ra0, self.dec0)
-
-            # do fastmatch with ref and im stars in degrees
-            matches = fastmatch(
-                ref=np.degrees(np.vstack([ras, decs]).T),
-                im=dpp * np.vstack([x_im, y_im]).T,
-                match_arcsec=self.match_arcsec,
-                min_matches=self.min_matches,
-                mag_range=self.mag_range,
-                proximity=0.05,
-                first_match=self.first_match,
-            )
-
-            # check if we have a result
-            if matches is None:
-                # self.warn('failed to match')
-                toast('Failed to solve: is image flipped correctly?')
-                logger.warning('no match, {:} im stars, {:} ref stars'.format(
-                    len(x_im), len(ras)))
-                return
-
-            # use result to find transform from ref in cartesian to im  in pixels
-            src = np.vstack([ras, decs]).T[[j for (i, j) in matches], :]
-            dst = np.vstack([x_im, y_im]).T[[i for (i, j) in matches], :]
-
-            # consider doing RANSAC or alternative transform here
-            # self.cart2pix = estimate_transform('similarity', src, dst)
-            self.cart2pix = estimate_transform('affine', src, dst)
-
-            # find centre of frame in RA/Dec
-            self.tile_ra0, self.tile_dec0 = self.pixels_to_ra_dec(
-                self.h // 2, self.w // 2
-            )
-
-            # estimate FOV
-            self.FOV_h = spherical_distance(
-                *self.pixels_to_ra_dec(0, 0), *self.pixels_to_ra_dec(self.h, 0)
-            )
-            self.FOV_w = spherical_distance(
-                *self.pixels_to_ra_dec(0, 0), *self.pixels_to_ra_dec(0, self.w)
-            )
-
-            #  and compute where North is
-            xx, yy = self.ra_dec_to_pixels(
-                np.array([self.ra0, self.ra0]),
-                np.array([self.dec0 - 0.5, self.dec0 + 0.5]),
-            )
-            self.north = to360(
-                90 - np.degrees(np.arctan2(yy[1] - yy[0], xx[1] - xx[0]))
-            )
-
-            desc = '{:5.3f} x {:5.3f}, {:.0f}\u00b0, RA: {:} Dec: {:}'.format(
-                self.FOV_w,
-                self.FOV_h,
-                self.north,
-                str(RA(self.tile_ra0)),
-                str(Dec(self.tile_dec0)))
-
-            toast('Solved ({:} matched)'.format(len(matches)), duration=1)
-            logger.info(desc)
-            self.info('{:.2f}\u00b0 x {:.2f}\u00b0 | {:} | {:}'.format(
-                self.FOV_w, self.FOV_h,
-                str(RA(self.tile_ra0)),
-                str(Dec(self.tile_dec0))))
-
-        except Exception as e:
-            logger.exception('error in match {:}'.format(e))
-
-    def solve(self, *args):
-        # called when user presses loc icon
-
-        self.cart2pix = None
+    def solve(self):
+        ''' Called when user clicks loc. Try to solve currently displayed image; 
+            if that fails, try to solve first image (since occasionally image 
+            artefacts due to field rotation prevent solution of stacked subs)
+        '''
 
         if not self.can_solve:
+            toast('Cannot solve: no platesolving database available')
             return
 
         self.ra0, self.dec0 = Component.get('DSO').current_object_coordinates()
         if self.ra0 is None:
-            # self.warn('unknown DSO')
             toast('Cannot solve: unknown DSO')
+            self.info('unknown DSO')
             return
 
         # get current image
-        self.im = Component.get('Stacker').get_stack_for_platesolving()
-        if self.im is None:
+        im = Component.get('Stacker').get_current_displayed_image()
+        if im is None:
             toast('Cannot solve: no current image')
-            # self.warn('no current image')
+            self.info('no current image')
             return
 
-        pool = ThreadPoolExecutor(3)
-        future = pool.submit(self.match)
-        future.add_done_callback(self.annotate)
+        # can't solve, so try solving first image in stack
+        if not self._solve(im):
+            im = Component.get('Stacker').get_current_displayed_image(first_sub=True)
+            if not self._solve(im):
+                toast('Failed to solve: is image flipped correctly?')
+                return
 
-    def annotate(self, *args):
-        if self.cart2pix is not None:
-            Component.get('Annotator').annotate()
+        Component.get('Annotator').annotate()
+
+
+    def _solve(self, im):
+        ''' Attempts to solve 'im'; returns True if successful
+        '''
+
+        # extract stars and their mags
+        blobs = blob_dog(im, min_sigma=3, max_sigma=5, threshold=.001, overlap=0)[:, [1, 0]]
+        centroids = star_centroids(im, blobs)
+        x = centroids[:, 0]
+        y = centroids[:, 1]
+        flux = centroids[:, 2]
+
+        self.im_height, self.im_width = im.shape
+        degrees_per_pixel = self.binning * (self.pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
+        fov = self.im_height * degrees_per_pixel
+
+        # convert flux to relative magnitude
+        mags = -2.5 * np.log10(flux / np.max(flux))
+
+        logger.debug('nstars = {:}; mag range {:.1f}'.format(len(x), np.max(mags)))
+
+        # select N-brightest
+        inds = np.argsort(mags)[: self.n_stars_in_image]
+        x_im, y_im, im_mags = x[inds], y[inds], mags[inds]
+
+        if len(x_im) < self.min_matches:
+            logger.warn('Too few stars to platesolve (min: {:})'.format(len(x_im)))
+            return False
+
+        # get reference stars for search field (NB larger fov is worse)
+        ras, decs, mags = Component.get('Catalogues').get_platesolving_stars(
+            make_tile(self.ra0, self.dec0, fov=2 * fov)
+        )
+
+        # sort by magnitude and limit to N-brightest (should depend on area re stars extracted in central zone)
+        inds = np.argsort(mags)[:80]
+        ref_mags = mags[inds]
+
+        # convert to cartesian coords
+        ras, decs = Eq2Cart(ras[inds], decs[inds], self.ra0, self.dec0)
+
+        # do fastmatch with ref and im stars in degrees
+        matches = fastmatch(
+            ref=np.degrees(np.vstack([ras, decs]).T),
+            im=degrees_per_pixel * np.vstack([x_im, y_im]).T,
+            match_arcsec=self.match_arcsec,
+            min_matches=self.min_matches,
+            mag_range=self.mag_range,
+            proximity=0.05,
+            first_match=self.first_match,
+        )
+
+        # check if we have a result
+        if matches is None:
+            logger.warning('no match, {:} im stars, {:} ref stars'.format(
+                len(x_im), len(ras)))
+            return False
+
+        # use result to find transform from ref in cartesian to im  in pixels
+        src = np.vstack([ras, decs]).T[[j for (i, j) in matches], :]
+        dst = np.vstack([x_im, y_im]).T[[i for (i, j) in matches], :]
+
+        # consider doing RANSAC or alternative transform here
+        # self.cart2pix = estimate_transform('similarity', src, dst)
+        self.cart2pix = estimate_transform('affine', src, dst)
+
+        # find centre of frame in RA/Dec
+        self.tile_ra0, self.tile_dec0 = self.pixels_to_ra_dec(
+            self.im_height // 2, self.im_width // 2
+        )
+
+        # estimate FOV
+        self.FOV_h = spherical_distance(
+            *self.pixels_to_ra_dec(0, 0), *self.pixels_to_ra_dec(self.im_height, 0)
+        )
+        self.FOV_w = spherical_distance(
+            *self.pixels_to_ra_dec(0, 0), *self.pixels_to_ra_dec(0, self.im_width)
+        )
+
+        # and compute where North is
+        xx, yy = self.ra_dec_to_pixels(
+            np.array([self.ra0, self.ra0]),
+            np.array([self.dec0 - 0.5, self.dec0 + 0.5]),
+        )
+        self.north = to360(
+            90 - np.degrees(np.arctan2(yy[1] - yy[0], xx[1] - xx[0]))
+        )
+
+        desc = '{:5.3f} x {:5.3f}, {:.0f}\u00b0, RA: {:} Dec: {:}'.format(
+            self.FOV_w,
+            self.FOV_h,
+            self.north,
+            str(RA(self.tile_ra0)),
+            str(Dec(self.tile_dec0)))
+
+        toast('Solved ({:} matched)'.format(len(matches)), duration=.7)
+        logger.info(desc)
+        self.info('{:.2f}\u00b0 x {:.2f}\u00b0 | {:} | {:}'.format(
+            self.FOV_w, self.FOV_h,
+            str(RA(self.tile_ra0)),
+            str(Dec(self.tile_dec0))))
+
+        return True
+
+        #if self.cart2pix is not None:
+        # Component.get('Annotator').annotate()
+
+        # self.annotate()
+
+
+    # def solve(self, *args):
+    #     # called when user presses loc icon
+
+    #     self.cart2pix = None
+
+    #     if not self.can_solve:
+    #         return
+
+    #     self.ra0, self.dec0 = Component.get('DSO').current_object_coordinates()
+    #     if self.ra0 is None:
+    #         toast('Cannot solve: unknown DSO')
+    #         return
+
+    #     # get current image
+    #     self.im = Component.get('Stacker').get_current_displayed_image()
+    #     if self.im is None:
+    #         toast('Cannot solve: no current image')
+    #         return
+
+    #     self.match()
+    #     self.annotate()
+
+    # def annotate(self, *args):
+    #     if self.cart2pix is not None:
+    #         Component.get('Annotator').annotate()
 
     def ra_dec_to_pixels(self, ra, dec):
         # generate pixel coordinates corresponding to ra and dec

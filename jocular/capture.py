@@ -31,17 +31,18 @@ class Capture(Component):
 
     def on_new_object(self):
         self.reset()
-        self.info('')
+        self.info('stopped')
         self.gui.enable(['capturing'])
 
     def on_previous_object(self):
-        self.info('')
+        self.info('stopped')
         self.gui.disable(['capturing'])
 
     def reset(self, stop_capturing=True):
         logger.debug('stop capturing? {:}'.format(stop_capturing))
         self.series_number = None
         self.fps = 0
+        self.last_faf = None
         if stop_capturing:
             self.stop_capture()
 
@@ -73,7 +74,7 @@ class Capture(Component):
             self.stop_capture(message=e)
 
     def stop_capture(self, message=None):
-        # stops capture normally or abnormally
+        # stops capture normally or abnormally
         logger.debug('stopping capture')
         Component.get('Camera').stop_capture()
         self.gui.set('capturing', False, update_property=True)
@@ -85,7 +86,7 @@ class Capture(Component):
             Component.get('CaptureScript').reset_generator()
             logger.error('problem capturing ({:})'.format(message))
             toast('Capture problem: {:}'.format(message))
-        self.info('')
+        self.info('stopped')
 
     def capture(self, *args):
         # generator yields next command to execute
@@ -94,7 +95,7 @@ class Capture(Component):
         if not self.capturing:
             return 
 
-        # get next command from generator
+        # get next command from generator
         op = next(Component.get('CaptureScript').generator)
 
         logger.debug(op)
@@ -102,7 +103,7 @@ class Capture(Component):
         if len(op) == 2:
             op, param = op
 
-        # change filter
+        # change filter
         if op == 'set filter':
             Component.get('FilterWheel').select_filter(name=param, 
                 changed_action=self.capture,
@@ -112,7 +113,7 @@ class Capture(Component):
             self.exposure = param
             self.capture()
 
-        # carry out a normal exposure
+        # carry out a normal exposure
         elif op == 'expose long':
             try:
                 self.start_capture_time = time.time()
@@ -172,7 +173,10 @@ class Capture(Component):
         # send short subs directly to display
         self.fps = 1 / (time.time() - self.start_capture_time)
         try:
-            Component.get('Monochrome').display_sub(Component.get('Camera').get_image())
+            im = Component.get('Camera').get_image()
+            # new: store last short sub in case we want to platesolve
+            self.last_faf = im
+            Component.get('Monochrome').display_sub(im)
             self.capture()
         except Exception as e:
             logger.exception('problem send to display {:}'.format(e))

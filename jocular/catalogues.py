@@ -15,8 +15,8 @@ from kivy.properties import BooleanProperty
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
-from jocular.utils import is_null
-from jocular.RA_and_Dec import RA, Dec
+#from jocular.utils import is_null
+#from jocular.RA_and_Dec import RA, Dec
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
@@ -45,6 +45,7 @@ class Catalogues(Component, Settings):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.star_db = None
+        self.user_objects = {}
 
         ''' load object types and normalise colour values to 0-1 
         '''
@@ -133,7 +134,7 @@ class Catalogues(Component, Settings):
 
         self.dsos = {}
         for objfile in shipped + usercats:
-            # handle user objects last as they overwrite everything else
+            # legacy: don't handle user_objects.csv (now using json)
             if not objfile.endswith('user_objects.csv'):
                 # form dict from user_objects
                 with open(objfile, newline='') as f:
@@ -145,15 +146,16 @@ class Catalogues(Component, Settings):
         logger.info('loaded {:} DSOs from {:} catalogues'.format(
             len(self.dsos), len(shipped + usercats)))
 
-        # now read user objects and allow them to overwrite
-        obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
-        if os.path.exists(obj_file):
-            with open(obj_file, newline='') as f:
-                reader = csv.DictReader(f)
-                for d in reader:
-                    nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
-                    self.dsos[nm] = d
-            logger.info('loaded user DSOs')
+        # read user objects or initialise
+        try:
+            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json')) as f:
+                self.user_objects = json.load(f)
+        except:
+            pass
+
+        # cause user objects to overwrite
+        for k, v in self.user_objects.items():
+            self.dsos[k.upper()] = v
 
         # ensure all fields are present and consistent
         for v in self.dsos.values():
@@ -167,142 +169,44 @@ class Catalogues(Component, Settings):
                 v[col] = v.get(col, '').upper()
             v['Other'] = v.get('Other', '')
 
+    def is_user_defined(self, key):
+        return self.user_objects.get(key, False)
 
-    def check_update(self, props):
-        ''' Given the set of DSO properties, check if user objects catalogue
-            needs to be updated
+    def update_user_objects(self, name, props):
+        ''' User has specified that DSO should be added or edited
+            by clicking update DSOs on GUI. Input props is
+            a dictionary of properties (RA/Dec etc) that have been
+            converted into canonical form in DSO prior to call
         '''
-        # don't update if no name or object type
-        if is_null(props['Name']):
-            return
-        if is_null(props['OT']):
-            return
 
-        name = '{:}/{:}'.format(props['Name'], props['OT'])
+        logger.debug('name {:} props {:}'.format(name, props))
+        logger.debug(self.user_objects)
 
-        # get existing properties
-        orig = Component.get('ObservingList').lookup_name(name)
-
-        # remove any orig that are not in props (eg obs etc)
-        orig = {k: v for k,v in orig.items() if k in props}
-
-        # convert all nulls to empty string simplify comparison
-        orig = {k: '' if is_null(v) else v for k, v in orig.items()}
-        props = {k: '' if is_null(v) else v for k, v in props.items()}
-
-        # convert RA and Dec to string to check if same or not
-        if str(RA(orig.get('RA', math.nan))) == str(RA(props.get('RA', math.nan))):
-            props['RA'] = orig['RA']
-        if str(Dec(orig.get('Dec', math.nan))) == str(Dec(props.get('Dec', math.nan))):
-            props['Dec'] = orig['Dec']
-        # convert diam & mag to 2 decimals to check if same or not
-        if '{:.2f}'.format(orig.get('Diam', 0)) == '{:.2f}'.format(props.get('Diam', 0)):
-            props['Diam'] = orig['Diam']
-        if '{:.2f}'.format(orig.get('Mag', 0)) == '{:.2f}'.format(props.get('Mag', 0)):
-            props['Mag'] = orig['Mag']
-
-
-        if orig == props:
-            logger.debug('no change in properties')
-            return
+        # add to user objects and save
+        self.user_objects[name] = props
 
         try:
-            logger.debug('properties have changed')
-            logger.debug('orig: {:}'.format(orig))
-            logger.debug(' new: {:}'.format(props))
-            obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
-            if not os.path.exists(obj_file):
-                logger.info('Creating user_objects.csv')
-                with open(obj_file, 'w') as f:
-                    f.write(','.join(self.props) + '\n')
-
-            # form dict from user_objects
-            with open(obj_file, newline='') as f:
-                reader = csv.DictReader(f)
-                odict = {'{:}/{:}'.format(row['Name'], row['OT']).upper(): row for row in reader}
-
-            # add/update properties
-            odict[name.upper()] = props
-
-            # get observinglist to modify or add in new object
-            Component.get('ObservingList').update_DSO(props)
-
-            # update dsos
-            # this is the ONLY place where dsos is updated, and hence self.objects
-            # in ObservingList, and it causes issues until we migrate code
-            # self.dsos[name.upper()] = props  
-
-            # write to csv
-            with open(obj_file, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=self.props)
-                writer.writeheader()
-                for v in odict.values():
-                    writer.writerow(v)
-
-            logger.info('Updated user objects (currently: {:} entries)'.format(
-                len(odict)))
-
+            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
+                json.dump(self.user_objects, f, indent=1)
         except Exception as e:
-            logger.exception('Problem writing user_objects.csv ({:})'.format(e))
+            logger.warning('Unable to save user_objects.json ({:})'.format(e))
 
+        # update main DSO list
+        self.dsos[name] = props
 
+    def delete_user_object(self, name):
+        ''' Remove user object both online and offline
+        '''
+        if name in self.user_objects:
+            del self.user_objects[name]
+        if name in self.dsos:
+            del self.dsos[name]
+        try:
+            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
+                json.dump(self.user_objects, f, indent=1)
+        except Exception as e:
+            logger.warning('Unable to save user_objects.json ({:})'.format(e))
 
-    # def update_user_catalogue(self, props):
-    #     ''' Update (or create new entry) for DSO defined by props. Note that any
-    #         changes here are not picked up again until next restart, it seems, most
-    #         likely due to commented out part below (will be fixed when part of this
-    #         code goes into DSO or vice versa)
-    #     '''
-
-    #     logger.debug(props)
-
-    #     # no name or empty name
-    #     if props.get('Name', '').strip == '':
-    #         return
-
-    #     if 'OT' not in props:
-    #         props['OT'] = ''
-
-    #     name = '{:}/{:}'.format(props['Name'], props['OT'])
-
-    #     logger.info('Updating user objects with {:}'.format(name))
-
-
-    #     ''' check if we already have a user_objects files; create if not
-    #         and overwrite props or append if name/OT doesn't exist
-    #     '''
-    #     try:
-    #         obj_file = os.path.join(self.app.get_path('catalogues'), 'user_objects.csv')
-    #         if not os.path.exists(obj_file):
-    #             logger.info('Creating user_objects.csv')
-    #             with open(obj_file, 'w') as f:
-    #                 f.write(','.join(self.props) + '\n')
-
-    #         # form dict from user_objects
-    #         with open(obj_file, newline='') as f:
-    #             reader = csv.DictReader(f)
-    #             odict = {'{:}/{:}'.format(row['Name'], row['OT']).upper(): row for row in reader}
-
-    #         # add/update properties
-    #         odict[name.upper()] = props
-
-    #         # update dsos
-    #         # this is the ONLY place where dsos is updated, and hence self.objects
-    #         # in ObservingList, and it causes issues until we migrate code
-    #         # self.dsos[name.upper()] = props  
-
-    #         # write to csv
-    #         with open(obj_file, 'w', newline='') as f:
-    #             writer = csv.DictWriter(f, fieldnames=self.props)
-    #             writer.writeheader()
-    #             for v in odict.values():
-    #                 writer.writerow(v)
-
-    #         logger.info('Updated user objects (currently: {:} entries)'.format(
-    #             len(odict)))
-
-    #     except Exception as e:
-    #         logger.exception('Problem writing user_objects.csv ({:})'.format(e))
 
 
     def is_excluded(self, catname):

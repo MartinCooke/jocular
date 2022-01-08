@@ -9,9 +9,8 @@ from loguru import logger
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.uix.togglebutton import ToggleButton
-from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.slider import Slider
+from kivymd.uix.slider import MDSlider
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.lang import Builder
@@ -30,13 +29,13 @@ Builder.load_string('''
             pos: self.pos
             size: self.width, self.height
         Color:
-            rgb: self.filter_color
-            a: .7 if self.state == 'down' else .2
+            rgb: self.filter_color if self.state == 'down' else (.8, .8, .8)
+            a: .7 if self.state == 'down' else 0
         Ellipse:
             pos: self.x + 2, self.y + 2
             size: self.width - 5, self.height - 5
     markup: True
-    color: (.8, .8, .8, 1) if self.state == 'down' else (0, 0, 0, 1)
+    color: (0, 0, 0, 1) if self.state == 'down' else (.6, .6, .6, 1)
     disabled: self.text == '-'
     background_color: 0, 0, 0, 0
     size: dp(70), dp(70)
@@ -50,10 +49,10 @@ class FilterToggle(ToggleButton):
 class FilterChooser(Panel, Component):
 
     filter_properties = {
-        "L": {"color": (0.8, 0.8, 0.8), "bg_color": (0.1, 0.1, 0.1, 0.3)},
-        "R": {"color": (1, 0, 0), "bg_color": (1, 0, 0, 0.6)},
-        "G": {"color": (0, 1, 0), "bg_color": (0, 1, 0, 0.5)},
-        "B": {"color": (0, 0, 1), "bg_color": (0, 0, 1, 0.5)},
+        "L": {"color": (.8, .8, .8), "bg_color": (0.1, 0.1, 0.1, 0.3)},
+        "R": {"color": (1, .2, .2), "bg_color": (1, 0, 0, 0.6)},
+        "G": {"color": (.2, 1, .2), "bg_color": (0, 1, 0, 0.5)},
+        "B": {"color": (.3, .3, 1), "bg_color": (0, 0, 1, 0.5)},
         "dark": {"color": (0.2, 0.2, 0.2), "bg_color": (0, 0, 0, 0)},
         "Ha": {"color": (0.8, 0.3, 0.3), "bg_color": (1, 0.6, 0.6, 0.5)},
         "OIII": {"color": (0.2, 0.6, 0.8), "bg_color": (0, 0, 0, 0)},
@@ -61,6 +60,7 @@ class FilterChooser(Panel, Component):
         "spec": {"color": (0.7, 0.6, 0.2), "bg_color": (0, 0, 0, 0)},
         "-": {"color": (0.15, 0.15, 0.15), "bg_color": (0, 0, 0, 0)},
     }
+
 
     def __init__(self, **args):
         super().__init__(**args)
@@ -129,13 +129,21 @@ class FilterChooser(Panel, Component):
         bh = self.nsubs_box = BoxLayout(padding=(10, 10), size_hint=(1, 1))
         self.nsubs_label = LabelR(text='subs/filter', size_hint=(.3, 1))
         bh.add_widget(self.nsubs_label)
-        self.nsubs_slider = Slider(min=1, max=12, value=4, step=1, size_hint=(.5, 1))
+        self.nsubs_slider = MDSlider(min=1, max=12, value=4, step=1, size_hint=(.5, 1))
         self.nsubs_slider.bind(value=self.nsubs_changed)
         bh.add_widget(self.nsubs_slider)
-        bh.add_widget(Button(text='done', size_hint=(.2, 1), on_press=self.done))
+        # bh.add_widget(Button(text='done', size_hint=(.2, 1), on_press=self.done))
+        bh.add_widget(Label(size_hint=(.2, 1)))
         self.add_widget(bh)
 
-    def done(self, *args):
+    # def done(self, *args):
+    #     filts = [f for f, b in self.buts.items() if b.state == 'down']
+    #     if len(filts) > 0:
+    #         Component.get('CaptureScript').filter_changed(filts, nsubs=self.nsubs)
+    #     self.hide()
+
+    def on_leave(self, *args):
+        # overrides Panel on_leave
         filts = [f for f, b in self.buts.items() if b.state == 'down']
         if len(filts) > 0:
             Component.get('CaptureScript').filter_changed(filts, nsubs=self.nsubs)
@@ -147,8 +155,12 @@ class FilterChooser(Panel, Component):
             logger.debug('toggled filter {:}'.format(filt))
         else:
             logger.debug('selected filter {:}'.format(filt))
+            for f, b in self.buts.items():
+                b.state = 'down' if f == filt else 'normal'
+            #filts = [f for f, b in self.buts.items() if b.state == 'down']
+
             Component.get('CaptureScript').filter_changed([filt])
-            self.hide()
+            # self.hide()
 
     def update_panel(self):
         filters = Component.get('CaptureScript').get_filters()

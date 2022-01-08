@@ -43,14 +43,15 @@ class Monochrome(Component):
 
     def on_new_object(self):
         self.mono = None
-        self.lum = None  #  luminosity (after applying stretch, B/W etc to mono)
-        self._gradient = None  #  pixel-by-pixel zero-mean gradient estimate to subtract
+        self.lum = None  # luminosity (after applying stretch, B/W etc to mono)
+        self._gradient = None  # pixel-by-pixel zero-mean gradient estimate to subtract
         self._std_background = None  # std dev of background estimated from gradient
         self._blackpoint = None  # automatic estimate of blackpoint
         self._n = 0
 
     def on_p1(self, *args):
         self.adjust_lum()
+
 
     def on_white(self, *args):
         self.adjust_lum()
@@ -72,7 +73,7 @@ class Monochrome(Component):
         self.adjust_lum()
 
     def on_fine(self, *args):
-        #  move black by a tiny amount
+        # move black by a tiny amount
         if not self.autoblack:
             newblack = min(1, max(0, self.black + 0.1 * self.fine))
             self.gui.set("black", float(newblack))  # causes update
@@ -88,7 +89,7 @@ class Monochrome(Component):
         self.gui.set("black", float(self._blackpoint))
 
     def update_gradient(self, im):
-        #  Estimate gradient and normalise to zero mean
+        # Estimate gradient and normalise to zero mean
         g = estimate_gradient(im)
         self._gradient = g - np.mean(g)
 
@@ -150,12 +151,12 @@ class Monochrome(Component):
         if self.show_image_stats:
             self.compute_image_stats()
 
-        #  subtract some % of gradient if we have it computed (not the case for short subs)
+        # subtract some % of gradient if we have it computed (not the case for short subs)
         if (self._gradient is not None) and (self.gradient > 0.1):
             im = im - (self.gradient / 100) * self._gradient
 
         # set black based on automatic blackpoint estimate and lift setting
-        #  we also allow lift settings in non-auto case
+        # we also allow lift settings in non-auto case
 
         if self.autoblack and (self._std_background is not None):
             black = max(0, self._blackpoint - self.lift * self._std_background)

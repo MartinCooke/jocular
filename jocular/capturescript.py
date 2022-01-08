@@ -14,21 +14,22 @@ from loguru import logger
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.metrics import dp
 from kivy.properties import OptionProperty
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDTextButton
+from kivy.uix.label import Label
+from kivymd.uix.label import MDLabel
+from kivy.uix.boxlayout import BoxLayout
 
 from jocular.component import Component
 from jocular.exposurechooser import exp_to_str
+from jocular.widgets import Panel, JMDToggleButton
 
 faf_scripts = ['align', 'focus', 'frame']
 light_scripts = ['light', 'seq']
-calibration_scripts = ['dark', 'bias', 'autoflat', 'flat']
+calibration_scripts = ['dark', 'bias', 'flat', 'autoflat']
 all_scripts = faf_scripts + light_scripts + calibration_scripts
 
 
-class CaptureScript(Component):
+class CaptureScript(Panel, Component):
 
     current_script = OptionProperty('align', options=all_scripts)
     capture_controls = {'devices', 'script_button', 'exposure_button', 'filter_button'}
@@ -52,29 +53,7 @@ class CaptureScript(Component):
             self.scripts['seq']['filter'] = ['B', 'G', 'R', 'L']
             self.save()
 
-        self.chooser = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(None, None),
-            size=(dp(100), dp(240)),
-            pos_hint={'center_x': 10, 'center_y': .5})
-
-        self.app.gui.add_widget(self.chooser)
-
-        self.script_buttons = {}
-        for s in all_scripts:
-            if s in faf_scripts:
-                col = .75, .65, .65, 1
-            elif s in light_scripts:
-                col = .75, .75, .65, 1
-            else:
-                col = .65, .75, .65, 1
-            but = self.script_buttons[s] = MDTextButton(
-                text=s, 
-                text_color=col,
-                theme_text_color='Custom',
-                font_size='18sp',
-                on_press=self.script_chosen)
-            self.chooser.add_widget(but)
+        self.build()
 
         # initialise via current script once dependencies have been built
         Clock.schedule_once(self.on_current_script, 0)
@@ -98,14 +77,77 @@ class CaptureScript(Component):
             elif self.current_script in light_scripts:
                 for k in calibration_scripts:
                     self.script_buttons[k].disabled = True
-       
-        self.chooser.pos_hint = {'right': .95, 'center_y': .5}
+      
+
+    def _button(self, name):
+        return JMDToggleButton(
+                text=name, 
+                group='scripts',
+                on_press=self.script_chosen)
+
+    def build(self, *args):
+
+        self.add_widget(Label(
+            size_hint=(1, .1), 
+            text='Select a script', 
+            font_size='24sp'))
+
+        self.add_widget(Label(size_hint=(1, .1)))
+
+        self.script_buttons = {s: self._button(s) for s in all_scripts}
+
+        bl = BoxLayout(
+            size_hint=(1, .8),
+            orientation='horizontal')
+        bl.add_widget(MDLabel(size_hint=(.3, 1)))
+        bl_right = BoxLayout(
+            size_hint=(.4, 1),
+            orientation='vertical')
+        bl.add_widget(bl_right)
+        bl.add_widget(Label(size_hint=(.3, 1)))
+
+        for s in faf_scripts:
+            bl_right.add_widget(self.script_buttons[s])
+        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
+
+        for s in light_scripts:
+            bl_right.add_widget(self.script_buttons[s])
+        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
+
+        for s in calibration_scripts:
+            bl_right.add_widget(self.script_buttons[s])
+        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
+
+        self.add_widget(bl)
+        self.app.gui.add_widget(self)
+
+
+    def on_show(self):
+        ''' display choice of next script, taking into account what is
+            compatible with current subs or not
+        '''
+
+        for s, but in self.script_buttons.items():
+            but.state = 'down' if s == self.current_script else 'normal'
+
+        if Component.get('Stacker').is_empty():
+            for v in self.script_buttons.values():
+                v.disabled = False
+
+        else:
+            if self.current_script in calibration_scripts:
+                for k in light_scripts + calibration_scripts:
+                    self.script_buttons[k].disabled = True
+                self.script_buttons[self.current_script].disabled = False
+
+            elif self.current_script in light_scripts:
+                for k in calibration_scripts:
+                    self.script_buttons[k].disabled = True
 
     def script_chosen(self, item):
-        ''' user has selected script, so update and close menu
+        ''' user has selected script, so update
         '''
         self.current_script = item.text
-        self.chooser.pos_hint = {'center_x': 10, 'center_y': .5}
 
     def save(self, *args):
         ''' save capture scripts

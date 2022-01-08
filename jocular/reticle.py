@@ -81,13 +81,16 @@ class Reticle(Component, Widget):
         self.pos = Metrics.get('origin')
         self.radius = Metrics.get('ring_radius')['image']
         super().__init__(**kwargs)
-        for direction in ['left', 'right', 'up', 'down']:
-            for rate in [1, 2, 3]:
-                arrow = Arrow(
-                    direction=direction, rate=rate, reticle=self,
-                    on_press=partial(self.move, direction, rate),
-                    on_release=self.stop_moving)
-                self.add_widget(arrow)
+        # don't add arrows
+        # until mount control working
+        if False:
+            for direction in ['left', 'right', 'up', 'down']:
+                for rate in [1, 2, 3]:
+                    arrow = Arrow(
+                        direction=direction, rate=rate, reticle=self,
+                        on_press=partial(self.move, direction, rate),
+                        on_release=self.stop_moving)
+                    self.add_widget(arrow)
 
     def on_show(self, *args):
         if self.show:

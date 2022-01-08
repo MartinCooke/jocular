@@ -29,23 +29,24 @@ Builder.load_string('''
     pos_hint: {'y': 0, 'x': 0} if root.session.show_session else {'y': 0, 'right': -1000} 
     size_hint: None, None
     orientation: 'vertical'
+    spacing: "10dp"
 
     BoxLayout:
         size_hint: (1, None)
         height: '48dp'
 
         JTextField:
-            width: '150dp'
+            width: '180dp'
             height: '32dp'
-            helper_text: ''
+            #helper_text: ''
             on_focus: root.session.session_changed(self.text) if not self.focus else None
             text: root.session.session
 
     MyBoxLayout:
         JTextField:
             hint_text: 'transparency'
-            width: '250dp'
-            helper_text: 'e.g. high clouds, good'
+            width: '220dp'
+            #helper_text: 'e.g. high clouds, good'
             on_focus: root.session.transparency_changed(self.text) if not self.focus else None
             text: root.session.transparency
 
@@ -53,36 +54,37 @@ Builder.load_string('''
     MyBoxLayout:
         JTextField:
             hint_text: 'seeing'
-            width: '250dp'
-            helper_text: 'e.g. poor, excellent'
+            width: '240dp'
+            #helper_text: 'e.g. poor, excellent'
             on_focus: root.session.seeing_changed(self.text) if not self.focus else None
             text: root.session.seeing
 
     MyBoxLayout:
         JTextField:
             hint_text: 'temperature'
-            helper_text: 'e.g. 5C or 45F'
+            #helper_text: 'e.g. 5C or 45F'
             on_focus: root.session.temperature_changed(self.text) if not self.focus else None
             text: root.session.formatted_temperature
 
         JTextField:
+            width: '140dp'
             hint_text: 'brightness'
-            helper_text: 'e.g. 19.23 or 4.5'
+            #helper_text: 'e.g. 19.23 or 4.5'
             on_focus: root.session.sky_brightness_changed(self.text) if not self.focus else None
             text: root.session.formatted_sky_brightness
 
     MyBoxLayout:
         JTextField:
-            width: '150dp'
+            width: '140dp'
             hint_text: 'scope'
-            helper_text: ''
+            #helper_text: ''
             on_focus: root.session.telescope_changed(self.text) if not self.focus else None
             text: root.session.telescope
 
         JTextField:
-            width: '150dp'
+            width: '180dp'
             hint_text: 'camera'
-            helper_text: ''
+            #helper_text: ''
             on_focus: root.session.camera_changed(self.text) if not self.focus else None
             text: root.session.camera
 
@@ -95,7 +97,7 @@ Builder.load_string('''
             height: '64dp'
             multiline: True
             hint_text: 'session notes'
-            helper_text: ''
+            #helper_text: ''
             text: root.session.session_notes
             on_focus: root.session.session_notes_changed(self.text) if not self.focus else None
 

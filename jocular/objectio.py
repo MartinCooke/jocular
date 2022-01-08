@@ -225,7 +225,7 @@ class ObjectIO(Component):
                 filt=unique_member([s.filter for s in subs]),
                 sub_type=content.sub_type)
 
-        # save info.json, handle rejects, and update observations table
+        # save info.json, handle rejects, and update observations table
 
         metadata.set(
             {'exposure': content.exposure, 
@@ -250,7 +250,7 @@ class ObjectIO(Component):
                 except Exception as e:
                     logger.exception('cannot change name ({:})'.format(e))
 
-        # save metadata, and if successful update observations
+        # save metadata, and if successful update observations
         newpath = self.current_object_dir
         try:
             ''' kludge for now: temperature at least may have been changed by session 

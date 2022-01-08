@@ -9,7 +9,6 @@ import numpy as np
 import math
 from loguru import logger
 
-from kivy.clock import Clock
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.scatter import Scatter
@@ -18,7 +17,6 @@ from kivy.graphics.transformation import Matrix
 from kivy.properties import BooleanProperty, NumericProperty, BoundedNumericProperty
 from kivy.core.window import Window
 from kivy.base import stopTouchApp
-from kivy.animation import Animation
 
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
@@ -39,7 +37,6 @@ Builder.load_string('''
     do_scale: True
     Image:
         id: image
-
 ''')
 
 class ScatterView(Scatter):
@@ -49,13 +46,13 @@ class ScatterView(Scatter):
         self.controller = controller
 
     def on_touch_down(self, touch):
-        # check if touch is within eyepiece and if so, where
+        # check if touch is within eyepiece and if so, where
 
         x, y = touch.pos
         xc, yc = Metrics.get('origin')
         r = (((xc - x) ** 2 + (yc - y) ** 2) ** .5) / Metrics.get('inner_radius')
 
-        # touch is not in the eyepiece
+        # touch is not in the eyepiece
         if r  >  .98:
             return False
 
@@ -107,7 +104,7 @@ class ScatterView(Scatter):
 
 class View(Component, Settings):  # must be in this order
 
-    zoom = NumericProperty(0)  # zoom lever ranges from 0 to 1 and maps from min-max zoom using curve
+    zoom = NumericProperty(0)  # zoom lever ranges from 0 to 1 and maps from min-max zoom using curve
     show_help = BooleanProperty(False)
     invert = BooleanProperty(False)
     orientation = BoundedNumericProperty(0, min=0, max=360)
@@ -122,7 +119,6 @@ class View(Component, Settings):  # must be in this order
     max_zoom = NumericProperty(30)
     zoom_power = NumericProperty(1)
     confirm_quit = BooleanProperty(True)
-    dim_after = NumericProperty(0)
  
     configurables = [
         ('flip_UD', {
@@ -148,11 +144,7 @@ class View(Component, Settings):  # must be in this order
         ('confirm_quit', {
             'name': 'confirm on quit?', 
             'switch': '',
-            'help': 'Require confirmation before quitting Jocular'}),
-        ('dim_after', {
-            'name': 'dim display controls after', 'float': (0, 60, 1),
-            'fmt': '{:.0f} seconds',
-            'help': 'set to 0 to switch off'})
+            'help': 'Require confirmation before quitting Jocular'})
         ]
 
     def __init__(self, **kwargs):
@@ -167,14 +159,10 @@ class View(Component, Settings):  # must be in this order
         self.image_selected = False
         self.old_transparency = self.transparency
         self.old_brightness = self.brightness
-
-        # start listening to mouse position events etc
-        Window.bind(mouse_pos=self.on_mouse_pos)
-
         logger.debug('View scatter {:}'.format(self.scatter))
 
     def on_new_object(self):
-        # until we receive the new object' sizes we cannot really zoom, so do this on first draw
+        # until we receive the new object' sizes we cannot really zoom, so do this on first draw
         self.reset()
 
     def on_previous_object(self):
@@ -182,48 +170,17 @@ class View(Component, Settings):  # must be in this order
         # restore orientation for previous objects
         self.orientation_settings = Component.get('Metadata').get({'orientation'})        
 
-    def on_mouse_pos(self, *args):
-        if hasattr(self, 'dimmer_event'):
-            self.dimmer_event.cancel()
-        if self.is_dimmed:
-            self.undim_screen()
-        # only dim if user wants it and there is an image and no reticle
-        if self.dim_after > 0 and \
-            (self.last_image is not None) and \
-            (not self.show_reticle):
-            self.dimmer_event = Clock.schedule_once(self.dim_screen, self.dim_after)
-
-    def undim_screen(self):
-        anim = Animation(brightness=self.old_brightness, duration=.2)
-        # anim &= Animation(transparency=self.old_transparency, duration=.2)
-        anim.bind(on_complete=self.undimming_complete)
-        anim.start(self)
-
-    def undimming_complete(self, *args):
-        self.is_dimmed = False
-
-    def dimming_complete(self, *args):
-        self.is_dimmed = True
-
-    def dim_screen(self, dt):
-        self.old_transparency = self.transparency
-        self.old_brightness = self.brightness
-        anim = Animation(brightness=0, duration=.5)
-        # anim &= Animation(transparency=1, duration=.5)
-        anim.bind(on_complete=self.dimming_complete)
-        anim.start(self)
-
     def reset(self):
         # Keep as separate method because most likely called on stack reset
         self.last_image = None
         self.reset_texture()
+        self.update_state()
 
     def on_save_object(self):
         Component.get('Metadata').set('orientation', self.orientation)
 
     def on_show_reticle(self, *args):
         self.app.gui.gui['reticle']['widget'].show = self.show_reticle
-        self.on_mouse_pos() # so dimming status is checked
 
     def on_brightness(self, *args):
         self.app.brightness = self.brightness
@@ -257,7 +214,6 @@ class View(Component, Settings):  # must be in this order
         self.scatter.apply_transform(mat, anchor=Metrics.get('origin'))
         self.update_state()
 
-    @logger.catch()
     def confirm_close(self, *args):
         if self.confirm_quit:
             self.dialog = MDDialog(
@@ -265,11 +221,9 @@ class View(Component, Settings):  # must be in this order
                 text="Are you sure you wish to quit?",
                 buttons=[
                     MDFlatButton(text="YES", 
-                        text_color=self.app.theme_cls.primary_color,
                         on_press=self.close),
                     MDFlatButton(
                         text="CANCEL", 
-                        text_color=self.app.theme_cls.primary_color,
                         on_press=self._cancel)
                 ],
             )
@@ -302,14 +256,12 @@ class View(Component, Settings):  # must be in this order
         self.zoom = z
         if zero_orientation:
             self.orientation = 0
-        # self._set_center(Metrics.get('origin'))
         self.scatter._set_center(Metrics.get('origin'))
 
     def on_invert(self, *args):
         if self.last_image is None:
             return
         # only invert if not colour image    
-        # if self.ids.image.texture.colorfmt == 'luminance':
         if self.scatter.ids.image.texture.colorfmt == 'luminance':
             self.display_image(use_cached_image=True)
             self.update_state()
@@ -367,15 +319,9 @@ class View(Component, Settings):  # must be in this order
         # check if shape or color has changed
         w, h = im.shape[0], im.shape[1]
         if (w != self.w) or (h != self.h) or (colorfmt != self.colorfmt):
-            # for some reason, image is recentered after texture reset but orientation/size not affected 
-            # old_center = self._get_center()
-            # self.reset_texture(w=w, h=h, colorfmt=colorfmt)
-            # self._set_center(old_center)
-
             old_center = self.scatter._get_center()
             self.reset_texture(w=w, h=h, colorfmt=colorfmt)
             self.scatter._set_center(old_center)
-
 
         im = self.do_flips(im)
 
@@ -384,17 +330,15 @@ class View(Component, Settings):  # must be in this order
             im = np.subtract(1, im, dtype=im.dtype)
 
         self.last_image = np.uint8(im * 255)
-        # self.ids.image.texture.blit_buffer(self.last_image.flatten(), colorfmt=colorfmt, bufferfmt='ubyte')
         self.scatter.ids.image.texture.blit_buffer(self.last_image.flatten(), colorfmt=colorfmt, bufferfmt='ubyte')
 
-        # first time through for each object, apply settings
+        # first time through for each object, apply settings
         if hasattr(self, 'orientation_settings') and self.orientation_settings is not None:
             z = self.zoom_to_lever(Window.height / self.last_image.shape[0])
             App.get_running_app().gui.set('zoom', z)
             self.zoom = z
             if 'orientation' in self.orientation_settings:
                 self.orientation = self.orientation_settings['orientation']
-            #self._set_center(Metrics.get('origin'))
             self.scatter._set_center(Metrics.get('origin'))
             self.invert = False
             self.orientation_settings = None  # indicates that they have been applied

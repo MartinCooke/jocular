@@ -71,7 +71,7 @@ def update_fits_header(path, exposure=None, sub_type=None, temperature=None):
 
 class Image:
 
-    # map from various FITS header names to Image attribute names
+    # map from various FITS header names to Image attribute names
     hmap = {
         'exposure': 'exposure', 'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
         'filter': 'filter', 'filt': 'filter',
@@ -79,7 +79,7 @@ class Image:
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
         'nsubs': 'nsubs', 'stackcnt': 'nsubs'}
 
-    # map from possible found filter names to the Jocular scheme
+    # map from possible found filter names to the Jocular scheme
     filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
         'blue': 'B', 'dark': 'dark',  
         'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII',
@@ -146,14 +146,15 @@ class Image:
             'temperature': None,
             'nsubs': None}
 
-        # extract any relevant information from FITs header
+        # extract any relevant information from FITs header
         fits_props = {}
         for k, v in hdr.items():
             if k.lower() in self.hmap:
-                fits_props[self.hmap[k.lower()]] = v
+                if hdr[k] is not None:
+                    fits_props[self.hmap[k.lower()]] = v
 
         try:
-            # is it a master?
+            # is it a master?
             self.is_master = self.name.startswith('master') or \
                 fits_props.get('sub_type', '').lower().startswith('master') or \
                 fits_props.get('nsubs', 0) > 1
@@ -167,7 +168,7 @@ class Image:
         else:
             name_props = self.parse_sub(self.name)
 
-        # form properties by overriding
+        # form properties by overriding
         props = {**default_props, **name_props, **fits_props}
 
         # rationalise properties as well as possible
@@ -187,7 +188,7 @@ class Image:
             else:
                 props['sub_type'] = 'light'
 
-            # filter might be R, r, red, filter: red, red filter, ...
+            # filter might be R, r, red, filter: red, red filter, ...
             v = props['filter'].lower()
             if v.endswith('filter'):
                 v = v[:-6].strip()
@@ -195,7 +196,7 @@ class Image:
                 v = v[6:].strip()
             props['filter'] = self.filter_map.get(v, v)   # untested change in v0.5
 
-            # temperature format might be a number, or followed by C
+            # temperature format might be a number, or followed by C
             if props['temperature'] is not None:
                 v = str(props['temperature']).lower()
                 if v.endswith('c'):
@@ -215,7 +216,7 @@ class Image:
         except Exception as e:
             logger.exception(e)
 
-        # now assign relevant properties (and some defaults) to Sub
+        # now assign relevant properties (and some defaults) to Sub
         self.exposure = props['exposure']
         self.filter = props['filter']
         self.temperature = props['temperature']
@@ -287,7 +288,7 @@ class Image:
 
     def parse_master(self, nm):
         # nm  of form <type>_<key>=<value> where keys can come in any order
-        # and keys are any of the things in the keymap
+        # and keys are any of the things in the keymap
 
         prop_sep = '_'
         key_value_sep = '='

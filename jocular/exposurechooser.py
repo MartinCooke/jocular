@@ -10,9 +10,10 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
+from kivymd.uix.label import MDLabel
 
 from jocular.component import Component
-from jocular.widgets import Panel, TextInputC, LabelL
+from jocular.widgets import Panel, TextInputC, LabelL, JMDToggleButton
 
 def exp_to_str(e):
     if e < 1:
@@ -56,6 +57,14 @@ class ExposureChooser(Panel, Component):
         for e, but in self.expo_buttons.items():
             but.state = 'down' if e == e_str else 'normal'
 
+    def _button(self, name, expo):
+        return JMDToggleButton(
+                text=name, 
+                size_hint=(.2, None),
+                group='expos',
+                height=dp(30),
+                on_press=partial(self.exposure_selected, expo))
+
     def build(self, *args):
 
         self.expos = [
@@ -63,13 +72,14 @@ class ExposureChooser(Panel, Component):
             1, 2, 5, 10, 15, 20, 25, 30, 45, 60
         ]
 
-        self.add_widget(Label(size_hint=(1, 1), text='Select exposure', font_size='24sp'))
+        self.add_widget(MDLabel(size_hint=(1, 1), text='Select exposure', font_size='24sp'))
         self.expo_buttons = {}
         for e in self.expos + self.user_expos:
             e_str = exp_to_str(e)
-            self.expo_buttons[e_str] = ToggleButton(text=e_str, 
-                size_hint=(.2, None), group='expos', height=dp(30), 
-                on_press=partial(self.exposure_selected, e))
+            self.expo_buttons[e_str] = self._button(e_str, e)
+            # self.expo_buttons[e_str] = ToggleButton(text=e_str, 
+            #     size_hint=(.2, None), group='expos', height=dp(30), 
+            #     on_press=partial(self.exposure_selected, e))
 
         # short exposures
         self.add_widget(LabelL(text='short', size_hint=(1, 1)))
@@ -95,13 +105,13 @@ class ExposureChooser(Panel, Component):
             self.user_gl.add_widget(Label(size_hint=(.2, None), height=dp(30)))
         self.add_widget(self.user_gl)
 
-        # exposure box
+        # exposure box
         bh = BoxLayout(orientation='horizontal', size_hint=(1, 1), padding=(0, 10))
-        bh.add_widget(LabelL(text='add new', size_hint=(.2, 1))) 
+        bh.add_widget(LabelL(text='add new exposure', size_hint=(.4, 1))) 
         bh.add_widget(TextInputC(hint_text='10, 10s, 30ms, 0.3', size_hint=(.4, 1), 
             multiline=False, font_size='16sp',
             on_text_validate=self.custom_exposure_added))
-        bh.add_widget(Label(text='10 most recent stored', size_hint=(.4, 1), color=(.5, .5, .5, 1))) 
+        bh.add_widget(MDLabel(size_hint=(.2, 1), color=(.5, .5, .5, 1))) 
         self.add_widget(bh)
 
         self.app.gui.add_widget(self)
@@ -127,5 +137,5 @@ class ExposureChooser(Panel, Component):
     def exposure_selected(self, expo, *args):
         # set exposure on GUI and on scripts panel
         Component.get('CaptureScript').exposure_changed(expo)
-        self.hide()
+        # self.hide()
 

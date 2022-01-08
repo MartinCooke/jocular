@@ -17,9 +17,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.metrics import dp
 from kivy.lang import Builder
 from kivy.core.window import Window
-
-# used to use this version
-# from jocular.hoverable import HoverBehavior
 from kivymd.uix.behaviors import HoverBehavior
 
 from jocular.metrics import Metrics
@@ -95,14 +92,14 @@ Builder.load_string(
     size_hint: None, None
     size: self.texture_size
     font_size: '15sp'
-    text_size: None, None  # forces size to be that of text
+    text_size: None, None  # forces size to be that of text
     color: (self.label_color if self.pinned else self.marker_color) + [self.visible]
     pos: (self.lab_x - self.width / 2, self.lab_y - self.height / 2) if self.center and not self.pinned else (self.lab_x, self.lab_y)
 
 <AnnotCluster>:
     canvas:
         Color:
-            rgb: 1, 0, 0
+            rgb: 1, 1, 1
             a: 1 if self.visible else 0
         Line:
             circle: self.sx, self.sy, self.radius
@@ -125,12 +122,12 @@ Builder.load_string(
 <AnnotFOV>:
     canvas:
         Color:
-            rgb: .8, .8, .8
+            rgb: 1, .4, .4
             a: 1 if self.visible else 0
         Line:
             points: [self.sx - self.length/2, self.sy, self.sx + self.length/2, self.sy]
-            width: 2
-    color: .8, .8, .8, 1
+            width: 4
+    color: 1, .4, .4, 1
 
 '''
 )
@@ -182,7 +179,7 @@ class Annotation(Label, HoverBehavior):
         if not self.pinned:
             lab = self.info['Name']
             self.font_size = '15sp'
-            # for quasars, label with mag + redshift
+            # for quasars, label with mag + redshift
             if self.ot == 'QS':
                 lab = '{:4.1f}'.format(self.info['Mag'])
                 z = self.info.get('z', '?')
@@ -228,7 +225,7 @@ class Annotation(Label, HoverBehavior):
         self.sx, self.sy = self.mapping(self.px, self.py)
         self.visible = self.in_eyepiece(self.xc, self.yc, self.r2) and self.display
 
-        #  display if visible and set to display
+        # display if visible and set to display
         if self.visible:
             bx, by = self.mapping(self.bx, self.by)
             if self.pinned:
@@ -246,7 +243,7 @@ class AnnotCluster(Annotation):
 
 
 class AnnotQuasar(Annotation):
-    # a couple of lines a few pix from QSO
+    # a couple of lines set a few pix from QSO
     length = NumericProperty(20)  # indicator line length in pixels
     gap = NumericProperty(10)  # gap from quasar to line in pixels
 
@@ -343,8 +340,10 @@ class Annotator(Component):
         # remove previous annotations
         gui = App.get_running_app().gui
         if self.has_annotations():
+            n_annots = len(self.annotations)
             for k in self.annotations:
                 gui.remove_widget(k)
+            logger.info('Cleared {:d} annotations'.format(n_annots))
             self.annotations = []
 
     def has_annotations(self):
@@ -405,7 +404,7 @@ class Annotator(Component):
         Component.get('View').orientation = solver.north
 
         # find objects in FOV from tile large enough to encompass sensor
-        w, h = solver.w, solver.h
+        w, h = solver.im_width, solver.im_height
         deg_per_pixel = float(solver.FOV_h / h)
         fov = 1.5 * max(solver.FOV_w, solver.FOV_h)
         tile = make_tile(solver.tile_ra0, solver.tile_dec0, fov=fov)
@@ -429,19 +428,22 @@ class Annotator(Component):
             )
         ]
 
-        # object type properties and defaults
+        # object type properties and defaults
         OT_props = cats.get_object_types()
         default_props = {'name': '?', 'col': [0, 0, 0], 'text': '¤', 'mag': 0}
 
         ''' dsos is a dict of names and properties
         '''
+
+        atypes = []
         for nm, info in dsos.items():
             px, py = solver.ra_dec_to_pixels(info['RA'], info['Dec'])
             px, py = float(px[0]), float(py[0])
-            #  check it is actually within the image dimensions
+            # check it is actually within the image dimensions
             if (px >= 0) & (py >= 0) & (px < w) & (py < h):
                 # replace OT acronym in info by full OT name
                 ot = info['OT']
+                atypes += [ot] # diagnostic
                 props = OT_props.get(ot, default_props)
                 # fill in missing props
                 for k, v in default_props.items():
@@ -454,7 +456,7 @@ class Annotator(Component):
                 center = True
                 if ot in {'OC', 'GC', 'CG', 'GG', 'G+', 'PG'}:
                     cls = AnnotCluster
-                    diam *= 1.3  # make circle slightly larger
+                    diam *= 1.3  # make circle slightly larger
                     center = False
                 elif ot in {'QS', 'BQ', 'DQ'}:
                     cls = AnnotQuasar
@@ -485,14 +487,14 @@ class Annotator(Component):
 
         # create annotation labels
         mapping = Component.get('View').scatter.to_parent
-        # mapping = Component.get('View').to_parent
+        # mapping = Component.get('View').to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2
         gui = App.get_running_app().gui
         for lab in self.annotations:
             gui.add_widget(lab, index=101)
             lab.update(mapping=mapping, xc=xc, yc=yc, r2=r2)
-            #  sort out situations where several have same target name
+            # sort out situations where several have same target name
             if lab.info['Name'] == target:
                 lab.pin()
         self.on_mag_limit()
@@ -503,7 +505,6 @@ class Annotator(Component):
         if not self.has_annotations():
             return
 
-        # mapping = Component.get('View').to_parent
         mapping = Component.get('View').scatter.to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2

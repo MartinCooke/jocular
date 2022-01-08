@@ -73,7 +73,11 @@ class Calibrator(Component, Settings):
 
 
     def on_new_object(self, *args):
-        self.info('')
+        n_masters = len(self.library)
+        if n_masters > 0:
+            self.info('{:d} masters'.format(n_masters))
+        else:
+            self.info('no masters')
 
     def add_to_library(self, m):
         ''' called on initialisation and when we save a new master
@@ -152,10 +156,12 @@ class Calibrator(Component, Settings):
 
         sub.calibrations = set({})
 
-        if not self.library: 
+        if not self.library:
+            self.info('no library')
             return
 
         if not (self.apply_dark or self.apply_bias or self.apply_flat):
+            self.info('none')
             return
 
         # get all masters (check speed, but should be quick)
@@ -218,9 +224,9 @@ class Calibrator(Component, Settings):
         sub.image = im
         applied = ' '.join(list(sub.calibrations))
         if applied:
-            self.info('applied ' + applied)
+            self.info(applied)
         else:
-            self.info('')
+            self.info('none suitable')
 
     def get_dark(self, sub):
         # Find suitable dark for this sub given its parameters
@@ -314,7 +320,7 @@ class Calibrator(Component, Settings):
             im = im - self.get_master(bias)
 
         # normalise by mean of image in central 3rd zone 
-        perc = 75  # retain central 75% of points when computing mean 
+        perc = 75  # retain central 75% of points when computing mean 
         w, h = im.shape
         w1, w2 = int(w / 3), int(2 * w / 3)
         h1, h2 = int(h / 3), int(2 * h / 3)
