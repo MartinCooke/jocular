@@ -11,7 +11,6 @@ Builder.load_string('''
 <Notes>:
     observing_notes: _notes
     adaptive_height: True
-    #adaptive_width: True
     pos_hint: {'top': .99, 'right': .99} if root.show_notes else {'top': .99, 'right': 0} 
     size_hint: None, None
     width: dp(200) 
@@ -43,8 +42,10 @@ class Notes(MDBoxLayout, Component):
         self.notes = ''
         self.orig_notes = Component.get('Metadata').get('Notes', default='')
         self.observing_notes.text = self.orig_notes
+        self.notes = self.observing_notes.text        
 
     def on_save_object(self):
+        print('saving notes', self.notes)
         Component.get('Metadata').set('Notes', self.notes)
 
     def notes_changed(self, *args):

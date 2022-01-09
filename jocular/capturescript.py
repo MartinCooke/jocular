@@ -28,11 +28,22 @@ light_scripts = ['light', 'seq']
 calibration_scripts = ['dark', 'bias', 'flat', 'autoflat']
 all_scripts = faf_scripts + light_scripts + calibration_scripts
 
-
 class CaptureScript(Panel, Component):
 
     current_script = OptionProperty('align', options=all_scripts)
     capture_controls = {'devices', 'script_button', 'exposure_button', 'filter_button'}
+
+    tooltips = {
+        'align': 'brings up a reticle for initial alignment',
+        'focus': 'typically longer exposure e.g. for use of focussing mask',
+        'frame': 'framing subs; also useful for platesolving',
+        'light': 'normal light subs in a single filter',
+        'seq' : 'sequence of subs through more than one filter e.g. used for LRGB',
+        'dark': 'create master dark and add to calibration library',
+        'bias': 'create master bias and add to calibration library',
+        'flat': 'create master flat and add to calibration library',
+        'autoflat': 'as flat but exposure is estimated automatically (recommended)'
+    }
 
     def __init__(self, **args):
         super().__init__(**args)
@@ -83,6 +94,7 @@ class CaptureScript(Panel, Component):
         return JMDToggleButton(
                 text=name, 
                 group='scripts',
+                tooltip_text=self.tooltips.get(name, ''),
                 on_press=self.script_chosen)
 
     def build(self, *args):

@@ -36,8 +36,10 @@ class Jocular(MDApp):
     line_color = ListProperty([0.3, 0.3, 0.3, 1])  # used in Obj and Table only
 
     ring_font_size = StringProperty('14sp')
-    info_font_size = StringProperty('14sp')
+    # info_font_size = StringProperty('14sp')
     form_font_size = StringProperty('15sp')
+
+    tooltip_delay = NumericProperty(.5)
 
     data_dir = StringProperty(None)
 
@@ -61,11 +63,11 @@ class Jocular(MDApp):
     def get_path(self, name):
         # centralised way to handle accessing resources Jocular needs
 
-        #  if path, return path to data dir, else return path to resource
+        # if path, return path to data dir, else return path to resource
         if name in self.subdirs:
             return self.get_dir_in_datadir(name)
 
-        # jocular's own resources
+        # jocular's own resources
 
         elif name == 'dsos':
             return os.path.join(self.directory, 'dsos')

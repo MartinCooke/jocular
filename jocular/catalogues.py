@@ -170,7 +170,7 @@ class Catalogues(Component, Settings):
             v['Other'] = v.get('Other', '')
 
     def is_user_defined(self, key):
-        return self.user_objects.get(key, False)
+        return key in self.user_objects
 
     def update_user_objects(self, name, props):
         ''' User has specified that DSO should be added or edited
@@ -178,6 +178,12 @@ class Catalogues(Component, Settings):
             a dictionary of properties (RA/Dec etc) that have been
             converted into canonical form in DSO prior to call
         '''
+
+        if 'Name' in props and 'OT' in props:
+            name = '{:}/{:}'.format(props['Name'], props['OT']).upper()
+        else:
+            logger.debug('Not updating catalogue as one of Name or OT is missing')
+            return
 
         logger.debug('name {:} props {:}'.format(name, props))
         logger.debug(self.user_objects)
@@ -206,7 +212,6 @@ class Catalogues(Component, Settings):
                 json.dump(self.user_objects, f, indent=1)
         except Exception as e:
             logger.warning('Unable to save user_objects.json ({:})'.format(e))
-
 
 
     def is_excluded(self, catname):

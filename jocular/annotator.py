@@ -43,7 +43,8 @@ Builder.load_string(
         halign: 'left'
         text_size: self.size
         color: app.lowlight_color
-        font_size: app.info_font_size
+        # font_size: app.info_font_size
+        font_size: app.form_font_size
         background_color: .6, 0, .6, 0
         width: dp(100)
         padding: dp(5), dp(1)
@@ -54,7 +55,8 @@ Builder.load_string(
         halign: 'left'
         text_size: self.size
         color: app.lowlight_color
-        font_size: app.info_font_size
+        # font_size: app.info_font_size
+        font_size: app.form_font_size
         background_color: .6, 0, .6, 0
         width: dp(250)
         text: '{:}'.format(root.value)
@@ -78,7 +80,8 @@ Builder.load_string(
         valign: 'middle'
         text_size: self.size
         color: root.title_color
-        font_size: str(int(app.info_font_size[:-2]) + 4) + 'sp'
+        # font_size: str(int(app.info_font_size[:-2]) + 4) + 'sp'
+        font_size: str(int(app.form_font_size[:-2]) + 4) + 'sp'
         width: dp(350)
         text: '[b]{:}[/b]'.format(root.Name)
 

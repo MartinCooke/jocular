@@ -31,11 +31,11 @@ class Capture(Component):
 
     def on_new_object(self):
         self.reset()
-        self.info('stopped')
+        self.info('inactive')
         self.gui.enable(['capturing'])
 
     def on_previous_object(self):
-        self.info('stopped')
+        self.info('inactive')
         self.gui.disable(['capturing'])
 
     def reset(self, stop_capturing=True):

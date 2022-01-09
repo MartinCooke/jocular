@@ -17,10 +17,11 @@ class Appearance(Component, Settings):
     lever_color = NumericProperty(32)
     hint_color = NumericProperty(32)
     ring_font_size = NumericProperty(14)
-    info_font_size = NumericProperty(14)
+    # info_font_size = NumericProperty(14)
     form_font_size = NumericProperty(15)
     transparency = NumericProperty(100)
     colour_saturation = NumericProperty(50)
+    tooltip_delay = NumericProperty(.5)
 
     configurables = [
         ('highlight_color', {
@@ -52,11 +53,11 @@ class Appearance(Component, Settings):
             'fmt': '{:.0f} percent',
             'help': ''
             }),
-        ('info_font_size', {
-            'name': 'panel font size', 'float': (10, 24, 1),
-            'help': 'Font size for information/annotation panels',
-            'fmt': '{:.0f} points'
-            }),
+        # ('info_font_size', {
+        #     'name': 'panel font size', 'float': (10, 24, 1),
+        #     'help': 'Font size for information/annotation panels',
+        #     'fmt': '{:.0f} points'
+        #     }),
         ('ring_font_size', {
             'name': 'ring font size', 'float': (10, 24, 1),
             'help': 'Font size for labels used on the ring',
@@ -66,7 +67,12 @@ class Appearance(Component, Settings):
             'name': 'form font size', 'float': (10, 24, 1),
             'help': 'Font size for form elements eg in DSO entry or session',
             'fmt': '{:.0f} points'
-            })
+            }),
+        ('tooltip_delay', {
+            'name': 'tooltip delay', 'float': (0, 5, .5),
+            'help': 'Time before tooltip appears',
+            'fmt': '{:.1f} seconds'
+            }),
         ]
 
     def __init__(self, **kwargs):
@@ -78,8 +84,8 @@ class Appearance(Component, Settings):
     def on_ring_font_size(self, *args):
         self.app.ring_font_size = '{:.0f}sp'.format(self.ring_font_size)
 
-    def on_info_font_size(self, *args):
-        self.app.info_font_size = '{:.0f}sp'.format(self.info_font_size)
+    # def on_info_font_size(self, *args):
+    #     self.app.info_font_size = '{:.0f}sp'.format(self.info_font_size)
     
     def on_form_font_size(self, *args):
         self.app.form_font_size = '{:.0f}sp'.format(self.form_font_size)
@@ -110,3 +116,6 @@ class Appearance(Component, Settings):
 
     def on_transparency(self, *args):
         self.app.transparency = self.transparency / 100
+
+    def on_tooltip_delay(self, *args):
+        self.app.tooltip_delay = self.tooltip_delay

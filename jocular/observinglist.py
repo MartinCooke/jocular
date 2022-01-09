@@ -176,7 +176,7 @@ class ObservingList(Component, Settings):
 
 
     @logger.catch()
-    def load(self, dt):
+    def load(self, dt=None):
 
         # load DSOs
         try:
@@ -437,8 +437,8 @@ class ObservingList(Component, Settings):
         if not hasattr(self, 'objects'):
             self.load()
 
-        # most of the time the object is already in the table
-        return self.objects.get(name.upper(), {})
+        # return self.objects.get(name.upper(), {})
+        return self.objects.get(name.upper(), None)
 
     def lookup_OTs(self, name):
         ''' Find all OTs that have this name; note that keys in objects are stored

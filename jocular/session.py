@@ -20,7 +20,8 @@ Builder.load_string('''
 
 <MyBoxLayout@BoxLayout>:
     size_hint: (1, None)
-    height: '{:}dp'.format(int(app.form_font_size[:-2]) + 20)
+    # height: '{:}dp'.format(int(app.form_font_size[:-2]) + 20)
+    height: '42dp'
 
 <SessionInfo>:
     padding: '10dp'

@@ -180,14 +180,14 @@ class GUI(FloatLayout):
 						start_angle=start_angle.get(nm, 0), end_angle=end_angle.get(nm, 360))
 					} 
 
-		# focus/alignment reticle
+		# focus/alignment reticle
 		orig_gui['reticle'] = {
 			'control_type': 'Reticle',
 			'widget': reticle
 			#'widget': Reticle(pos=origin, radius=radii['image'])
 		}
  
-		# load GUI spec and convert so widget names are keys
+		# load GUI spec and convert so widget names are keys
 		with open(self.app.get_path('gui.json'), 'r') as f:
 			gs = json.load(f)
 
@@ -290,6 +290,7 @@ class GUI(FloatLayout):
 		angle = spec['angle']
 		location = spec['location']
 		radial = spec.get('radial', False)
+		tooltip = spec.get('tooltip', '')
 
 		# get initial value from config, else from initial, else make it up
 
@@ -397,6 +398,7 @@ class GUI(FloatLayout):
 			self.add_widget(w)
 			w.bind(on_press=partial(self.on_action, wname))
 
+		w.tooltip_text = tooltip
 		spec['widget'] = w
 		self.gui[wname] = spec
 
@@ -539,6 +541,7 @@ class GUI(FloatLayout):
 
 	@logger.catch()
 	def has_changed(self, component, value):
+		logger.debug('changed {:} {:}'.format(component, value))
 		self.changed_components[component] = value
 		self.check_changes()
 

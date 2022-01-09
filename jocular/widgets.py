@@ -22,6 +22,7 @@ from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.behaviors import HoverBehavior
+from kivymd.uix.tooltip import MDTooltip
 from kivy.uix.behaviors import ToggleButtonBehavior
 from kivymd.uix.button import MDRectangleFlatButton
 
@@ -64,6 +65,8 @@ Builder.load_string(
     font_size: app.ring_font_size
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
+    tooltip_text: ''
+    tooltip_display_delay: app.tooltip_delay
 
 <JLever>:
     color: app.lever_color
@@ -109,23 +112,31 @@ Builder.load_string(
     width: '140dp'
     #helper_text_mode: "on_error"
     line_color_normal: 0, 0, 0, 0
-    text_color: app.theme_cls.accent_color
-    text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text) else app.theme_cls.accent_color
+    #text_color: app.theme_cls.accent_color
+    #text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text) else app.theme_cls.accent_color
+    text_color_normal: app.theme_cls.accent_color
     #text_color_normal: app.theme_cls.accent_color
     font_size: app.form_font_size # '20sp'
-    #current_hint_text_color: [1, 0, 0, 1] if (root.invalid and self.text) else app.hint_color
+    # hint_text_color_normal: app.hint_color
     on_text: root.invalid = False
+    fill_color_normal: .1, 0, 0, 0
+    fill_color_focus: .1, 0, 0, .1
+    hint_text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text != '') else app.hint_color
     mode: 'fill'
+    spacing: dp(2)
 
 # I can't get KivyMD toggle behavior to work so this is my implementation
 <JMDToggleButton>:
     size_hint: 1, None 
     # group: 'scripts'
-    height: dp(36) 
+    #tooltip_text: 'tooltip' if app.show_tooltips else ''
+    tooltip_display_delay: app.tooltip_delay
+    shift_y: dp(40)
+    height: dp(36)
 
 ''')
 
-class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior):
+class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior, MDTooltip):
     def on_state(self, widget, value):
         if value == 'down':
             widget.md_bg_color = .4, .4, .4, 1
@@ -262,7 +273,7 @@ class Rotatable(Widget, Polar):
         )
 
 
-class JWidget(Widget):
+class JWidget(Widget, MDTooltip):
     pass
 
 class JRotWidget(JWidget, Rotatable):

@@ -13,10 +13,12 @@ Builder.load_string('''
 
 <StatusLabel>:
     size_hint: 1, None
-    height: dp(24) 
+    # height: dp(24) 
+    height: dp(int(app.form_font_size[:-2]) + 2)
     halign: 'right'
     markup: True
-    font_size: app.info_font_size
+    # font_size: app.info_font_size
+    font_size: app.form_font_size
     text_size: self.size
     size: self.texture_size
     padding: dp(3), dp(1)
@@ -51,7 +53,10 @@ Builder.load_string('''
         size_hint: 1, .3
         halign: 'right'
         font_size: '12sp'
-        color: .5, .5, .5, 1
+        # font_size: app.form_font_size
+        # color: .5, .5, .5, 1
+        color: app.hint_color
+
 
 ''')
 
