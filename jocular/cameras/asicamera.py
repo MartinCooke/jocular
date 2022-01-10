@@ -49,7 +49,7 @@ class ASICamera(GenericCamera):
 		except asi.ZWO_Error as e:
 			# we don't mind if it is already initialised but
 			# we care about other errors
-			if e == 'Library already initialized':
+			if str(e).strip() == 'Library already initialized':
 				pass
 			else:
 				self.status = 'cannot initialise camera'
