@@ -215,7 +215,6 @@ class ObjectIO(Component):
         self.dialog.dismiss()
 
         metadata = Component.get('Metadata')
-        print('do_save metadata', metadata)
         subs = Component.get('Stacker').subs
 
         # save master if requested

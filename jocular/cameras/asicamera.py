@@ -78,25 +78,76 @@ class ASICamera(GenericCamera):
 			logger.exception('problem assigning camera 0 ({:})'.format(e))
 			return
 
-		# if we want camera info we can get it using
-		# camera_info = self.asicamera.get_camera_property()
+		# examine camera properties
+		try:
+			self.camera_props = self.asicamera.get_camera_property()
+			for k, v in self.camera_props.items():
+				logger.info('{:15s} {:}'.format(k, v))
+		except Exception as e:
+			self.status = 'error getting camera properties'
+			logger.exception('error getting camera properties ({:})'.format(e))
+			return
 
-		# set some properties: in future will be options
+		# list camera controls
+		try:
+			self.camera_controls = self.asicamera.get_controls()
+			for k, v in self.camera_controls.items():
+				logger.info('{:15s} {:}'.format(k, v))
+		except Exception as e:
+			self.status = 'error getting camera controls'
+			logger.exception('error getting camera controls ({:})'.format(e))
+			return
+
+		# get bin options
+		try:
+			binops = ['{:1d} x {:1d}'.format(b, b) for b in self.camera_props['SupportedBins']]
+		except Exception as e:
+			logger.warning('cannot get bin options ({:})'.format(e))
+			binops = ['1 x 1']
+
+		# get gain options
+		try:
+			gainprops = self.camera_controls['Gain']
+			ming, maxg = gainprops['MinValue'], gainprops['MaxValue']
+		except Exception as e:
+			self.status = 'cannot get gain options'
+			logger.exception('cannot get gain options ({:})'.format(e))
+			return
+
+
+		# update configurables
+		self.configurables = [
+			('gain', {
+				'name': 'gain setting', 
+				'float': (ming, maxg, 10),
+				'help': ''}),
+			('binning', {
+				'name': 'binning', 
+				'options': binops,
+				'help': ''})
+		]
+
+		# set some properties initially; gain will be overriden
+		# with user-pref during capture
 		try:
 			self.asicamera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD, 
 				self.asicamera.get_controls()['BandWidth']['MinValue'])
 			self.asicamera.disable_dark_subtract()
 			self.asicamera.set_image_type(asi.ASI_IMG_RAW16)
-			self.asicamera.set_control_value(asi.ASI_GAIN, 150)
+			self.asicamera.set_control_value(asi.ASI_GAIN, ming)
 		except Exception as e:
 			self.status = 'error setting camera values'
 			logger.exception('error setting camera values ({:})'.format(e))
 			return
 
 		try:
-			whbi = self.asicamera.get_roi_format()
-			self.status = 'ASI camera: {:} x {:}'.format(whbi[1], whbi[0])
+			# whbi = self.asicamera.get_roi_format()
+			self.status = '{:}: {:} x {:}'.format(
+				self.camera_props.get('Name', 'anon'),
+				self.camera_props.get('MaxWidth', 0),
+				self.camera_props.get('MaxHeight', 0))
 			self.connected = True
+			logger.info(self.status)
 		except Exception as e:
 			self.status = 'error getting camera sensor size'
 			logger.exception('error getting camera sensor size ({:})'.format(e))
@@ -106,6 +157,7 @@ class ASICamera(GenericCamera):
 		binning=None, return_image=False, is_bias=False):
 
 		if is_bias:
+			# change this to min exposure
 			self.exposure = .001
 
 		self.exposure = exposure
@@ -119,28 +171,32 @@ class ASICamera(GenericCamera):
 			toast('error stopping exposure')
 			logger.exception('error stopping exposure ({:})'.format(e))
 
+		# to do: only change these if necessary
+		# since takes a few ms to do each set
+
 		# set gain
 		try:
-			self.asicamera.set_control_value(asi.ASI_GAIN, self.gain)
+			self.asicamera.set_control_value(asi.ASI_GAIN, int(self.gain))
+			logger.info('setting gain to {:.0f}'.format(self.gain))
 		except Exception as e:
 			toast('camera issue while setting gain')
 			logger.exception('camera issue while setting gain ({:})'.format(e))
 
 		# set binning
-		if self.binning != 'no':
-			try:
-				self.asicamera.set_roi(bins=int(self.binning[0]))
-			except ValueError as e:
-				toast('camera issue while setting binning')
-				logger.exception('illegal value for binning ({:})'.format(e))
+		try:
+			self.asicamera.set_roi(bins=int(self.binning[0]))
+			logger.info('setting binning to {:}'.format(self.binning))
+		except ValueError as e:
+			toast('camera issue while setting binning')
+			logger.exception('camera issue while setting binning ({:})'.format(e))
 
-		# exposure is in microseconds
+		# exposure is in microseconds
 		try:
 			self.asicamera.set_control_value(asi.ASI_EXPOSURE, int(self.exposure * 1e6))
+			logger.info('setting exposure to {:}'.format(self.exposure))
 		except Exception as e:
 			toast('camera issue while setting exposure')
 			logger.exception('camera issue while setting exposure ({:})'.format(e))
-
 
 		logger.debug('starting exposure')
 		self.asicamera.start_exposure()
