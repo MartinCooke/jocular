@@ -8,7 +8,7 @@ from functools import partial
 from loguru import logger
 
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, DictProperty
 from kivy.lang import Builder
 from kivymd.uix.stacklayout import MDStackLayout
 from kivymd.uix.button import MDRectangleFlatButton, MDRectangleFlatIconButton, MDRaisedButton
@@ -193,6 +193,7 @@ class DSO(Component):
     Diam = StringProperty('')
     Other = StringProperty('')
     can_delete = BooleanProperty(True)
+    otypes = DictProperty({})
 
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
@@ -202,6 +203,8 @@ class DSO(Component):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        otypes = Component.get('Catalogues').get_object_types()
+        self.otypes = {k: v['name'] for k, v in otypes.items()}
         self.dso_panel = DSO_panel(self)
         self.app.gui.add_widget(self.dso_panel)
         self.del_button = MDRectangleFlatIconButton(

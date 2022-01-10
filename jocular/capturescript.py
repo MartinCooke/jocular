@@ -94,7 +94,7 @@ class CaptureScript(Panel, Component):
         return JMDToggleButton(
                 text=name, 
                 group='scripts',
-                tooltip_text=self.tooltips.get(name, ''),
+                #tooltip_text=self.tooltips.get(name, ''),
                 on_press=self.script_chosen)
 
     def build(self, *args):

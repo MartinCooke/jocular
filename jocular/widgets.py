@@ -65,8 +65,8 @@ Builder.load_string(
     font_size: app.ring_font_size
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
-    tooltip_text: ''
-    tooltip_display_delay: app.tooltip_delay
+    #tooltip_text: ''
+    #tooltip_display_delay: app.tooltip_delay
 
 <JLever>:
     color: app.lever_color
@@ -130,13 +130,13 @@ Builder.load_string(
     size_hint: 1, None 
     # group: 'scripts'
     #tooltip_text: 'tooltip' if app.show_tooltips else ''
-    tooltip_display_delay: app.tooltip_delay
+    #tooltip_display_delay: app.tooltip_delay
     shift_y: dp(40)
     height: dp(36)
 
 ''')
 
-class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior, MDTooltip):
+class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior): # , MDTooltip):
     def on_state(self, widget, value):
         if value == 'down':
             widget.md_bg_color = .4, .4, .4, 1
@@ -273,7 +273,7 @@ class Rotatable(Widget, Polar):
         )
 
 
-class JWidget(Widget, MDTooltip):
+class JWidget(Widget): # MDTooltip):
     pass
 
 class JRotWidget(JWidget, Rotatable):

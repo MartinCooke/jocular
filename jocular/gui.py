@@ -398,7 +398,7 @@ class GUI(FloatLayout):
 			self.add_widget(w)
 			w.bind(on_press=partial(self.on_action, wname))
 
-		w.tooltip_text = tooltip
+		# w.tooltip_text = tooltip
 		spec['widget'] = w
 		self.gui[wname] = spec
 
@@ -528,7 +528,7 @@ class GUI(FloatLayout):
 		''' Save certain GUI values to config. We save everything except
 			actions and elements whose save property is False
 		'''
-		pass # actually done in Component now
+		pass # actually done in Component now
 
 
 	# def on_touch_down(self, touch):
