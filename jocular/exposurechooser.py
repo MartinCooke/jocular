@@ -72,14 +72,15 @@ class ExposureChooser(Panel, Component):
             1, 2, 5, 10, 15, 20, 25, 30, 45, 60
         ]
 
-        self.add_widget(MDLabel(size_hint=(1, 1), text='Select exposure', font_size='24sp'))
+        self.add_widget(Label(
+            size_hint=(1, 1), 
+            text='Select exposure', 
+            font_size='24sp'))
+
         self.expo_buttons = {}
         for e in self.expos + self.user_expos:
             e_str = exp_to_str(e)
             self.expo_buttons[e_str] = self._button(e_str, e)
-            # self.expo_buttons[e_str] = ToggleButton(text=e_str, 
-            #     size_hint=(.2, None), group='expos', height=dp(30), 
-            #     on_press=partial(self.exposure_selected, e))
 
         # short exposures
         self.add_widget(LabelL(text='short', size_hint=(1, 1)))

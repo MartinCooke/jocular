@@ -24,7 +24,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.behaviors import HoverBehavior
 from kivymd.uix.tooltip import MDTooltip
 from kivy.uix.behaviors import ToggleButtonBehavior
-from kivymd.uix.button import MDRectangleFlatButton
+from kivymd.uix.button import MDFlatButton
 
 from jocular.utils import angle360
 
@@ -136,7 +136,7 @@ Builder.load_string(
 
 ''')
 
-class JMDToggleButton(MDRectangleFlatButton, ToggleButtonBehavior): # , MDTooltip):
+class JMDToggleButton(MDFlatButton, ToggleButtonBehavior): # , MDTooltip):
     def on_state(self, widget, value):
         if value == 'down':
             widget.md_bg_color = .4, .4, .4, 1

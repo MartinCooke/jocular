@@ -192,7 +192,6 @@ class DSO(Component):
     Mag = StringProperty('')
     Diam = StringProperty('')
     Other = StringProperty('')
-    can_delete = BooleanProperty(True)
     otypes = DictProperty({})
 
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
@@ -206,20 +205,12 @@ class DSO(Component):
         otypes = Component.get('Catalogues').get_object_types()
         self.otypes = {k: v['name'] for k, v in otypes.items()}
         self.dso_panel = DSO_panel(self)
-        self.app.gui.add_widget(self.dso_panel)
-        self.del_button = MDRectangleFlatIconButton(
-            pos_hint={"center_y": .63},
-            icon='delete', 
-            text='delete user-defined DSO')
-        self.del_button.bind(on_press=self.delete_DSO)
-        self.app.gui.add_widget(self.del_button)
-        
+        self.app.gui.add_widget(self.dso_panel)        
 
     def on_new_object(self):
         ''' Called when user clicks new
         '''
         self.update_properties({})
-        self.can_delete = False
         self.orig_name = None
 
     def on_previous_object(self):
@@ -283,7 +274,8 @@ class DSO(Component):
 
     def change_name(self, settings, *args):
 
-        self.dialog.dismiss()
+        if hasattr(self, 'dialog'):
+            self.dialog.dismiss()
 
         # lookup all properties
         all_settings = Component.get('ObservingList').lookup_name(
@@ -295,7 +287,6 @@ class DSO(Component):
 
     def _cancel(self, *args):
         self.dialog.dismiss()
-
 
 
     ''' handle changes to DSO properties
@@ -311,8 +302,6 @@ class DSO(Component):
 
         # lookup all possible object types for this name
         OTs = Component.get('ObservingList').lookup_OTs(val)
-
-        self.can_delete = False
 
         # no match
         if len(OTs) == 0:
@@ -358,12 +347,6 @@ class DSO(Component):
         self.update_properties(
             Component.get('ObservingList').lookup_name(m), 
             update_name_field=False)
-
-        # check if we can allow delete of this entry
-        key = '{:}/{:}'.format(self.Name, self.OT).upper()
-        self.can_delete = Component.get('Catalogues').is_user_defined(key)
-
-
 
     def Con_changed(self, widget):
         ''' Ought to check constellation TLAs in future
@@ -436,7 +419,7 @@ class DSO(Component):
         # check if name/OT is already known
         ref_props = Component.get('ObservingList').lookup_name(key)
 
-        # not known, so can add but not delete
+        # not known
         if ref_props is None:
             if self.Name and self.OT:
                 self.app.gui.has_changed('DSO', True)
@@ -459,50 +442,44 @@ class DSO(Component):
         if self.orig_name is None:
             return False
         return '{:}/{:}'.format(self.Name, self.OT).upper() != self.orig_name
-
-    def on_can_delete(self, *args):
-        self.del_button.x = 0 if self.can_delete else -1000
  
-    def delete_DSO(self, *args):
-        ''' Remove current DSO from user objects list
-        '''
-        name = '{:}/{:}'.format(self.Name, self.OT).upper()
-        Component.get('Catalogues').delete_user_object(name)
-        self.on_new_object()
 
- 
+
     @logger.catch()
     def on_save_object(self):
-        ''' On saving we ensure that Name, OT and Con is saved as these 
-            appear in the previous object table; other props don't need to
-            be saved as they are looked up from the DSO database on each
-            load.
+        ''' If necessary update metadata and add new DSO to user catalogue
         '''
 
-        Component.get('Metadata').set({
-            'Name': self.Name.strip(), 
-            'OT': self.OT, 
-            'Con': self.Con
-            })
+        name, OT = self.Name.strip(), self.OT.strip()
 
-        # prepare props in canonical format
-        props = {
-            'Name': self.Name.strip(),
-            'OT': self.OT.strip(),
-            'Con': self.Con.strip(),
-            'RA': RA.parse(self.RA),
-            'Dec': Dec.parse(self.Dec),
-            'Diam': str_to_arcmin(self.Diam),
-            'Mag': str_to_float(self.Mag),
-            'Other': self.Other}
+        key = '{:}/{:}'.format(name, OT).upper()
+        ref_props = Component.get('ObservingList').lookup_name(key)
 
-        # get catalogue to check if anything has changed and update user objects if necc.
-        # Component.get('Catalogues').check_update(props)
+        ''' new object or some properties have changed
+        '''
+        if ref_props is None or self.has_any_property_changed(ref_props):
 
-        # better to do it like this
-        name = '{:}/{:}'.format(self.Name.strip(), self.OT.strip()).upper()
-        Component.get('Catalogues').update_user_objects(name, props)
+            # update metadata for new or changed object
+            Component.get('Metadata').set(
+                {'Name': name if name else 'anon', 
+                'OT': OT, 
+                'Con': self.Con.strip()})
 
+            myRA, myDec = RA.parse(self.RA), Dec.parse(self.Dec)
+
+            # must have name, OT, and well-formed RA and Dec
+            if name and OT and myRA is not None and myDec is not None:
+                Component.get('Catalogues').update_user_objects(key, {
+                    'Name': name,
+                    'OT': OT,
+                    'Con': self.Con.strip(),
+                    'RA': myRA,
+                    'Dec': myDec,
+                    'Diam': str_to_arcmin(self.Diam),
+                    'Mag': str_to_float(self.Mag),
+                    'Other': self.Other.strip()
+                    }
+                )
 
     def current_object_coordinates(self):
         ''' Called by platesolver

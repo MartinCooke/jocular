@@ -129,7 +129,6 @@ class Stacker(Component, Settings):
             exposure=0 if expo is None else expo, 
             sub_type=unique_member([s.sub_type for s in self.subs]), 
             filt=''.join({s.filter for s in self.subs}))
-
  
     def reset(self):
         # Called when we have a new object and when user clears stack

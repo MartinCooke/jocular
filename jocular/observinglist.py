@@ -99,7 +99,6 @@ class ObservingList(Component, Settings):
             for v in self.objects.values():
                 if v.get('Added', ''):
                     ol[v['Name']] = v['Added']
-            # ol = {v['Name']: v['Added'] for v in self.objects.values() if v['Added'] != ''}
             with open(self.app.get_path('observing_list.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
@@ -112,7 +111,6 @@ class ObservingList(Component, Settings):
             for v in self.objects.values():
                 if v.get('Notes', '').strip():
                     ol[v['Name']] = v['Notes']
-            #ol = {v['Name']: v['Notes'] for v in self.objects.values() if v['Notes'].strip() != ''}
             with open(self.app.get_path('observing_notes.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
@@ -228,7 +226,7 @@ class ObservingList(Component, Settings):
             name = v['Name']
             v['Obs'] = previous.get(name.lower(), 0)
             v['Added'] = observing_list.get(name, '')
-            v['List'] = 'Y' if name in observing_list else 'N'
+            v['List'] = 'Y' if name in observing_list else ''
             v['Notes'] = observing_notes.get(name, '')
             v['Other'] = v.get('Other', '')
 
@@ -258,6 +256,7 @@ class ObservingList(Component, Settings):
             'Obs': {'w': 40, 'type': int, 'field': 'Obs'},
             'List': {'w': 35},
             'Added': {'w': 65, 'sort': {'DateFormat': '%d %b'}},
+            'U': {'w': 25, 'align': 'center'},
             'Notes': {'w': 100, 'input': True},
             'Other': {'w': 1, 'align': 'left'},
         }
@@ -273,9 +272,17 @@ class ObservingList(Component, Settings):
         )
         ctrl.add_widget(
             CButton(
-                text='remove from list',
-                width=dp(130),
+                text='del from list',
+                width=dp(100),
                 on_press=self.remove_from_observing_list,
+            )
+        )
+
+        ctrl.add_widget(
+            CButton(
+                text='del from cat',
+                width=dp(100),
+                on_press=self.remove_from_catalogue,
             )
         )
 
@@ -294,7 +301,7 @@ class ObservingList(Component, Settings):
         )
         self.slider.bind(value=self.time_changed)
         self.time_field = TableLabel(
-            text=datetime.now().strftime('%d %B %H:%M'), size_hint_x=None, width=dp(160)
+            text=datetime.now().strftime('%d %b %H:%M'), size_hint_x=None, width=dp(160)
         )
         ctrl.add_widget(self.slider)
         ctrl.add_widget(self.time_field)
@@ -318,7 +325,7 @@ class ObservingList(Component, Settings):
         if hasattr(self, 'update_event'):
             self.update_event.cancel()
         t0 = datetime.now() + timedelta(seconds=3600 * value)
-        self.time_field.text = t0.strftime('%d %B %H:%M')
+        self.time_field.text = t0.strftime('%d %b %H:%M')
 
         sun_alt = sun_altitude(t0, self.latitude, self.longitude)
         self.sun_time.text = 'sun: {:3.0f}\u00b0'.format(sun_alt)
@@ -350,7 +357,11 @@ class ObservingList(Component, Settings):
         # User selects a row in the observing list table
         name = row.fields['Name'].text + '/' + row.fields['OT'].text
         self.table.hide()
-        Component.get('DSO').new_DSO_name(self.lookup_name(name))
+        res = self.lookup_name(name)
+        if res is not None:
+            Component.get('DSO').new_DSO_name(res)
+        else:
+            toast('Cannot find {:} in database'.format(name))
 
     def add_to_observing_list(self, *args):
         dn = datetime.now().strftime('%d %b')
@@ -363,9 +374,22 @@ class ObservingList(Component, Settings):
     def remove_from_observing_list(self, *args):
         for s in self.table.selected:
             self.objects[s]['Added'] = ''
-            self.objects[s]['List'] = 'N'
+            self.objects[s]['List'] = ''
         logger.info('removed {:} objects'.format(len(self.table.selected)))
         self.update_list()
+
+    def remove_from_catalogue(self, *args):
+        ''' Remove current DSO from user objects list
+        '''
+        catas = Component.get('Catalogues')
+        for s in self.table.selected:
+            obj = self.objects[s]
+            # only delete if a user defined object
+            if obj['U'] == 'Y':
+                name = '{:}/{:}'.format(obj['Name'], obj['OT']).upper()
+                catas.delete_user_object(name)
+        self.update_list()
+
 
     def new_observation(self):
         OT = Component.get('Metadata').get('OT', '')
@@ -437,7 +461,6 @@ class ObservingList(Component, Settings):
         if not hasattr(self, 'objects'):
             self.load()
 
-        # return self.objects.get(name.upper(), {})
         return self.objects.get(name.upper(), None)
 
     def lookup_OTs(self, name):

@@ -120,7 +120,7 @@ class Observations(Component):
         sesh = Component.get('ObjectIO').session_dir
         for dso in glob.glob(os.path.join(sesh, '*')):
             if os.path.isdir(dso):
-                # remove any empty observation directories
+                # remove any empty observation directories
                 if len(os.listdir(dso)) == 0:
                     try:
                         os.rmdir(dso)

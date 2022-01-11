@@ -142,6 +142,7 @@ class Catalogues(Component, Settings):
                     for d in reader:
                         nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
                         self.dsos[nm] = d
+                        self.dsos[nm]['U'] = ''
 
         logger.info('loaded {:} DSOs from {:} catalogues'.format(
             len(self.dsos), len(shipped + usercats)))
@@ -155,7 +156,9 @@ class Catalogues(Component, Settings):
 
         # cause user objects to overwrite
         for k, v in self.user_objects.items():
-            self.dsos[k.upper()] = v
+            nm = k.upper()
+            self.dsos[nm] = v
+            self.dsos[nm]['U'] = 'Y'
 
         # ensure all fields are present and consistent
         for v in self.dsos.values():
@@ -173,32 +176,22 @@ class Catalogues(Component, Settings):
         return key in self.user_objects
 
     def update_user_objects(self, name, props):
-        ''' User has specified that DSO should be added or edited
-            by clicking update DSOs on GUI. Input props is
-            a dictionary of properties (RA/Dec etc) that have been
-            converted into canonical form in DSO prior to call
+        ''' Called from DSO when object is saved and is new or altered
         '''
 
-        if 'Name' in props and 'OT' in props:
-            name = '{:}/{:}'.format(props['Name'], props['OT']).upper()
-        else:
-            logger.debug('Not updating catalogue as one of Name or OT is missing')
-            return
-
-        logger.debug('name {:} props {:}'.format(name, props))
-        logger.debug(self.user_objects)
-
-        # add to user objects and save
+        # add/update to user objects
         self.user_objects[name] = props
 
         try:
             with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
                 json.dump(self.user_objects, f, indent=1)
+            logger.info('{:} {:}'.format(name, props))
         except Exception as e:
             logger.warning('Unable to save user_objects.json ({:})'.format(e))
 
         # update main DSO list
         self.dsos[name] = props
+        self.dsos[name]['U'] = 'Y'
 
     def delete_user_object(self, name):
         ''' Remove user object both online and offline
