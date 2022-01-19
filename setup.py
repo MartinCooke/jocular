@@ -30,7 +30,7 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'numpy>=1.20.1',
-        'scikit-image>=0.18.1',  # numerous image ops
+        'scikit-image>=0.19.1',  # numerous image ops
         'kivy>=2.0.0',  # main GUI framework
         'kivymd>=0.104.2', # kivy material design widgets
         'astropy>=4.2',  # fits etc
@@ -38,7 +38,7 @@ setup(
         'pyusb>=1.1.1',  # camera
         'hidapi>=0.10.1',  # filterwheel
         'colour-demosaicing>=0.1.6', # debayering,
-        'zwoasi', # wrapper for ZWO cameras 
+        'zwoasi>=0.0.22', # wrapper for ZWO cameras 
         'loguru>=0.5.3' # logging
     ],
     entry_points='''
