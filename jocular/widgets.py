@@ -22,6 +22,8 @@ from kivy.vector import Vector
 
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
+
+# for now
 from kivymd.uix.textfield import MDTextField
 from kivy.uix.behaviors import ToggleButtonBehavior
 from kivymd.uix.button import MDFlatButton
@@ -150,24 +152,30 @@ Builder.load_string(
 <TextInputC>:
     padding: [5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines)]
 
+# this works with the kivymd master
 <JTextField>:
     size_hint: (None, None)
     # height: '40dp'
     width: '140dp'
     #helper_text_mode: "on_error"
+    
     line_color_normal: 0, 0, 0, 0
-    #text_color: app.theme_cls.accent_color
+        
+    foreground_color: app.theme_cls.accent_color
+
     #text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text) else app.theme_cls.accent_color
     text_color_normal: app.theme_cls.accent_color
-    #text_color_normal: app.theme_cls.accent_color
     font_size: app.form_font_size # '20sp'
     # hint_text_color_normal: app.hint_color
     on_text: root.invalid = False
+
+    # for latest kivymd these two lines produce coloured text
     fill_color_normal: .1, 0, 0, 0
     fill_color_focus: .1, 0, 0, .1
     hint_text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text.strip()) else app.hint_color
     mode: 'fill'
     spacing: dp(2)
+
 
 # I can't get KivyMD toggle behavior to work so this is my implementation
 <JMDToggleButton>:
