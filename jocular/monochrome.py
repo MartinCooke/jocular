@@ -52,7 +52,6 @@ class Monochrome(Component):
     def on_p1(self, *args):
         self.adjust_lum()
 
-
     def on_white(self, *args):
         self.adjust_lum()
 
@@ -201,6 +200,7 @@ class Monochrome(Component):
                 self.image_stats_fields[s].text = "{:}: {:.1f}%".format(
                     s, 100 * stats[s]
                 )
+            # self.white = float(stats['99.9 percentile'])
 
     #  use kv for these?
     def make_image_stats_panel(self):

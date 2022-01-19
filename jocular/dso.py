@@ -10,8 +10,6 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import StringProperty, BooleanProperty, DictProperty
 from kivy.lang import Builder
-from kivymd.uix.stacklayout import MDStackLayout
-from kivymd.uix.button import MDRectangleFlatButton, MDRectangleFlatIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
@@ -27,7 +25,7 @@ Builder.load_string('''
 
 <DSO_panel>:
     name_field: _name
-    type_field: _type_field
+    ot_field: _ot
     padding: '10dp'
     adaptive_height: True
     pos_hint: {'top': .99, 'x': 0} if root.dso.show_DSO else {'top': .99, 'right': -1000} 
@@ -48,7 +46,7 @@ Builder.load_string('''
 
     DSOBoxLayout:
         JTextField:
-            id: _type_field
+            id: _ot
             hint_text: 'type'
             #helper_text: 'e.g. PN, GX'
             on_focus: root.dso.OT_changed(self) if not self.focus else None
@@ -57,39 +55,39 @@ Builder.load_string('''
             width: '140dp'
             hint_text: 'con'
             #helper_text: 'e.g. PER'
-            on_text: root.dso.Con_changed(self)
+            on_text: root.dso.prop_changed(self, 'Con')
             text: root.dso.Con
 
     DSOBoxLayout:
         JTextField:
             hint_text: 'RA'
             #helper_text: "e.g. 21h30'42"
-            on_text: root.dso.RA_changed(self)
+            on_text: root.dso.prop_changed(self, 'RA', update=False)
             text: '' if root.dso.RA == 'nan' else root.dso.RA
-            on_focus: root.dso.RA_changed(self, defocus=True) if not self.focus else None
+            on_focus: root.dso.prop_changed(self, 'RA') if not self.focus else None
 
         JTextField:
             width: '130dp'
             hint_text: 'dec'
             #helper_text: "-3 21' 4"
-            on_text: root.dso.Dec_changed(self)
+            on_text: root.dso.prop_changed(self, 'Dec', update=False)
             text: '' if root.dso.Dec == 'nan' else root.dso.Dec
-            on_focus: root.dso.Dec_changed(self, defocus=True) if not self.focus else None
+            on_focus: root.dso.prop_changed(self, 'Dec') if not self.focus else None
 
     DSOBoxLayout:
         JTextField:
             hint_text: 'diam'
             #helper_text: "e.g. 21'"
-            on_text: root.dso.Diam_changed(self)
+            on_text: root.dso.prop_changed(self, 'Diam', update=False)
             text: '' if root.dso.Diam == 'nan' else root.dso.Diam
-            on_focus: root.dso.Diam_changed(self, defocus=True) if not self.focus else None
+            on_focus: root.dso.prop_changed(self, 'Diam') if not self.focus else None
 
         JTextField:
             width: '110dp'
             hint_text: 'mag'
             #helper_text: "e.g. 14.1"
-            #on_focus: root.dso.Mag_changed(self) if not self.focus else None
-            on_text: root.dso.Mag_changed(self)
+            # on_focus: root.dso.prop_changed(self, 'Mag') if not self.focus else None
+            on_text: root.dso.prop_changed(self, 'Mag')
             text: '' if root.dso.Mag == 'nan' else root.dso.Mag
 
     DSOBoxLayout:
@@ -98,7 +96,7 @@ Builder.load_string('''
             hint_text: 'other'
             #helper_text: ""
             text: root.dso.Other
-            on_text: root.dso.Other_changed(self)
+            on_text: root.dso.prop_changed(self, 'Other')
 
 ''')
 
@@ -109,11 +107,9 @@ def prop_to_str(prop, val):
     if prop in {'Con', 'Name', 'OT', 'Other'}:
         return val
     if prop == 'RA':
-        return str(RA(val))
+        return str(RA(val)) if val else ''
     if prop == 'Dec':
-        if val == '':
-            return ''
-        return str(Dec(val))
+        return str(Dec(val)) if val else ''
     if prop == 'Mag':
         return float_to_str(val)
     if prop == 'Diam':
@@ -169,6 +165,36 @@ def arcmin_to_str(diam):
     return "{:.2f}\'".format(diam)
 
 
+def validated_prop(val, prop):
+    ''' is val a valid property of type prop
+    '''
+    if prop == 'OT':
+        return None if len(val) != 2 else val
+    if prop == 'Con':
+        return None if len(val) != 3 else val
+    if prop == 'RA':
+        RA_deg = RA.parse(val)        
+        return None if RA_deg is None else str(RA(RA_deg))
+    if prop == 'Dec':
+        Dec_deg = Dec.parse(val)
+        return None if Dec_deg is None else str(Dec(Dec_deg))
+    if prop == 'Mag':
+        try:
+            return str(float(val))
+        except:
+            return None
+    if prop == 'Diam':
+        try:
+            diam_str = str_to_arcmin(val)
+            return arcmin_to_str(diam_str)
+        except:
+            return None
+    if prop == 'Other':
+        return val
+    return False
+
+
+
 ''' Main classes here
 '''
 
@@ -193,16 +219,18 @@ class DSO(Component):
     Diam = StringProperty('')
     Other = StringProperty('')
     otypes = DictProperty({})
+    updating = BooleanProperty(False)
+    original_props = DictProperty(None, allownone=True)
 
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
     show_DSO = BooleanProperty(False)
-    # check_ambiguity = BooleanProperty(False) # check for ambiguous Names e.g. PN/GG
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        otypes = Component.get('Catalogues').get_object_types()
+        self.cats = Component.get('Catalogues')
+        otypes = self.cats.get_object_types()
         self.otypes = {k: v['name'] for k, v in otypes.items()}
         self.dso_panel = DSO_panel(self)
         self.app.gui.add_widget(self.dso_panel)        
@@ -211,21 +239,17 @@ class DSO(Component):
         ''' Called when user clicks new
         '''
         self.update_properties({})
-        self.orig_name = None
+        self.original_props = {}
 
     def on_previous_object(self):
         ''' User selected an object in observations table
         '''
 
         # get data for object from Metadata
-        md = Component.get('Metadata').get({'Name', 'OT'})
-
-        # store original name so we can see if has been changed later
-        self.orig_name = '{:}/{:}'.format(md.get('Name', ''), md.get('OT', ''))
+        md = Component.get('Metadata').get(self.props)
 
         # lookup using name and object type
-        reference_settings = Component.get('ObservingList').lookup_name(
-            self.orig_name)
+        reference_settings = self.cats.lookup(md.get('Name', ''), OT=md.get('OT', ''))
 
         # use ref settings if available, else Name/OT from metadata
         settings = md if reference_settings is None else reference_settings
@@ -233,30 +257,36 @@ class DSO(Component):
         # update all properties which causes screen updates
         self.update_properties(settings)
 
-        logger.info('loading DSO')
+        # store original props so as to be able to spot changes
+        self.original_props = settings
+
         for p, val in settings.items():
             logger.info('{:} = {:}'.format(p, val))
 
-
-
-    def update_properties(self, props, update_name_field=True):
+    def update_properties(self, props, update_name=True, update_OT=True):
         ''' Fill in fields with properties
         '''
 
-        for p in self.props:
+        if props is None:
+            return
+
+        self.updating = True
+        for p in set(self.props):
             setattr(self, p, prop_to_str(p, props.get(p, '')))
-
-        if update_name_field:
+        if update_name:
             self.dso_panel.name_field.text = self.Name
-
-
+        if update_OT:
+            self.dso_panel.ot_field.text = self.OT
+        self.updating = False
+ 
     def new_DSO_name(self, settings):
         ''' Called from ObservingList when user selects a name from the DSO table. 
         '''
         
         # if we already have a name and a non-empty stack, ask user to confirm
-        if not Component.get('Stacker').is_empty() and self.Name:
-            change = 'from {:} to {:}'.format(self.Name, settings.get('Name',''))
+        new_name = settings.get('Name','')
+        if not Component.get('Stacker').is_empty() and self.Name and self.Name != new_name:
+            change = 'from {:} to {:}'.format(self.Name, new_name)
             self.dialog = MDDialog(
                 auto_dismiss=False,
                 text="Are you sure you wish to change the name of the current DSO\n" + change,
@@ -277,209 +307,105 @@ class DSO(Component):
         if hasattr(self, 'dialog'):
             self.dialog.dismiss()
 
-        # lookup all properties
-        all_settings = Component.get('ObservingList').lookup_name(
-            '{:}/{:}'.format(settings.get('Name', ''), settings.get('OT', '')))
- 
-        # update DSO properties
-        self.update_properties(all_settings, update_name_field=True)
-
+        # update properties
+        self.update_properties(self.cats.lookup(
+            settings.get('Name', ''), OT=settings.get('OT', '')))
 
     def _cancel(self, *args):
         self.dialog.dismiss()
-
-
-    ''' handle changes to DSO properties
-    '''
 
     def Name_changed(self, val, *args):
         ''' Name is changed as soon as the text is altered to allow lookup
         '''
 
-        # don't do any lookups if we are initialising 
-        # if not self.check_ambiguity:
-        #    return
+        if self.updating:
+            return
 
-        # lookup all possible object types for this name
-        OTs = Component.get('ObservingList').lookup_OTs(val)
-
-        # no match
-        if len(OTs) == 0:
-            self.Name = val
-
-        # unique match, fill in
-        elif len(OTs) ==  1:
-            self.exact_match(val + '/' + OTs[0])
-
-        # ambiguous OT, so present alternatives
+        matches = self.cats.lookup(val)
+        if matches is None:
+            self.update_properties({}, update_name=False)
         else:
-            self.choose_OT = MDStackLayout(pos_hint={'x': .1, 'top': .98}, spacing=[20, 20])
-            self.app.gui.add_widget(self.choose_OT)
-            for ot in OTs:
-                self.choose_OT.add_widget(MDRaisedButton(text=ot,
-                    on_press=partial(self.exact_match, val + '/' + ot)))
-        self.check_for_change()
+            logger.debug('Found match: {:}'.format(matches))
+            self.update_properties(matches)
+        self.Name = val
+        # self.check_for_change()
 
     def OT_changed(self, widget):
-        ''' For the moment we allow any object type but in the future
-            could check if one of known types and allow user to
-            introduce a new type via a dialog
+        ''' Allow any object type of 1-3 chars
         '''
+
+        if self.updating:
+            return
+
+        widget.invalid = False
         ot = widget.text.upper()
         widget.invalid = len(ot) > 3
         if not widget.invalid:
             self.OT = ot
-            # lookup object
-            key = '{:}/{:}'.format(self.Name, ot).upper()
-            props = Component.get('ObservingList').lookup_name(key)
+            props = self.cats.lookup(self.Name, OT=ot)
             if props is not None:
                 self.update_properties(props)
         self.check_for_change()
 
-    def exact_match(self, m, *args):
-        ''' We have exact match for DSO (name/OT) so clear any OT choice
-            widgets and update values
-        '''
-        if hasattr(self, 'choose_OT'):
-            self.choose_OT.clear_widgets()
-            del self.choose_OT
-        logger.debug('Found match: {:}'.format(m))
-        self.update_properties(
-            Component.get('ObservingList').lookup_name(m), 
-            update_name_field=False)
-
-    def Con_changed(self, widget):
-        ''' Ought to check constellation TLAs in future
-        '''
-        widget.invalid = len(widget.text) != 3
-        if not widget.invalid:
-            self.Con = widget.text
+    def prop_changed(self, widget, prop, update=True):
+        if self.updating:
+            return
+        self.updating = True
+        widget.invalid = False
+        val = widget.text.strip()
+        if val == '':
+            widget.text = '='
+            widget.text = ''
+            setattr(self, prop, val)
+        else:
+            valid_prop = validated_prop(val, prop)
+            widget.invalid = valid_prop is None
+            if valid_prop is not None:
+                if update:
+                    setattr(self, prop, valid_prop)
         self.check_for_change()
-
-    def RA_changed(self, widget, defocus=False):
-        ''' Signal RA format errors immediately, and
-            convert to canonical form on defocus
-        '''
-        RA_str = widget.text.strip()
-        if RA_str != '':
-            RA_deg = RA.parse(RA_str)
-            widget.invalid = RA.parse(RA_str) is None 
-            if defocus and not widget.invalid:
-                self.RA = str(RA(RA_deg))
-                self.check_for_change()
-
-    def Dec_changed(self, widget, defocus=False):
-        Dec_str = widget.text.strip()
-        if Dec_str != '':
-            Dec_deg = Dec.parse(Dec_str)
-            widget.invalid = Dec.parse(Dec_str) is None
-            if defocus and not widget.invalid:
-                self.Dec = str(Dec(Dec_deg))
-                self.check_for_change()
-
-    def Mag_changed(self, widget):
-        ''' should be a int or float
-        '''
-        mag_str = widget.text.strip()
-        try:
-            float(mag_str)
-            self.Mag = mag_str
-            widget.invalid = False
-            self.check_for_change()
-        except:
-            widget.invalid = True
-
-    def Diam_changed(self, widget, defocus=False):
-        ''' Suffix can be d or degree symbol, ' or "
-            assume arcmin if no suffix
-        '''
-
-        diam = widget.text.strip()
-        try:
-            diam_str = str_to_arcmin(diam)
-            widget.invalid = False
-            if defocus:
-                self.Diam = arcmin_to_str(diam_str)
-                self.check_for_change()
-        except:
-            widget.invalid = True
-
-    def Other_changed(self, widget):
-        self.Other = widget.text.strip()
-        self.check_for_change()
+        self.updating = False
 
 
     def check_for_change(self):
-        ''' Extract properties for current object by looking up on database
-            each time, and compare with current properties
+        ''' Compare original with current properties
         '''
 
-        key = '{:}/{:}'.format(self.Name, self.OT).upper()
-
-        # check if name/OT is already known
-        ref_props = Component.get('ObservingList').lookup_name(key)
-
-        # not known
-        if ref_props is None:
-            if self.Name and self.OT:
-                self.app.gui.has_changed('DSO', True)
-        else:
-            self.app.gui.has_changed('DSO', self.has_any_property_changed(ref_props))
-
-    def has_any_property_changed(self, props):
-        ''' Check if there has been any change; has to be
-            done carefully due to format conversions
-        '''
-
-        for p in self.props:
-            if p in props:
-                # print(p, prop_to_str(p, getattr(self, p)), prop_to_str(p, props[p]), end='')
-                if prop_to_str(p, getattr(self, p)) != prop_to_str(p, props[p]):
-                    # print(p, 'changed')
-                    return True
-
-        # also signal change if the current name has been changed
-        if self.orig_name is None:
-            return False
-        return '{:}/{:}'.format(self.Name, self.OT).upper() != self.orig_name
+        orig = {p: prop_to_str(p, self.original_props.get(p, '')) for p in  self.props}
+        now = {p: prop_to_str(p, getattr(self, p)) for p in self.props}
+        self.app.gui.has_changed('DSO', orig != now)
+        return orig != now
  
-
-
-    @logger.catch()
     def on_save_object(self):
-        ''' If necessary update metadata and add new DSO to user catalogue
+        ''' Update metadata and add any new or changed DSO to user catalogue
         '''
 
-        name, OT = self.Name.strip(), self.OT.strip()
+        props = {
+            'Name': self.Name.strip(),
+            'OT': self.OT.strip(),
+            'RA': RA.parse(self.RA),
+            'Dec': Dec.parse(self.Dec),
+            'Con': self.Con.strip(),
+            'Diam': str_to_arcmin(self.Diam),
+            'Mag': str_to_float(self.Mag),
+            'Other': self.Other.strip()
+            }
 
-        key = '{:}/{:}'.format(name, OT).upper()
-        ref_props = Component.get('ObservingList').lookup_name(key)
+        # existing object and not changed => do nothing
+        if not self.check_for_change() and self.cats.lookup(props['Name'], OT=props['OT']) is not None:
+            return
+ 
+        ''' add to user DSO catalogue if new or modified and has 
+            well-formed name/OT/RA/Dec
+        ''' 
+        if props['Name'] and props['OT'] and props['RA'] is not None and props['Dec'] is not None:
+            self.cats.update_user_object(props)
+ 
+        # update metadata
+        if props['Name'] == '':
+            props['Name'] = 'anon'
+        Component.get('Metadata').set(props)
 
-        ''' new object or some properties have changed
-        '''
-        if ref_props is None or self.has_any_property_changed(ref_props):
-
-            # update metadata for new or changed object
-            Component.get('Metadata').set(
-                {'Name': name if name else 'anon', 
-                'OT': OT, 
-                'Con': self.Con.strip()})
-
-            myRA, myDec = RA.parse(self.RA), Dec.parse(self.Dec)
-
-            # must have name, OT, and well-formed RA and Dec
-            if name and OT and myRA is not None and myDec is not None:
-                Component.get('Catalogues').update_user_objects(key, {
-                    'Name': name,
-                    'OT': OT,
-                    'Con': self.Con.strip(),
-                    'RA': myRA,
-                    'Dec': myDec,
-                    'Diam': str_to_arcmin(self.Diam),
-                    'Mag': str_to_float(self.Mag),
-                    'Other': self.Other.strip()
-                    }
-                )
 
     def current_object_coordinates(self):
         ''' Called by platesolver

@@ -4,6 +4,7 @@
 import math
 from math import radians
 
+from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.uix.label import Label
@@ -18,11 +19,10 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
+
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.behaviors import HoverBehavior
-from kivymd.uix.tooltip import MDTooltip
 from kivy.uix.behaviors import ToggleButtonBehavior
 from kivymd.uix.button import MDFlatButton
 
@@ -77,18 +77,62 @@ Builder.load_string(
 <JToggleButton>:
     color: app.theme_cls.accent_color if self.state == 'down' else app.lowlight_color
 
+# panel for central region of eyepiece; provides contents and header
+# need to make it scrollable!
 <Panel>:
+    header: _header
+    contents: _contents
     canvas:
         Color:
-            rgba: .2, .2, .2, .8
-        Rectangle:
-            pos: self.pos
-            size: self.width, self.height
-    padding: 20, 20
+            rgba: .2, .2, .2, .7
+        Ellipse:
+            pos: self.x + dp(58) + (self.width - self.height) / 2, dp(58)
+            size: self.height - dp(116), self.height - dp(116)
     orientation: 'vertical'
-    size_hint: None, None
-    size: dp(450), dp(450)
     pos_hint: {'center_x': 10, 'center_y': .5}
+    size_hint: None, None
+    # padding at top to avoid ring
+    Label:
+        size_hint: 1, None
+        height: dp(75)
+    BoxLayout:
+        size_hint: 1, None
+        height: dp(35)
+        orientation: 'horizontal'
+        Label:
+            size_hint: 1, 1
+        BoxLayout:
+            id: _header
+            size_hint: None, 1
+            width: dp(200)
+            #font_size: '20sp'
+            #text: root.title
+        Label:
+            size_hint: 1, 1
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, 1
+        Label:
+            size_hint: 1, 1
+        BoxLayout:
+            canvas.before:
+                Color:
+                    rgb: 1, 0, 0
+                    a: 0
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            id: _contents
+            orientation: 'vertical'
+            size_hint: None, 1
+            width: dp(500)
+        Label:
+            size_hint: 1, 1
+
+    # padding at base to avoid ring
+    Label:
+        size_hint: 1, None
+        height: dp(100)
 
 <LabelR>:
     halign: 'right'
@@ -121,7 +165,7 @@ Builder.load_string(
     on_text: root.invalid = False
     fill_color_normal: .1, 0, 0, 0
     fill_color_focus: .1, 0, 0, .1
-    hint_text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text != '') else app.hint_color
+    hint_text_color_normal: [1, 0, 0, 1] if (root.invalid and self.text.strip()) else app.hint_color
     mode: 'fill'
     spacing: dp(2)
 
@@ -133,23 +177,19 @@ Builder.load_string(
     #tooltip_display_delay: app.tooltip_delay
     shift_y: dp(40)
     height: dp(36)
+    md_bg_color: .25, .25, .25, 1
 
 ''')
 
 class JMDToggleButton(MDFlatButton, ToggleButtonBehavior): # , MDTooltip):
     def on_state(self, widget, value):
         if value == 'down':
-            widget.md_bg_color = .4, .4, .4, 1
+            widget.md_bg_color = .45, .45, .45, 1
         else:
-            widget.md_bg_color = .17, .17, .17, 1
-
+            widget.md_bg_color = .25, .25, .25, 1
 
 class JTextField(MDTextField):
     invalid = BooleanProperty(False)
-
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
-    #     self.theme_cls.bind()
 
 class TextInputC(TextInput):
     pass
@@ -160,17 +200,41 @@ class LabelR(Label):
 class LabelL(Label): 
     pass
 
-class Panel(BoxLayout, HoverBehavior):
+class Panel(BoxLayout):
     ''' Represents the centre panel used for config/choosers etc
     '''
 
+    contents = ObjectProperty(None)
+    header = ObjectProperty(None)
+    hovered = BooleanProperty(False)
+    title = StringProperty('')
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        Window.bind(mouse_pos=self.on_mouse_pos)
+
     def show(self, *args):
         self.on_show()
-        self.pos_hint = {'center_x': .5, 'center_y': .5}       
+        self.pos_hint = {'center_x': .5, 'center_y': .5}  
+        width, height = Window.size
+        self.width = height
+        self.height = height  
 
     def hide(self, *args):
         self.on_hide()
         self.pos_hint = {'center_x': 10, 'center_y': .5}       
+
+    def on_mouse_pos(self, *args):
+        # code from Hoverable by Olivier Poyen
+        if not self.get_root_window():
+            return
+        pos = args[1]
+        inside = self.collide_point(*self.to_widget(*pos))
+        if self.hovered == inside:
+            return
+        self.hovered = inside
+        if not inside:
+            self.on_leave()
 
     def on_show(self):
         pass

@@ -25,14 +25,32 @@ def fits_in_dir(path):
     fits = {f: os.path.getmtime(f) for f in fits}
     return sorted(fits, key=fits.get)
 
-# to do: add creation date
-def save_image(data=None, path=None, exposure=None, filt='L', sub_type='light', 
-        nsubs=None, temperature=None):
-    # saves sub or master
+
+def save_image(data=None, path=None, capture_props=None):
+    ''' saves sub or master
+        capture_props is a dict of additional keys/values to save e.g. gain
+    '''
+    dupes = [
+        ('SUBTYPE', 'IMAGETYP'),
+        ('EXPOSURE', 'EXPTIME'), 
+        ('CAMERA', 'INSTRUME'), 
+        ('NSUBS', 'STACKCNT'),
+        ('BINNING', 'XBINNING'),
+        ('BINNING', 'YBINNING'),
+        ('TEMPERAT', 'CCD-TEMP')
+    ]
+
+    exposure = capture_props.get('exposure', None)
+    sub_type = capture_props.get('sub_type', 'L')
+    filt = capture_props.get('filter', 'L')
+    temperature = capture_props.get('temperature', None)
+    nsubs = capture_props.get('nsubs', None)
+
     try:
         hdu = fits.PrimaryHDU(data)
         hdr = hdu.header
         hdr['CREATOR'] = ('Jocular', __version__)
+        hdr['DATE-OBS'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
         if exposure is not None:
             hdr['EXPOSURE'] = (exposure, 'seconds')
         if sub_type in {'master dark', 'master bias'}:
@@ -44,10 +62,22 @@ def save_image(data=None, path=None, exposure=None, filt='L', sub_type='light',
             hdr['TEMPERAT'] = temperature
         if nsubs is not None:
             hdr['NSUBS'] = nsubs 
+
+        # add any other keys that are not in the header
+        for k, v in capture_props.items():
+            if v is not None and k.upper() not in hdr:
+                hdr[k.upper()] = v
+
+        # duplicate values for alternative keys
+        for key, altkey in dupes:
+            if key in hdr:
+                hdr[altkey] = hdr[key]
+
         hdu.writeto(path, overwrite=True)
         logger.info('saved {:}'.format(path))
         for k, v in hdr.items():
             logger.trace('{:9s} = {:}'.format(k, v))
+
     except Exception as e:
         logger.warning('unable to save to {:} ({:})'.format(path, e))
 
@@ -74,7 +104,8 @@ class Image:
     # map from various FITS header names to Image attribute names
     hmap = {
         'exposure': 'exposure', 'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
-        'filter': 'filter', 'filt': 'filter',
+        'filter': 'filter', 'filt': 'filter', 'gain': 'gain', 'camera': 'camera', 'offset': 'offset',
+        'ROI': 'ROI', 'roi': 'ROI', 'binning': 'binning',
         'subtype': 'sub_type', 'sub_type': 'sub_type', 'imagetyp': 'sub_type',
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
         'nsubs': 'nsubs', 'stackcnt': 'nsubs'}
@@ -84,6 +115,20 @@ class Image:
         'blue': 'B', 'dark': 'dark',  
         'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII',
         'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
+
+    # default props
+    default_props = {
+        'exposure': None, 
+        'sub_type': 'light', 
+        'filter': 'L', 
+        'temperature': None,
+        'gain': None,
+        'offset': None,
+        'camera': None,
+        'binning': None,
+        'ROI': None,
+        'nsubs': None}
+
 
 
     def __init__(self, path=None, verbose=False, check_image_data=False):
@@ -114,6 +159,11 @@ class Image:
             self.image = None
             raise ImageNotReadyException('Cannot read fits header for {:}'.format(path))
 
+
+        if verbose:
+            for k, v in hdr.items():
+                logger.trace('{:9s} = {:}'.format(k, v))
+
         # check for a well-formed image (new in v0.5)
         if self.image is not None:
             shape = self.image.shape
@@ -138,14 +188,6 @@ class Image:
         except Exception as e:
             logger.exception(e)
 
-        # default values (these will get overriden if they exist in name or FITs)
-        default_props = {
-            'exposure': None, 
-            'sub_type': 'light', 
-            'filter': 'L', 
-            'temperature': None,
-            'nsubs': None}
-
         # extract any relevant information from FITs header
         fits_props = {}
         for k, v in hdr.items():
@@ -169,10 +211,9 @@ class Image:
             name_props = self.parse_sub(self.name)
 
         # form properties by overriding
-        props = {**default_props, **name_props, **fits_props}
+        props = {**self.default_props, **name_props, **fits_props}
 
-        # rationalise properties as well as possible
-
+        # rationalise properties
         try:
             if props['exposure'] is not None:
                 try:
@@ -217,18 +258,16 @@ class Image:
             logger.exception(e)
 
         # now assign relevant properties (and some defaults) to Sub
-        self.exposure = props['exposure']
-        self.filter = props['filter']
-        self.temperature = props['temperature']
-        self.nsubs = props['nsubs']
-        self.sub_type = props['sub_type']
+        for p in self.default_props.keys():
+            setattr(self, p, props[p])
 
         self.status = 'select'
         self.arrival_time = int(time.time())
         self.keyframe = False
         self.calibrations = {'dark': False, 'flat': False, 'bias': False}
 
-        if verbose:
+        # if verbose:
+        if True:
             self.describe(fits_props=fits_props, name_props=name_props)
 
     def describe(self, fits_props=None, name_props=None):
@@ -239,18 +278,20 @@ class Image:
         else:
             logger.debug('{:} Sub {:}'.format(created_by, self.name))
         im = self.get_image()
-        logger.debug('{:9s} {:14s} ({:} days) {:5s} expo {:} filt {:} {:} {:}'.format(
+        logger.trace('{:9s} {:14s} ({:} days) {:5s} expo {:} filt {:} gain {:} bin {:} {:} {:}'.format(
             self.shape_str, 
             self.create_time.strftime('%d %b %y %H:%M'),
             self.age,
             self.sub_type,
             self.exposure,
             self.filter,
+            'no' if self.gain is None else self.gain,
+            self.binning,
             str(self.temperature) + 'C' if self.temperature is not None else '',
             str(self.nsubs) + ' subs in master' if self.nsubs is not None else ''))
-        logger.debug('from FITS: {:}'.format(fits_props))
-        logger.debug('from name: {:}'.format(name_props))
-        logger.debug('min {:.4f} max {:.4f} mean {:.4f}'.format(
+        logger.trace('from FITS: {:}'.format(fits_props))
+        logger.trace('from name: {:}'.format(name_props))
+        logger.trace('min {:.4f} max {:.4f} mean {:.4f}'.format(
             np.min(im), np.max(im), np.mean(im)))
 
 

@@ -25,7 +25,6 @@ from jocular.utils import angle360
 from jocular.component import Component
 from jocular.metrics import Metrics
 from jocular.ring import Ring
-# from jocular.reticle import Reticle
 from jocular.widgets import jicon
 from jocular.utils import get_datadir, start_logging
 
@@ -167,7 +166,7 @@ class GUI(FloatLayout):
 		thickness = Metrics.get('ring_thickness')
 
 		# location of capture 'saddle'
-		angle = [-10, 8]
+		angle = [-11, 9]
 		min_a, max_a = angle360(90 - angle[0]), angle360(90 - angle[1])
 		greys = {'background': .02, 'outer': .2, 'middle': .17, 'inner': .12, 'image': 0, 'capture_ring': .2}
 		start_angle = {'capture_ring': angle360(min(min_a, max_a))}
@@ -234,10 +233,11 @@ class GUI(FloatLayout):
 
 		logger.info('starting to load components')
 
-		for c in ['Status', 'Appearance', 'Metadata', 'Catalogues', 'Notes', 'DSO', 'Session', 'Stacker', 
-			'Capture', 'CaptureScript', 'Observations', 'ObservingList', 'Monochrome',
-			'MultiSpectral', 'ObjectIO', 'Aligner', 
-			'DeviceManager', 'Camera', 'FilterWheel', 'Telescope', 
+		for c in ['Status', 'Appearance', 'Metadata', 'Catalogues', 
+			'Notes', 'DSO', 'Session', 'Stacker', 
+			'Capture', 'CaptureScript', 'Observations', 'ObservingList', 
+			'Monochrome', 'MultiSpectral', 'ObjectIO', 'Aligner',
+			'DeviceManager', 'Camera', 'FilterWheel', 
 			'ExposureChooser', 'FilterChooser', 'SettingsManager',
 			'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator']:
 			Component.get(c)
@@ -530,15 +530,6 @@ class GUI(FloatLayout):
 		'''
 		pass # actually done in Component now
 
-
-	# def on_touch_down(self, touch):
-	# 	print('on touch down')
-	# 	return False
-		# if not self.disabled and self.collide_point(*touch.pos):
-		#     self.selected = True
-		#     return True
-		# return False
-
 	@logger.catch()
 	def has_changed(self, component, value):
 		logger.debug('changed {:} {:}'.format(component, value))
@@ -565,9 +556,6 @@ class GUI(FloatLayout):
 			spec = self.gui['new_DSO']
 			if spec['widget'].text.endswith('save'):
 				spec['widget'].text = spec['widget'].text[:-4] + 'new'
-
-
-
 
 
 	''' uses plyer, but that is super-ugly on Windows, but keep code in case

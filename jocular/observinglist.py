@@ -18,14 +18,13 @@ from kivy.uix.boxlayout import BoxLayout
 from kivymd.uix.slider import MDSlider
 from kivy.uix.label import Label
 from kivy.metrics import dp
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.RA_and_Dec import RA, Dec
 from jocular.table import Table, CButton, TableLabel
 from jocular.calcs import local_sidereal_time, sun_altitude
+from jocular.utils import toast
 
 def ToHM(x):
     if math.isnan(x):
@@ -54,6 +53,7 @@ def quadrant(x):
         quad = 0
     return qmap[quad]
 
+
 class ObservingList(Component, Settings):
 
     tab_name = 'Observatory'
@@ -73,6 +73,7 @@ class ObservingList(Component, Settings):
             })
     ]
 
+
     def __init__(self):
         super().__init__()
         self.app = App.get_running_app()
@@ -85,112 +86,13 @@ class ObservingList(Component, Settings):
 
         Clock.schedule_once(self.load, 0)
 
-    def on_close(self):
-        self.save_observing_list()
-        self.save_notes()
 
-    def save_observing_list(self, *args):
-        try:
-            ''' bug here: if self.objects is changed (with new objects) then
-                it won't have Added field. Temporary fix but needs migrationt
-                to Catalogues
-            '''
-            ol = {}
-            for v in self.objects.values():
-                if v.get('Added', ''):
-                    ol[v['Name']] = v['Added']
-            with open(self.app.get_path('observing_list.json'), 'w') as f:
-                json.dump(ol, f, indent=1)
-        except Exception as e:
-            logger.exception('problem saving ({:})'.format(e))
-            toast('problem saving observing list')
-
-    def save_notes(self, *args):
-        try:
-            ol = {}
-            for v in self.objects.values():
-                if v.get('Notes', '').strip():
-                    ol[v['Name']] = v['Notes']
-            with open(self.app.get_path('observing_notes.json'), 'w') as f:
-                json.dump(ol, f, indent=1)
-        except Exception as e:
-            logger.exception('problem saving ({:})'.format(e))
-            toast('problem saving observing notes')
-
-    def compute_altaz(self, current_hours_offset=0):
-
-        t = datetime.now() + timedelta(seconds=3600 * current_hours_offset)
-        rads = math.pi / 180
-
-        if hasattr(self, 'last_time_changed'):
-            tdiff = t - self.last_time_changed
-            if tdiff.seconds < 5:
-                return
-        self.last_time_changed = t
-
-        lst = local_sidereal_time(t, self.longitude)
-        lat = self.latitude * rads
-        ras = np.array([v['RA'] for v in self.objects.values()])
-        decs = np.array([v['Dec'] for v in self.objects.values()]) * rads
-
-        sinlat, coslat = np.sin(lat), np.cos(lat)
-        H = (-self.utc_offset * 15 + lst - ras) * rads
-        sinH, cosH = np.sin(H), np.cos(H)
-        az = 180 + (np.arctan2(sinH, cosH * sinlat - np.tan(decs) * coslat) / rads)
-        alt = np.arcsin(sinlat * np.sin(decs) + coslat * np.cos(decs) * cosH) / rads
-
-        for v, _alt, _az in zip(self.objects.values(), alt, az):
-            v['Az'] = math.nan if math.isnan(_az) else int(_az)
-            v['Alt'] = math.nan if math.isnan(_alt) else int(_alt)
-            v['Quadrant'] = '' if math.isnan(_az) else quadrant(_az)
-
-    def compute_transits(self):
-        # from ch 15 of Meeus
-
-        ras = np.array([v['RA'] for v in self.objects.values()])
-        decs = np.array([v['Dec'] for v in self.objects.values()])
-
-        #  apparent sidereal time at Greenwich at 0hUT
-        t = datetime.now()
-        gst_0 = local_sidereal_time(datetime(t.year, t.month, t.day), 0)
-
-        max_alts = 90 - self.latitude + decs
-        max_alts[max_alts > 90] = 180 - max_alts[max_alts > 90]
-
-        # transit time: slight diff from Meeus since longitude negative from W here
-        transiting = np.abs(decs) < (90 - self.latitude)
-        m0 = (ras - self.longitude - gst_0 + self.utc_offset * 15) / 15
-        m0[m0 > 24] = m0[m0 > 24] - 24
-        m0[m0 < 0] = m0[m0 < 0] + 24
-
-        # 80 ms or so
-        for v, _max_alt, _transits, _m in zip(
-            self.objects.values(), max_alts, transiting, m0
-        ):
-            v['MaxAlt'] = math.nan if math.isnan(_max_alt) else int(_max_alt)
-            v['Transit'] = float(_m) if _transits else math.nan
-
-        logger.info('computed transits for {:} objects'.format(len(ras)))
-
-
-    @logger.catch()
     def load(self, dt=None):
 
         # load DSOs
         try:
-            ''' self.objects is not a copy, so when user objects are added
-                in Catalogues.update_user_catalogue, they are also added
-                to self.objects. This causes issues because new objects
-                dont have all the augmented properties like Added let alone
-                transit information. 
-
-                Should migrate some of the functionality
-                of ObservingList and Catalogues to make it easier
-                to maintain consistency. In fact, all the lookups should
-                be done via Catalogues and not via ObservingList
-            '''
-
-            self.objects = Component.get('Catalogues').get_basic_dsos()
+            # return a COPY of the basic dsos to prevent unwanted side effects
+            self.objects = Component.get('Catalogues').get_basic_dsos().copy()
         except Exception as e:
             logger.exception('problem loading DSOs ({:})'.format(e))
             toast('problem loading DSOs')
@@ -234,6 +136,99 @@ class ObservingList(Component, Settings):
             self.compute_transits()
         except Exception as e:
             logger.exception('problem computing transits {:}'.format(e))
+
+
+    def on_close(self):
+        self.save_observing_list()
+        self.save_notes()
+
+
+    def save_observing_list(self, *args):
+        try:
+            ''' bug here: if self.objects is changed (with new objects) then
+                it won't have Added field. Temporary fix but needs migrationt
+                to Catalogues
+            '''
+            ol = {}
+            for v in self.objects.values():
+                if v.get('Added', ''):
+                    ol[v['Name']] = v['Added']
+            with open(self.app.get_path('observing_list.json'), 'w') as f:
+                json.dump(ol, f, indent=1)
+        except Exception as e:
+            logger.exception('problem saving ({:})'.format(e))
+            toast('problem saving observing list')
+
+
+    def save_notes(self, *args):
+        try:
+            ol = {}
+            for v in self.objects.values():
+                if v.get('Notes', '').strip():
+                    ol[v['Name']] = v['Notes']
+            with open(self.app.get_path('observing_notes.json'), 'w') as f:
+                json.dump(ol, f, indent=1)
+        except Exception as e:
+            logger.exception('problem saving ({:})'.format(e))
+            toast('problem saving observing notes')
+
+
+    def compute_altaz(self, current_hours_offset=0):
+
+        t = datetime.now() + timedelta(seconds=3600 * current_hours_offset)
+        rads = math.pi / 180
+
+        if hasattr(self, 'last_time_changed'):
+            tdiff = t - self.last_time_changed
+            if tdiff.seconds < 5:
+                return
+        self.last_time_changed = t
+
+        lst = local_sidereal_time(t, self.longitude)
+        lat = self.latitude * rads
+        ras = np.array([v['RA'] for v in self.objects.values()])
+        decs = np.array([v['Dec'] for v in self.objects.values()]) * rads
+
+        sinlat, coslat = np.sin(lat), np.cos(lat)
+        H = (-self.utc_offset * 15 + lst - ras) * rads
+        sinH, cosH = np.sin(H), np.cos(H)
+        az = 180 + (np.arctan2(sinH, cosH * sinlat - np.tan(decs) * coslat) / rads)
+        alt = np.arcsin(sinlat * np.sin(decs) + coslat * np.cos(decs) * cosH) / rads
+
+        for v, _alt, _az in zip(self.objects.values(), alt, az):
+            v['Az'] = math.nan if math.isnan(_az) else int(_az)
+            v['Alt'] = math.nan if math.isnan(_alt) else int(_alt)
+            v['Quadrant'] = '' if math.isnan(_az) else quadrant(_az)
+
+
+    def compute_transits(self):
+        # from ch 15 of Meeus
+
+        ras = np.array([v['RA'] for v in self.objects.values()])
+        decs = np.array([v['Dec'] for v in self.objects.values()])
+
+        #  apparent sidereal time at Greenwich at 0hUT
+        t = datetime.now()
+        gst_0 = local_sidereal_time(datetime(t.year, t.month, t.day), 0)
+
+        max_alts = 90 - self.latitude + decs
+        max_alts[max_alts > 90] = 180 - max_alts[max_alts > 90]
+
+        # transit time: slight diff from Meeus since longitude negative from W here
+        transiting = np.abs(decs) < (90 - self.latitude)
+        m0 = (ras - self.longitude - gst_0 + self.utc_offset * 15) / 15
+        m0[m0 > 24] = m0[m0 > 24] - 24
+        m0[m0 < 0] = m0[m0 < 0] + 24
+
+        # 80 ms or so
+        for v, _max_alt, _transits, _m in zip(
+            self.objects.values(), max_alts, transiting, m0
+        ):
+            v['MaxAlt'] = math.nan if math.isnan(_max_alt) else int(_max_alt)
+            v['Transit'] = float(_m) if _transits else math.nan
+
+        logger.info('computed transits for {:} objects'.format(len(ras)))
+
 
     def build(self):
 
@@ -320,6 +315,7 @@ class ObservingList(Component, Settings):
             initial_sort_column='RA',
         )
 
+
     def time_changed(self, widgy, value):
         # user moves time slider
         if hasattr(self, 'update_event'):
@@ -339,6 +335,7 @@ class ObservingList(Component, Settings):
             self.table.update_display()
             self.update_event = Clock.schedule_once(self.table.update, 0.5)
 
+
     @logger.catch()
     def show(self, *args):
         '''Called from menu to browse DSOs; open on first use'''
@@ -353,15 +350,17 @@ class ObservingList(Component, Settings):
         self.table.show()
         self.time_changed(self.time_field, 0)
 
+
     def new_from_list(self, row, *args):
         # User selects a row in the observing list table
         name = row.fields['Name'].text + '/' + row.fields['OT'].text
         self.table.hide()
-        res = self.lookup_name(name)
-        if res is not None:
-            Component.get('DSO').new_DSO_name(res)
-        else:
+        res = Component.get('Catalogues').lookup(name)
+        if res is None:
             toast('Cannot find {:} in database'.format(name))
+        else:
+            Component.get('DSO').new_DSO_name(res)
+
 
     def add_to_observing_list(self, *args):
         dn = datetime.now().strftime('%d %b')
@@ -390,7 +389,6 @@ class ObservingList(Component, Settings):
                 catas.delete_user_object(name)
         self.update_list()
 
-
     def new_observation(self):
         OT = Component.get('Metadata').get('OT', '')
         Name = Component.get('Metadata').get('Name', None)
@@ -399,7 +397,7 @@ class ObservingList(Component, Settings):
         if Name is not None:
             name = '{:}/{:}'.format(Name, OT)
             if name in self.objects:
-                self.objects[name]['Obs'] += 1
+                self.objects[name]['Obs'] = self.objects[name].get('Obs', 0) + 1
             if hasattr(self, 'table'):
                 self.table.update()
 
@@ -450,24 +448,3 @@ class ObservingList(Component, Settings):
             self.compute_transits()
         except Exception as e:
             logger.exception('problem computing transits ({:})'.format(e))
-
-
-    @logger.catch()
-    def lookup_name(self, name, *args):
-        ''' name is of the form name/object type e.g. SHK 10/CG. Called either after 
-            looking up object types (in dso.py), or when a user clicks on a row in the
-            dso table (above)
-        '''
-        if not hasattr(self, 'objects'):
-            self.load()
-
-        return self.objects.get(name.upper(), None)
-
-    def lookup_OTs(self, name):
-        ''' Find all OTs that have this name; note that keys in objects are stored
-            in upper case
-        '''
-        if not hasattr(self, 'objects'):
-            self.load()
-        name = name.upper() + '/'
-        return [n.split('/')[1] for n in self.objects.keys() if n.startswith(name)]

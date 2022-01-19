@@ -10,8 +10,8 @@ from loguru import logger
 
 from kivy.app import App
 from kivy.properties import BooleanProperty, NumericProperty
-from kivymd.toast.kivytoast import toast
 
+from jocular.utils import toast
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.RA_and_Dec import RA, Dec
@@ -230,7 +230,7 @@ class PlateSolver(Component, Settings):
         x_im, y_im, im_mags = x[inds], y[inds], mags[inds]
 
         if len(x_im) < self.min_matches:
-            logger.warn('Too few stars to platesolve (min: {:})'.format(len(x_im)))
+            logger.warning('Too few stars to platesolve (min: {:})'.format(len(x_im)))
             return False
 
         # get reference stars for search field (NB larger fov is worse)

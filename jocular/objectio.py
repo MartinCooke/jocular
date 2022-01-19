@@ -16,11 +16,9 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.label import Label
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
-from jocular.utils import add_if_not_exists, generate_observation_name, unique_member, move_to_dir
+from jocular.utils import add_if_not_exists, generate_observation_name, move_to_dir, toast
 from jocular.image import save_image, Image
 from jocular.formwidgets import configurable_to_widget
 
@@ -65,7 +63,7 @@ class SaveDialogContent(MDBoxLayout):
 
     exposure = NumericProperty(0)
     sub_type = StringProperty('light')
-    temperature = NumericProperty(0)
+    temperature = NumericProperty(0, allownone=True)
     save_master = BooleanProperty(False)
     change_fits_headers = BooleanProperty(False)
 
@@ -127,22 +125,21 @@ class ObjectIO(Component):
             temperature if dark, create master and potentially others
         '''
 
-        subs = Component.get('Stacker').subs
-        self.change_fits_headers = False   # force user to set this to True
-
-        # nowt to save
-        if len(subs) == 0:
+        stacker = Component.get('Stacker')
+        if stacker.is_empty():
             self.new_object()
             return
+
+        self.change_fits_headers = False   # force user to set this to True
 
         # find name, sub_type, exposure and temperature
         name = Component.get('DSO').Name
         if name.lower()[:4] in {'dark', 'flat', 'bias'}:
             sub_type = name.lower()[:4]
         else:
-            sub_type = unique_member([s.sub_type for s in subs])
+            sub_type = stacker.get_prop('sub_type')
 
-        exposure = unique_member([s.exposure for s in subs])
+        exposure = stacker.get_prop('exposure')
         temperature = Component.get('Session').temperature
 
         # nothing to save
@@ -155,8 +152,7 @@ class ObjectIO(Component):
             self.new_object()
             return
 
-        # we have somethign to confirm so set up dialog
-
+        # we have something to confirm so set up dialog
         color = self.app.theme_cls.primary_color
         text = 'Please confirm that you wish to save. You may also change the following properties if required.'
         if self.existing_object:
@@ -215,18 +211,31 @@ class ObjectIO(Component):
         self.dialog.dismiss()
 
         metadata = Component.get('Metadata')
-        subs = Component.get('Stacker').subs
+        stacker = Component.get('Stacker')
+        # subs = Component.get('Stacker').subs
 
         # save master if requested
         if content.save_master:
-            Component.get('Calibrator').create_master(
-                exposure=content.exposure, 
-                temperature=content.temperature,
-                filt=unique_member([s.filter for s in subs]),
-                sub_type=content.sub_type)
+            # form capture properties: might streamline this
+            if content.temperature == -40:
+                content.temperature = None
+            capture_props = {
+                'exposure': content.exposure, 
+                'temperature': content.temperature,
+                'filter': stacker.get_prop('filter'),
+                'gain': stacker.get_prop('gain'),
+                'offset': stacker.get_prop('offset'),
+                'binning': stacker.get_prop('binning'),
+                'ROI': stacker.get_prop('ROI'),
+                'camera': stacker.get_prop('camera'),
+                'sub_type': content.sub_type
+            }
+
+            Component.get('Calibrator').create_master(capture_props=capture_props)
 
         # save info.json, handle rejects, and update observations table
 
+        # not clear this is useful?
         metadata.set(
             {'exposure': content.exposure, 
             'sub_type': content.sub_type,
@@ -287,17 +296,17 @@ class ObjectIO(Component):
         self.current_object_dir = path
         Component.initialise_previous_object()
 
-    def new_sub(self, data=None, name=None, 
-        exposure=None, filt=None, temperature=None, sub_type=None):
+    def new_sub(self, data=None, name=None, capture_props=None):
         ''' Called by Capture or WatchedCamera
+            capture_props is a dictionary that contains additional key/values
+            that we want to save in the FITs header (eg gain) 
         '''
 
         if data is None or name is None:
             return
 
-        logger.debug('New sub | type {:} name {:} expo {:} filt {:} temp {:}'.format(
-            sub_type, name, exposure, filt, temperature))
-
+        logger.debug('New sub | {:}'.format(capture_props))
+        sub_type = capture_props['sub_type']
         stacker = Component.get('Stacker')
  
         if self.current_object_dir is None:
@@ -316,8 +325,7 @@ class ObjectIO(Component):
         path = os.path.join(self.current_object_dir, name)
 
         try:
-            save_image(data=data, path=path, exposure=exposure, filt=filt, 
-                temperature=temperature, sub_type=sub_type)
+            save_image(data=data, path=path, capture_props=capture_props)
             stacker.add_sub(Image(path))
         except Exception as e:
             logger.exception('cannot add sub to stack ({:})'.format(e))

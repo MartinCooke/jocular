@@ -9,12 +9,11 @@ import numpy as np
 from functools import partial
 
 from loguru import logger
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import BooleanProperty
 from kivy.clock import Clock
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.cameras.genericcamera import GenericCamera
+from jocular.utils import toast
 
 SX_CLEAR_PIXELS = 1
 SX_READ_PIXELS_DELAYED = 2
@@ -26,11 +25,6 @@ def convert_int(x, from_type='uint16', to_type='uint8'):
 	return np.array([x], dtype=from_type).view(dtype=to_type)
 
 class SXCamera(GenericCamera):
-
-	# configurables = {
-	# 	'binning': {'options': ['None', '2 x 2', '3 x 3', '4 x 4']},
-	# 	'colour space': {'options': ['Mono', 'RGGB', 'GRGB', 'BGGR']}
-	# 	}
 
 	lodestar = BooleanProperty(True)
 
@@ -282,6 +276,12 @@ class SXCamera(GenericCamera):
 			np.min(self.last_capture), np.max(self.last_capture), np.mean(self.last_capture)))
 		if self.on_capture is not None:
 			Clock.schedule_once(self.on_capture, 0)
+
+	def get_capture_props(self):
+		''' Any specific info for caller
+		'''
+		return {'camera': 'Lodestar X2'}
+
 
 	def deinterlace(self, odd8, even8):
 		''' De-interlace Lodestar.

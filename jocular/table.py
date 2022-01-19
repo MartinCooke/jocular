@@ -20,7 +20,8 @@ from kivy.uix.label import Label
 from kivy.lang import Builder
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty
 from kivy.metrics import dp
-from kivy.clock import Clock
+
+from jocular.utils import toast
 
 Builder.load_string('''
 
@@ -808,12 +809,7 @@ class Table(FloatLayout):
         self.update_display()
 
     def export(self, but):
-        def no_nl(s):
-            return s.replace('\n', ' ')
 
-        self.export_button = but
-        self.orig_export_button_color = but.color
-        but.color = [1, 0, 0, 1]
         cols = self.cols.keys()
         when = datetime.now().strftime('%d_%b_%y_%H_%M')
 
@@ -824,12 +820,9 @@ class Table(FloatLayout):
             cols = [v.get('field', k) for k, v in self.cols.items()]
             for s in self.search_results:
                 sd = self.data[s]
-                f.write(','.join([no_nl(str(sd.get(c,''))) for c in cols]))
+                f.write(','.join([str(sd.get(c,'')).replace('\n', ' ') for c in cols]))
                 f.write('\n')
-        Clock.schedule_once(self.change_export_button, 1)
-
-    def change_export_button(self, dt):
-        self.export_button.color = self.orig_export_button_color
+        toast('Exported to {:}'.format(path), duration=3)
 
     def get_selected(self):
         return self.selected

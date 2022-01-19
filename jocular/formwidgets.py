@@ -28,10 +28,10 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 		widgetwidth = dp(150)
 
 	font_size = '16sp'
-	help_font_size = '15sp'
+	help_font_size = '13sp'
 	color = App.get_running_app().theme_cls.accent_color
 
-	bv = BoxLayout(padding=(dp(5), dp(5)), size_hint=(1, None), height=dp(60), 
+	bv = BoxLayout(padding=(dp(5), dp(5)), size_hint=(1, None), height=dp(55), 
 		orientation='vertical')
 	bh = BoxLayout(size_hint=(1, .55))
 	bh.add_widget(Label(size_hint=(1, 1)))
@@ -91,8 +91,6 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 			step=.01, min=0, max=1, value=val2)
 		bh2.add_widget(slider1)
 		bh2.add_widget(slider2)
-		#slider1.hint_bg_color=(.6,.6,.6,1)
-		#slider1._set_colors()
 		slider1.bind(value=partial(
 			__dfloat_changed, name, spec, slabel, fmt, changed, slider1, slider2))
 		slider2.bind(value=partial(

@@ -11,10 +11,11 @@ from kivy.properties import BooleanProperty, DictProperty, NumericProperty
 from kivy.core.window import Window
 
 from jocular.table import Table
-from jocular.utils import make_unique_filename
+from jocular.utils import make_unique_filename, toast
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.image import Image, save_image, fits_in_dir
+from jocular.exposurechooser import exp_to_str
 
 date_time_format = '%d %b %y %H:%M'
 
@@ -52,6 +53,7 @@ class Calibrator(Component, Settings):
             'help': 'Maximum age of flats to use'}),
     ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
@@ -87,9 +89,14 @@ class Calibrator(Component, Settings):
         self.masters[m.fullname] = m
         self.library[m.fullname] = {
             'name': m.name,
+            'camera': str(m.camera) if m.camera is not None else '',
             'type': m.sub_type,
-            'exposure': str(m.exposure) if m.exposure is not None else '???',
-            'temperature': str(m.temperature) if m.temperature is not None else '???',
+            'exposure': exp_to_str(m.exposure) if m.exposure is not None else '',
+            'temperature': str(m.temperature) if m.temperature is not None else '',
+            'gain': m.gain if m.gain is not None else '',
+            'offset': m.offset if m.offset is not None else '',
+            'bin': m.binning if m.binning is not None else '',
+            'ROI': str(m.ROI) if m.ROI is not None else '',
             'filter': m.filter,
             'created': m.create_time.strftime(date_time_format),
             'shape_str': m.shape_str,
@@ -98,17 +105,22 @@ class Calibrator(Component, Settings):
         }
 
 
-    def create_master(self, sub_type=None, exposure=None, temperature=None, filt=None):
+    def create_master(self, capture_props=None):
         ''' Called by ObjectIO to save an existing stack capture by Jocular as a calibration master
         '''
 
-        logger.info('save master type {:} expo {:} temp {:} filt {:}'.format(
-            sub_type, exposure, temperature, filt))
+        if 'filter' not in capture_props:
+            toast('Cannot create master: unknown filter')
+            return
 
         stacker = Component.get('Stacker')
+        sub_type = capture_props['sub_type']
 
-        # force the use of method that the user has chosen or set up by default for this type of calib
-        master = stacker.get_stack(filt, calibration=True)
+        ''' Get hold of master from stacker, forcing the use of stack
+            combination method that the user has chosen
+        '''
+        master = stacker.get_stack(capture_props['filter'], calibration=True)
+        capture_props['nsubs'] = stacker.get_selected_sub_count()
 
         ''' Apply bad pixel mapping to calibration frames
             If dark, find hot pixels in master and remove, otherwise use existing BPM
@@ -128,36 +140,36 @@ class Calibrator(Component, Settings):
         if sub_type == 'flat':
             master = 2 * master
 
-        self.save_master(data=master, exposure=exposure, filt=filt, temperature=temperature, 
-            sub_type=sub_type, nsubs=stacker.get_selected_sub_count())
-
-        # add to notes field of current DSO
-        Component.get('Notes').notes = 'exposure {:} filter {:} temperature {:}'.format(exposure, filt, temperature)
+        self.save_master(data=master, capture_props=capture_props)
 
 
-    def save_master(self, data=None, exposure=None, filt=None, temperature=None, sub_type=None, nsubs=None):
+    def save_master(self, data=None, capture_props=None):
         ''' Save master and add to library to make it available immediately. Called both by
             create_master above and by the Watched camera for any alien master subs. The difference is
             that create_master above does BPM/flat handling etc so only applies to natively-captured
             calibration masters.
         '''
 
-        logger.info('new master type {:} expo {:} temp {:} filt {:} nsubs {:}'.format(
-            sub_type, exposure, temperature, filt, nsubs))
-
-        name = 'master{:}.fit'.format(sub_type)
+        name = 'master{:}.fit'.format(capture_props['sub_type'])
         path = make_unique_filename(os.path.join(self.calibration_dir, name))
-        save_image(data=data, path=path, exposure=exposure, filt=filt, temperature=temperature,
-            sub_type='master ' + sub_type, nsubs=nsubs)
+        save_image(data=data, path=path, capture_props=capture_props)
         self.add_to_library(Image(path))
+
+        # add to notes field of current DSO
+        notes = ' '.join(['{:} {:}'.format(k, v) for k, v in capture_props.items() 
+            if k in {'exposure', 'filter', 'temperature', 'gain', 'offset', 'camera', 'ROI', 'binning'}])
+        Component.get('Notes').notes = notes
+
+        logger.info('new master {:}'.format(capture_props))
+
 
     def calibrate(self, sub):
         # Given a light sub, apply calibration. Fails silently if no suitable calibration masters. 
 
         sub.calibrations = set({})
 
-        if not self.library:
-            self.info('no library')
+        if len(self.library) == 0:
+            self.info('no masters')
             return
 
         if not (self.apply_dark or self.apply_bias or self.apply_flat):
@@ -172,14 +184,8 @@ class Calibrator(Component, Settings):
         logger.debug('D {:} F {:} B {:}'.format(dark, flat, bias))
 
         D = self.get_master(dark)
-        # if D is not None:
-        #     print('{:} min {:} max {:} median {:} mean {:}'.format(dark, np.min(D), np.max(D), np.median(D), np.mean(D)))
         F = self.get_master(flat)
-        # if F is not None:
-        #     print('{:} min {:} max {:} median {:} mean {:}'.format(flat, np.min(F), np.max(F), np.median(F), np.mean(F)))
         B = self.get_master(bias)
-        # if B is not None:
-        #     print('{:} min {:} max {:} median {:} mean {:}'.format(bias, np.min(B), np.max(B), np.median(B), np.mean(B)))
 
         im = sub.get_image()
 
@@ -196,7 +202,7 @@ class Calibrator(Component, Settings):
                     im = (im - B) / F
                 else:
                     sub.calibrations = {'flat'}
-                    im = im / F # inadvisable, but we allow it
+                    im = im / F # inadvisable, but we allow it for expt purposes
 
         elif self.apply_dark:
             if dark is not None:
@@ -228,17 +234,29 @@ class Calibrator(Component, Settings):
         else:
             self.info('none suitable')
 
+
+    def find_masters(self, sub, sub_type):
+        ''' return dict of subs that match basic properties
+            such as shape, camera, ROI etc
+        '''
+        return {k: v for k, v in self.masters.items()
+                if  v.shape == sub.shape and 
+                    v.sub_type == sub_type and 
+                    v.ROI == sub.ROI and
+                    v.camera == sub.camera and
+                    v.gain == sub.gain and
+                    v.offset == sub.offset}
+       
+
     def get_dark(self, sub):
         # Find suitable dark for this sub given its parameters
 
         if sub.exposure is None:
             return None
 
-        # choose darks that are the right shape with exposure within tolerance
-        darks = {k: v for k, v in self.masters.items()
-                    if  v.shape == sub.shape and 
-                        v.sub_type == 'dark' and 
-                        v.exposure is not None and 
+        # choose darks that meet requirements
+        darks = {k: v for k, v in self.find_masters(sub, 'dark').items()
+                    if  v.exposure is not None and
                         abs(v.exposure - sub.exposure) < self.exposure_tol}
 
         temperature = Component.get('Session').temperature
@@ -258,16 +276,14 @@ class Calibrator(Component, Settings):
     def get_bias(self, sub):
         # get the most recent bias
 
-        bias = {k: v.age for k, v in self.masters.items() 
-                if v.shape == sub.shape and v.sub_type == 'bias' }
+        bias = {k: v.age for k, v in self.find_masters(sub, 'bias').items()}
 
         return min(bias, key=bias.get) if len(bias) > 0 else None
  
+
     def get_flat(self, sub):
 
-        # flats of right shape
-        flats = {k:v for k, v in self.masters.items() 
-            if  v.shape == sub.shape and v.sub_type == 'flat'}
+        flats = self.find_masters(sub, 'flat')
 
         # flat in required filter
         if sub.filter is not None:
@@ -316,7 +332,6 @@ class Calibrator(Component, Settings):
         # subtract bias if available
         bias = self.get_bias(sub)
         if bias is not None:
-            #print('subtracting bias')
             im = im - self.get_master(bias)
 
         # normalise by mean of image in central 3rd zone 
@@ -341,12 +356,17 @@ class Calibrator(Component, Settings):
             name='Calibration masters',
             description='Calibration masters',
             cols={
-                'Name': {'w': 300, 'align': 'left', 'field': 'name'},
+                'Name': {'w': 120, 'align': 'left', 'field': 'name'},
+                'Camera': {'w': 140, 'align': 'left', 'field': 'camera', 'type': str},
                 'Type': {'w': 60, 'field': 'type', 'align': 'left'},
                 'Exposure': {'w': 80, 'field': 'exposure'},
                 'Temp. C': {'w': 80, 'field': 'temperature', 'type': str},
+                'Gain': {'w': 50, 'field': 'gain', 'type': int},
+                'Offset': {'w': 60, 'field': 'offset', 'type': int},
+                'ROI': {'w': 80, 'field': 'ROI', 'type': str},
+                'Bin': {'w': 45, 'field': 'bin', 'type': int},
                 'Filter': {'w': 80, 'field': 'filter'},
-                'Created': {'w': 180, 'field': 'created', 'sort': {'DateFormat': date_time_format}},
+                'Created': {'w': 120, 'field': 'created', 'sort': {'DateFormat': date_time_format}},
                 'Size': {'w': 110, 'field': 'shape_str'},
                 'Age': {'w': 50, 'field': 'age', 'type': int},
                 'Subs': {'w': 50, 'field': 'nsubs', 'type': int}

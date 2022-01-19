@@ -7,6 +7,7 @@ import math
 from scipy.stats import trimboth
 from loguru import logger 
 from pathlib import Path
+from kivymd.toast.kivytoast import toast as mdtoast
 
 def is_null(v):
     return (v is None) or \
@@ -14,6 +15,10 @@ def is_null(v):
         (isinstance(v, float) and math.isnan(v)) or  \
         (isinstance(v, dict) and len(v) == 0) or \
         (isinstance(v, list) and len(v) == 0)
+
+def toast(mesg, duration=1):
+    mdtoast(mesg, duration=duration)
+    logger.info('toast: {:}'.format(mesg))
 
 def angle360(angle):
     if angle < 0:
@@ -103,6 +108,8 @@ def generate_observation_name(path, prefix=None):
     return '{:} v{:}'.format(prefix, n)
 
 def s_to_minsec(s):
+    if s < 1:
+        return '{:.0f}ms'.format(1000 * s)
     mins, secs = divmod(round(s), 60)
     if mins == 0:
         return '{:}s'.format(secs)

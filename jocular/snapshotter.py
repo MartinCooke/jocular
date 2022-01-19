@@ -13,14 +13,12 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.properties import OptionProperty, BooleanProperty, NumericProperty
 from kivy.metrics import Metrics as KivyMetrics
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.image import save_image
 from jocular.metrics import Metrics
-from jocular.utils import s_to_minsec, unique_member, purify_name
+from jocular.utils import s_to_minsec, purify_name, toast
 
 class Snapshotter(Component, Settings):
 
@@ -109,10 +107,13 @@ class Snapshotter(Component, Settings):
         if im is not None:
             im = im * (2**16 - 1)
             logger.debug('min {:} max {:}'.format(np.min(im), np.max(im)))
+            capture_props = {
+                'exposure': stacker.describe().get('total_exposure', None),
+                'sub_type': stacker.get_prop('sub_type'),
+                'filt': stacker.get_prop('filter')
+            }
             save_image(data=im.astype(np.uint16), path=self.save_path,
-                exposure=stacker.describe().get('total_exposure', None),
-                sub_type=unique_member([s.sub_type for s in stacker.subs]),
-                filt = unique_member([s.filter for s in stacker.subs]))
+                capture_props=capture_props)
             toast('Saved fits to {:}'.format(os.path.basename(self.save_path)), duration=2.5)
         else:
             toast('no image to save')
@@ -162,7 +163,7 @@ class Snapshotter(Component, Settings):
             if d['multiple_exposures']:
                 block += ['varied exposures']
             else:
-                block += ['{:} x {:.0f}s'.format(d['nsubs'], d['sub_exposure'])]
+                block += ['{:} x {:}'.format(d['nsubs'], s_to_minsec(d['sub_exposure']))]
 
         if not d['filters'].endswith('L'): # more interesting than just LUM
             block += [d['filters']]
@@ -282,10 +283,10 @@ class Snapshotter(Component, Settings):
         obj_details = self.DSO_details()
         proc_details = self.processing_details()
         sesh_details = self.session_details() + self.kit_details()
-        max_rows = max([len(obj_details), len(proc_details), len(sesh_details)])
+        max_rows = max([len(obj_details), len(proc_details), len(sesh_details)]) + 1
         total_height = h
         if self.annotation != 'plain':
-            total_height = total_height + 2 * rowgap + large_text_height
+            total_height = int(total_height + 2 * rowgap + large_text_height)
         if self.annotation == 'full':
             total_height = int(total_height + max_rows * small_text_height + (max_rows - 1) * rowgap)
 

@@ -9,14 +9,11 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.clock import Clock
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
-from jocular.utils import move_to_dir
+from jocular.utils import move_to_dir, toast
 from jocular.image import Image, ImageNotReadyException, is_fit
 from jocular.cameras.genericcamera import GenericCamera
-
 
 class WatchedCamera(GenericCamera):
 
@@ -147,21 +144,9 @@ class WatchedCamera(GenericCamera):
 	def on_controllable(self, *args):
 		self.capturing = not self.controllable
 
-
 	def get_possible_fits(self):
 		wdir = self.watched_dir
 		return [os.path.join(wdir, d) for d in os.listdir(wdir) if is_fit(d)]
-
-		''' in this version we'll look only in the watched directory itself
-			rather than messing around with ASILive's craziness
-		'''
-		# asipath = os.path.join(wdir, 'ASILive_AutoSave', 'SingleFrame')
-		# if os.path.exists(asipath):
-		# 	for sdir in os.listdir(asipath):
-		# 		pth = os.path.join(asipath, sdir)
-		# 		if os.path.isdir(pth):
-		# 			fits += [os.path.join(pth, d) for d in os.listdir(pth)]
-		#return [f for f in fits if is_fit(os.path.basename(f))]
 
 	def watch(self, dt):
 		''' Monitor watched directory.
@@ -247,44 +232,43 @@ class WatchedCamera(GenericCamera):
 		'''
 
 		cs = Component.get('CaptureScript')
+		capture_props = {}
 
-		exposure = {
+		capture_props['exposure'] = {
 			'auto': sub.exposure,
 			'from user': cs.get_exposure(),
 		}[self.exposure]
 
-		if filt is None:
+		capture_props['filter'] = filt 
+		if capture_props['filter'] is None:
 			''' if from user, choose first filter in case of seq i.e. won't
 				really work to use seq with watched
 			'''
-			filt = {
+			capture_props['filter'] = {
 				'auto': sub.filter,
 				'from user': cs.get_filters()[0],
 				'assume L': 'L'
 			}[self.filt]
 
-		if sub_type is None:
-			sub_type = {
+		capture_props['sub_type'] = sub_type
+		if capture_props['sub_type'] is None:
+			capture_props['sub_type'] = {
 				'auto': sub.sub_type,
 				'from user': cs.get_sub_type(),
 				'assume light': 'light'
 			}[self.sub_type]
 
-		temperature = {
+		capture_props['temperature'] = {
 			'auto': sub.temperature,
 			'from user': Component.get('Session').temperature,
 		}[self.temperature]
 
-
 		# don't scale masters (check this!)
 		if sub.is_master:
+			capture_props['nsubs'] = sub.nsubs
 			Component.get('Calibrator').save_master(
 				data=im,
-				exposure=exposure, 
-				filt=filt, 
-				temperature=temperature, 
-				sub_type=sub_type,
-				nsubs=sub.nsubs)
+				capture_props=capture_props)
 
 		else:
 			# send image to ObjectIO to save
@@ -293,13 +277,13 @@ class WatchedCamera(GenericCamera):
 			Component.get('ObjectIO').new_sub(
 				data=im.astype(np.uint16),
 				name='{:}_{:}'.format(filt, nm),
-				exposure=exposure,
-				filt=filt,
-				temperature=temperature,
-				sub_type=sub_type)
+				capture_props=capture_props)
 
 		# signal to interface the values being used
-		cs.set_external_details(exposure=exposure, sub_type=sub_type, filt=filt)
+		cs.set_external_details(
+			filt=capture_props['filter'],
+			exposure=capture_props['exposure'],
+			sub_type=capture_props['sub_type'])
 
 	def bin(self, im):
 		b = self.binning

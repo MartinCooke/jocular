@@ -68,7 +68,6 @@ class Jocular(MDApp):
             return self.get_dir_in_datadir(name)
 
         # jocular's own resources
-
         elif name == 'dsos':
             return os.path.join(self.directory, 'dsos')
 
@@ -76,8 +75,8 @@ class Jocular(MDApp):
             return os.path.join(self.directory, 'resources', name)
 
         # user-accessible settings
-        elif name in {'observing_list.json', 'observing_notes.json', 'previous_observations.json'}:
-            return os.path.join(self.data_dir, name)
+        # elif name in {'observing_list.json', 'observing_notes.json', 'previous_observations.json'}:
+        #     return os.path.join(self.data_dir, name)
 
         # jocular settings
         elif name.endswith('.json'):
@@ -91,7 +90,7 @@ class Jocular(MDApp):
         elif name == 'dso_db':
             return os.path.join(self.data_dir, 'platesolving', 'dso_tiles')
         elif name == 'ASI':
-            # NB these need keeping up to date
+            # NB these need keeping up to date so perhaps better externalised
             if sys.platform.startswith('linux'):
                 asi = 'libASICamera2.so.1.18'
             elif sys.platform.startswith('darwin'):
@@ -157,8 +156,8 @@ class Jocular(MDApp):
         else:
             logger.exception('root exception: {:}'.format(exception))
         # save width and height
-        Config.set('graphics', 'width', str(int(Window.width/ dp(1))))
-        Config.set('graphics', 'height', str(int(Window.height/dp(1))))
+        Config.set('graphics', 'width', str(int(Window.width / dp(1))))
+        Config.set('graphics', 'height', str(int(Window.height /dp(1))))
         Config.write()
         Component.close()
         self.gui.on_close()

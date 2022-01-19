@@ -9,7 +9,7 @@ from jocular.utils import percentile_clip
 def estimate_background(im):
     # requires about .7ms for Lodestar image on MacBook Pro 2020
 
-     # fit at random pixels and remove outliers
+    # fit at random pixels and remove outliers
     npts = 500
     r, c = im.shape
 

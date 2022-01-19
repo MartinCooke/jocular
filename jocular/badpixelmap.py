@@ -1,9 +1,10 @@
 ''' Maintains and applies bad pixel map that persists between sessions
     new in V0.3: creates a new BPM for each sensor shape encountered to avoid applying
     BPM to the wrong sensor and to enable multiple sensors to be used 
+    in v0.5, don't bother to load/save map due to lots of combinations of ROI etc
+    just do it 'online'
 '''
 
-import os
 import numpy as np
 from scipy.ndimage import convolve
 
@@ -32,39 +33,42 @@ class BadPixelMap(Component, Settings):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.bpm = None
-
-    def load_BPM(self, shape):
-        # load BPM for this shape, creating if necessary
-
-        self.bplist = []  # acts as a circular buffer of BPs from recent frames
+        self.bplist = []
         self.frame_count = 0
-        self.bpm = None
-        self.bpm_shape = shape
-        self.bpm_name = 'BPM_{:}x{:}.npy'.format(shape[0], shape[1])
-        path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
-        if os.path.exists(path):
-            bpm = np.load(path)
-            self.update_bpm({(x, y) for x, y in zip(bpm[0], bpm[1])})
-            logger.info('loaded bad pixel map with {:} members'.format(len(bpm[0])))
-        else:
-            logger.info('creating new bad pixel map')
+
+    # def load_BPM(self, shape):
+    #     # load BPM for this shape, creating if necessary
+
+    #     self.bplist = []  # acts as a circular buffer of BPs from recent frames
+    #     self.frame_count = 0
+    #     self.bpm = None
+    #     self.bpm_shape = shape
+    #     self.bpm_name = 'BPM_{:}x{:}.npy'.format(shape[0], shape[1])
+    #     path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
+    #     if os.path.exists(path):
+    #         bpm = np.load(path)
+    #         self.update_bpm({(x, y) for x, y in zip(bpm[0], bpm[1])})
+    #         logger.info('loaded bad pixel map with {:} members'.format(len(bpm[0])))
+    #     else:
+    #         logger.info('creating new bad pixel map')
 
     def on_close(self):
-        self.save_BPM()
+        pass
+        # self.save_BPM()
 
     def process_bpm(self, sub):
 
         if not self.apply_BPM:
             return
 
-        # we don't have one yet, so create one of correct shape
-        if self.bpm is None:
-            self.load_BPM(sub.shape)
+        # # we don't have one yet, so create one of correct shape
+        # if self.bpm is None:
+        #     self.load_BPM(sub.shape)
 
-        # we have one, but it is the wrong shape (ie different sensor) so save & load
-        elif self.bpm_shape != sub.shape:
-            self.save_BPM()
-            self.load_BPM(sub.shape)
+        # # we have one, but it is the wrong shape (ie different sensor) so save & load
+        # elif self.bpm_shape != sub.shape:
+        #     self.save_BPM()
+        #     self.load_BPM(sub.shape)
 
         im = sub.get_image()
         badpix = self.find_hot_pixels(im)
@@ -85,6 +89,8 @@ class BadPixelMap(Component, Settings):
         across most recent 'bpm_frames' when building the hot pixel map; and (b) in the
         EAA use case the only adverse effect is to replace a few non-hot pixels
         by their median. Returns a set of (row, col) coordinates
+
+        10ms for Lodestar, 50ms for ASI 290MM
         ''' 
                 
         # set min to zero
@@ -105,7 +111,6 @@ class BadPixelMap(Component, Settings):
         # coordinates of hot pixels as 2 x N array
         hps = np.where(hp_cands>0)
 
-        # return hot pixel coordinates as a set of row-col pairs
         return {(r, c) for r, c in zip(hps[0], hps[1])}
 
     def do_bpm(self, im, bpm=None):
@@ -133,11 +138,11 @@ class BadPixelMap(Component, Settings):
         self.frame_count += 1
         self.compute_bpm()
 
-    def save_BPM(self):
-        # Save as npy file
-        if self.bpm is None:
-            return
-        bpm = np.array([[x for x, y in self.bpm], [y for x, y in self.bpm]])
-        path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
-        np.save(path, bpm)
-        logger.info('saved map with {:} members'.format(len(bpm[0])))
+    # def save_BPM(self):
+    #     # Save as npy file
+    #     if self.bpm is None:
+    #         return
+    #     bpm = np.array([[x for x, y in self.bpm], [y for x, y in self.bpm]])
+    #     path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
+    #     np.save(path, bpm)
+    #     logger.info('saved map with {:} members'.format(len(bpm[0])))

@@ -10,11 +10,10 @@ from loguru import logger
 from kivy.app import App
 from kivy.properties import NumericProperty, BooleanProperty
 from kivy.clock import Clock
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.gradient import image_stats
+from jocular.utils import toast
 
 capture_controls = {'devices', 'script_button', 'capturing', 'exposure_button', 'filter_button'}
 
@@ -187,39 +186,35 @@ class Capture(Component):
 
         self.fps = 1 / (time.time() - self.start_capture_time)
 
-        # temporarily added these 2 lines while sorting out camera stop issue
-        # but think this thru as it might mean last thing doesn't get saved
-        #if not self.capturing:
-        #    return 
-
         im = Component.get('Camera').get_image()
+        capture_props = Component.get('Camera').get_capture_props()
+
+        # probably best here get capture params directly from Camera component
+        # to do
 
         if im is None:
             toast('No image to save')
             return
 
-        # we'll save as 16-bit int FITs
+        # save as 16-bit int FITs
         im *= (2**16 - 1)
-
-        # details = self.get_capture_details()
 
         if not hasattr(self, 'series_number') or self.series_number is None:
             self.series_number = 1
         else: 
             self.series_number += 1
 
-        sub_type = Component.get('CaptureScript').get_sub_type()
-        filt = Component.get('FilterWheel').current_filter
-        pref = sub_type if sub_type in {'flat', 'dark'} else filt
+        capture_props['exposure'] = self.exposure
+        capture_props['filter'] = Component.get('FilterWheel').current_filter
+        capture_props['temperature'] = Component.get('Session').temperature
+        sub_type = capture_props['sub_type'] = Component.get('CaptureScript').get_sub_type()
+        pref = sub_type if sub_type in {'flat', 'dark'} else capture_props['filter']
         name = '{:}_{:d}.fit'.format(pref, self.series_number)
-
+        
         Component.get('ObjectIO').new_sub(
             data=im.astype(np.uint16),
             name=name,
-            exposure=self.exposure,
-            filt=filt,
-            temperature=Component.get('Session').temperature,
-            sub_type=sub_type)
+            capture_props=capture_props)
 
         # ask for next capture immediately
         self.capture()

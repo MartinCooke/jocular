@@ -1,4 +1,4 @@
-''' Serves stars and catalogues to other components, notably the
+''' Serves stars and DSO catalogues to other components, notably the
     platesolver, annotator, and observing list
 '''
 
@@ -15,11 +15,10 @@ from kivy.properties import BooleanProperty
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
-#from jocular.utils import is_null
-#from jocular.RA_and_Dec import RA, Dec
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
+
 
 class Catalogues(Component, Settings):
 
@@ -40,6 +39,7 @@ class Catalogues(Component, Settings):
         ]
 
     props = ['Name', 'RA', 'Dec', 'Con', 'OT', 'Mag', 'Diam', 'Other']
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -68,6 +68,7 @@ class Catalogues(Component, Settings):
         if self.star_db is None:
             try:
                 self.star_db  = np.load(self.app.get_path('star_db'))
+                logger.info('loaded platesolving star database')
             except:
                 pass
 
@@ -123,6 +124,7 @@ class Catalogues(Component, Settings):
             self.load_basic_dsos()
         return self.dsos
 
+
     def load_basic_dsos(self):
         ''' load shipped catalogues then update/overwrite with any user 
             catalogue items; convert to uppercase name/OT as keys on read-in
@@ -172,12 +174,65 @@ class Catalogues(Component, Settings):
                 v[col] = v.get(col, '').upper()
             v['Other'] = v.get('Other', '')
 
+
+
+    def lookup(self, name, OT=None):
+        ''' lookup object details for name
+            If name is in form name/OT then return match or None
+            If name is in form name (no OT) then return data for all matches
+        '''
+
+        name = name.upper()
+
+        if OT is not None and OT and '/' not in name:
+            name = '{:}/{:}'.format(name, OT)
+
+        logger.debug(name)
+        dsos = self.get_basic_dsos()
+        if name in dsos:
+            return dsos[name]
+
+        # if just provided with a name and no OT, check if there is a unique match
+        if '/' not in name:
+            name += '/'
+            matches = [n for n in dsos if n.startswith(name)]
+            if len(matches) == 1:
+                return dsos[matches[0]]
+
+        return None
+
+
+    # def lookup_name(self, name, *args):
+    #     ''' name is of the form name/object type e.g. SHK 10/CG. Called either after 
+    #         looking up object types (in dso.py), or when a user clicks on a row in the
+    #         dso table (above)
+    #     '''
+    #     if not hasattr(self, 'objects'):
+    #         self.load()
+
+    #     return self.objects.get(name.upper(), None)
+
+
+    # def lookup_OTs(self, name):
+    #     ''' Find all OTs that have this name; note that keys in objects are stored
+    #         in upper case
+    #     '''
+    #     if not hasattr(self, 'objects'):
+    #         self.load()
+    #     name = name.upper() + '/'
+    #     return [n.split('/')[1] for n in self.objects.keys() if n.startswith(name)]
+
+
+
     def is_user_defined(self, key):
         return key in self.user_objects
 
-    def update_user_objects(self, name, props):
+
+    def update_user_object(self, props):
         ''' Called from DSO when object is saved and is new or altered
         '''
+
+        name = '{:}/{:}'.format(props['Name'], props['OT']).upper()
 
         # add/update to user objects
         self.user_objects[name] = props
@@ -192,6 +247,7 @@ class Catalogues(Component, Settings):
         # update main DSO list
         self.dsos[name] = props
         self.dsos[name]['U'] = 'Y'
+
 
     def delete_user_object(self, name):
         ''' Remove user object both online and offline

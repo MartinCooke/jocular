@@ -8,7 +8,6 @@ from loguru import logger
 
 from jocular.image import fits_in_dir, update_fits_header
 from jocular.component import Component
-# from jocular.image import Image, ImageNotReadyException, is_fit
 
 
 def remove_empties(d):

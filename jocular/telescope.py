@@ -3,12 +3,11 @@
 
 from loguru import logger
 from kivy.properties import StringProperty
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
-from jocular.devicemanager import DeviceFamily, Device
+from jocular.device import DeviceFamily, Device
 from jocular.ascom import connect_to_ASCOM_device
+from jocular.utils import toast
 
 class Telescope(Component, DeviceFamily):
 

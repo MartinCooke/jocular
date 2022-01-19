@@ -94,17 +94,17 @@ class CaptureScript(Panel, Component):
         return JMDToggleButton(
                 text=name, 
                 group='scripts',
+                font_size='20sp',
                 #tooltip_text=self.tooltips.get(name, ''),
                 on_press=self.script_chosen)
 
     def build(self, *args):
 
-        self.add_widget(Label(
-            size_hint=(1, .1), 
-            text='Select a script', 
-            font_size='24sp'))
+        #self.title = 'Select a script'
+        self.title_label = Label(text='Select a script', font_size='24sp')
+        self.header.add_widget(self.title_label)
 
-        self.add_widget(Label(size_hint=(1, .1)))
+        self.contents.add_widget(Label(size_hint=(1, .1)))
 
         self.script_buttons = {s: self._button(s) for s in all_scripts}
 
@@ -130,7 +130,7 @@ class CaptureScript(Panel, Component):
             bl_right.add_widget(self.script_buttons[s])
         bl_right.add_widget(MDLabel(size_hint=(1, .05)))
 
-        self.add_widget(bl)
+        self.contents.add_widget(bl)
         self.app.gui.add_widget(self)
 
 
@@ -260,7 +260,7 @@ class CaptureScript(Panel, Component):
             self.scripts['seq']['nsubs'] = nsubs
         self.update()
 
-    def set_external_details(self, exposure=None, sub_type=None, filt=None):
+    def set_external_details(self, filt=None, exposure=None, sub_type=None):
         ''' Display capture details on the interface. Used for previous captures 
             and watched captures.
         '''

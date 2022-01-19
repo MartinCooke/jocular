@@ -45,7 +45,7 @@ class Notes(MDBoxLayout, Component):
         self.notes = self.observing_notes.text        
 
     def on_save_object(self):
-        Component.get('Metadata').set('Notes', self.notes)
+        Component.get('Metadata').set('Notes', self.notes.strip())
 
     def notes_changed(self, *args):
         self.notes = self.observing_notes.text

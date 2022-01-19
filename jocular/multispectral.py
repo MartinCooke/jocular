@@ -8,7 +8,7 @@ from scipy.stats import trimboth
 from skimage.color import rgb2lab, lab2rgb
 from skimage.transform import resize, rescale
 
-from kivy.properties import BooleanProperty, NumericProperty
+from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from jocular.gradient import estimate_gradient, estimate_background
 from jocular.component import Component
 from jocular.settingsmanager import Settings
@@ -56,7 +56,9 @@ class MultiSpectral(Component, Settings):
     save_settings = ['saturation', 'colour_stretch', 'redgreen', 'yellowblue']
 
     bin_colour = BooleanProperty(True)
-    subtract_gradients = BooleanProperty(True)
+    compensation = StringProperty('subtract gradients')
+    #subtract_gradients = BooleanProperty(True)
+    #subtract_background = BooleanProperty(False)
 
     tab_name = 'LAB Colour'
     configurables = [
@@ -64,11 +66,20 @@ class MultiSpectral(Component, Settings):
             'name': 'bin colour?', 
             'switch': '',
             'help': 'Binning the colour channels helps reduce colour noise'}),
-        ('subtract_gradients', {
-            'name': 'subtract colour gradients?', 
-            'switch': '',
-            'help': 'Automatically estimate and remove colour gradients in each channel'})
+        ('compensation', {
+            'name': 'compensation', 
+            'options': ['none', 'subtract background', 'subtract gradients'],
+            'help': 'done prior to colour scaling (subtract gradents recommended)'})
         ]
+
+        # ('subtract_background', {
+        #     'name': 'subtract background?', 
+        #     'switch': '',
+        #     'help': 'Automatically estimate and remove background in each channel'}),
+        # ('subtract_gradients', {
+        #     'name': 'subtract colour gradients?', 
+        #     'switch': '',
+        #     'help': 'Automatically estimate and remove colour gradients in each channel'})
 
     saturation = NumericProperty(0)
     colour_stretch = NumericProperty(.5)
@@ -200,11 +211,10 @@ class MultiSpectral(Component, Settings):
         if self.bin_colour:
             ims = [bin_image(im) for im in ims]
 
-        # alternative approach to test
-        # might also add option to not subtract anything.... just to test
-        if self.subtract_gradients:
+        # compensation prior to scaling
+        if self.compensation == 'subtract gradients':
             ims = [im - estimate_gradient(im) for im in ims]
-        else:
+        elif self.compensation == 'subtract background':
             ims = [im - estimate_background(im)[0] for im in ims]
 
         # it turns out this value is absolutely critical because setting it too low means that stars get saturated

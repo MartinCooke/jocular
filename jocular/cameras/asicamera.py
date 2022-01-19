@@ -1,3 +1,6 @@
+''' see https://github.com/python-zwoasi/python-zwoasi/blob/master/zwoasi/__init__.py
+'''
+
 import time
 import os
 import numpy as np
@@ -5,26 +8,54 @@ import zwoasi as asi
 from loguru import logger
 
 from kivy.app import App
-from kivy.properties import StringProperty, NumericProperty
+from kivy.properties import StringProperty, NumericProperty, BooleanProperty
 from kivy.clock import Clock
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.cameras.genericcamera import GenericCamera
+from jocular.utils import toast
+
 
 class ASICamera(GenericCamera):
 
 	gain = NumericProperty(150)
-	binning = StringProperty('no')
+	offset = NumericProperty(1)
+	binning = StringProperty('1 x 1')
+	use_min_bandwidth = BooleanProperty(True)
+	polling_interval = NumericProperty(.2)  # in seconds
+	ROI = StringProperty('full')
+	square_sensor = BooleanProperty(True)
 
 	configurables = [
-		('gain', {'name': 'gain setting', 'float': (1, 1000, 10),
+		('gain', {'name': 'gain setting', 'float': (0, 1000, 10),
+				'help': ''}),
+		('offset', {'name': 'offset', 'float': (1, 240, 1),
 				'help': ''}),
 		('binning', {
 			'name': 'bin', 
-			'options': ['no', '2 x 2', '3 x 3'],
-			'help': ''})
+			'options': ['1 x 1', '2 x 2', '3 x 3'],
+			'help': ''}),
+		('ROI', {
+			'name': 'ROI',
+			'options': ['full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
+			'help': 'region of interest relative to full frame'
+			}),
+		('square_sensor', {
+			'name': 'equalise aspect ratio',
+			'switch': '',
+			'help': 'make sensor width and height equal (using ROI)'
+			}),
+		('polling_interval', {
+			'name': 'polling interval', 
+			'float': (.05, 1, .05),
+			'help': 'how often to check for exposure'}),
+		('use_min_bandwidth', {
+			'name': 'minimise USB bandwidth',
+			'switch': ''
+			})
 	]
+
+	def _set_configurable(self, prop, vals):
+		self.configurables = [(k, vals if k==prop else v) for k, v in self.configurables]
 
 	def connect(self):
 
@@ -101,6 +132,9 @@ class ASICamera(GenericCamera):
 		# get bin options
 		try:
 			binops = ['{:1d} x {:1d}'.format(b, b) for b in self.camera_props['SupportedBins']]
+			self._set_configurable('binning', {
+				'name': 'binning', 
+				'options': binops})
 		except Exception as e:
 			logger.warning('cannot get bin options ({:})'.format(e))
 			binops = ['1 x 1']
@@ -109,32 +143,34 @@ class ASICamera(GenericCamera):
 		try:
 			gainprops = self.camera_controls['Gain']
 			ming, maxg = gainprops['MinValue'], gainprops['MaxValue']
+			self._set_configurable('gain', {
+				'name': 'gain setting', 
+				'float': (ming, maxg, 10)})
+		except Exception as e:
+			self.status = 'cannot get gain options'
+			logger.exception('cannot get gain options ({:})'.format(e))
+			return
+
+		# get offset options
+		try:
+			offsetprops = self.camera_controls['Offset']
+			ming, maxg = offsetprops['MinValue'], offsetprops['MaxValue']
+			self._set_configurable('offset', {
+				'name': 'offset', 
+				'float': (ming, maxg, 1)})
 		except Exception as e:
 			self.status = 'cannot get gain options'
 			logger.exception('cannot get gain options ({:})'.format(e))
 			return
 
 
-		# update configurables
-		self.configurables = [
-			('gain', {
-				'name': 'gain setting', 
-				'float': (ming, maxg, 10),
-				'help': ''}),
-			('binning', {
-				'name': 'binning', 
-				'options': binops,
-				'help': ''})
-		]
-
-		# set some properties initially; gain will be overriden
-		# with user-pref during capture
+		# set some properties
 		try:
-			self.asicamera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD, 
-				self.asicamera.get_controls()['BandWidth']['MinValue'])
+			if self.use_min_bandwidth:
+				self.asicamera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD, 
+					self.asicamera.get_controls()['BandWidth']['MinValue'])
 			self.asicamera.disable_dark_subtract()
 			self.asicamera.set_image_type(asi.ASI_IMG_RAW16)
-			self.asicamera.set_control_value(asi.ASI_GAIN, ming)
 		except Exception as e:
 			self.status = 'error setting camera values'
 			logger.exception('error setting camera values ({:})'.format(e))
@@ -152,10 +188,16 @@ class ASICamera(GenericCamera):
 			self.status = 'error getting camera sensor size'
 			logger.exception('error getting camera sensor size ({:})'.format(e))
 
+		# set initial ROI, binning etc
+		self.on_gain()
+		self.on_offset()
+		self.dims_changed()
+
 
 	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
 		binning=None, return_image=False, is_bias=False):
 
+		#logger.debug('start of capture function')
 		if is_bias:
 			# change this to min exposure
 			self.exposure = .001
@@ -171,41 +213,23 @@ class ASICamera(GenericCamera):
 			toast('error stopping exposure')
 			logger.exception('error stopping exposure ({:})'.format(e))
 
-		# to do: only change these if necessary
-		# since takes a few ms to do each set
-
-		# set gain
+		# exposure is in microseconds (this is fast to set)
 		try:
-			self.asicamera.set_control_value(asi.ASI_GAIN, int(self.gain))
-			logger.info('setting gain to {:.0f}'.format(self.gain))
-		except Exception as e:
-			toast('camera issue while setting gain')
-			logger.exception('camera issue while setting gain ({:})'.format(e))
-
-		# set binning
-		try:
-			self.asicamera.set_roi(bins=int(self.binning[0]))
-			logger.info('setting binning to {:}'.format(self.binning))
-		except ValueError as e:
-			toast('camera issue while setting binning')
-			logger.exception('camera issue while setting binning ({:})'.format(e))
-
-		# exposure is in microseconds
-		try:
-			self.asicamera.set_control_value(asi.ASI_EXPOSURE, int(self.exposure * 1e6))
+			self.asicamera.set_control_value(
+				asi.ASI_EXPOSURE, int(self.exposure * 1e6))
 			logger.info('setting exposure to {:}'.format(self.exposure))
 		except Exception as e:
 			toast('camera issue while setting exposure')
 			logger.exception('camera issue while setting exposure ({:})'.format(e))
 
-		logger.debug('starting exposure')
+		#logger.debug('starting exposure')
 		self.asicamera.start_exposure()
 
 		if return_image:
 			time.sleep(self.exposure)
 			ready = False
 			while not ready:
-				time.sleep(.2)
+				time.sleep(self.polling_interval)
 				ready = self.asicamera.get_exposure_status() != asi.ASI_EXP_WORKING
 			if self.asicamera.get_exposure_status() != asi.ASI_EXP_SUCCESS:
 				self.handle_failure('capture problem')
@@ -213,24 +237,105 @@ class ASICamera(GenericCamera):
 			return self.get_camera_data()
 			 
 		self.capture_event = Clock.schedule_once(self.check_exposure, 
-			max(0.2, self.exposure))
+			max(self.polling_interval, self.exposure))
+
+		#logger.debug('end of capture function')
+
+
+	def dims_changed(self):
+		''' called if binning, ROI or square_sensor changes
+		'''
+		if not self.connected:
+			return
+		binning = int(self.binning[0])
+		regs = {
+			'full': 1, 
+			'three-quarters': 3/4,
+			'two-thirds': 2/3, 
+			'half': 1/2, 
+			'third': 1/3, 
+			'quarter': 1/4}
+		div = regs[self.ROI] / binning
+		width = int(self.camera_props['MaxWidth'] * div)
+		height = int(self.camera_props['MaxHeight'] * div)
+		if self.square_sensor:
+			width = height = min(width, height)
+		width = 8 * (width//8)
+		height = 8 * (height//8)
+		self.asicamera.set_roi(
+			bins=int(self.binning[0]),
+			width=width,
+			height=height)
+		logger.debug('binning {:}  sensor {:4d} x {:4d}'.format(
+			self.binning, width, height))
+
+	def on_ROI(self, *args):
+		self.dims_changed()
+
+	def on_square_sensor(self, *args):
+		self.dims_changed()
+
+	def on_binning(self, *args):
+		self.dims_changed()
+		
+	def on_gain(self, *args):
+		if not self.connected:
+			return
+		try:
+			self.asicamera.set_control_value(asi.ASI_GAIN, int(self.gain))
+			logger.info('setting gain to {:.0f}'.format(self.gain))
+		except Exception as e:
+			toast('problem setting gain')
+			logger.exception('problem setting gain ({:})'.format(e))
+
+	def on_offset(self, *args):
+		if not self.connected:
+			return
+		try:
+			''' apparently offset is called brightness
+			'''  
+			# self.asicamera.set_control_value(asi.ASI_OFFSET, int(self.offset))
+			self.asicamera.set_control_value(asi.ASI_BRIGHTNESS, int(self.offset))
+			logger.info('setting offset to {:.0f}'.format(self.offset))
+		except Exception as e:
+			toast('problem setting offset')
+			logger.exception('problem setting offset ({:})'.format(e))
+
 
 	def get_camera_data(self):
-		# from https://github.com/stevemarple/python-zwoasi/blob/master/zwoasi/__init__.py
+		''' see capture method in
+			https://github.com/stevemarple/python-zwoasi/blob/master/zwoasi/__init__.py
+		'''
 		data = self.asicamera.get_data_after_exposure(None)
 		whbi = self.asicamera.get_roi_format()
 		shape = [whbi[1], whbi[0]]
 		img = np.frombuffer(data, dtype=np.uint16)
 		return img.reshape(shape) / 2 ** 16
 
+	def get_capture_props(self):
+		''' return dict of props such as gain, ROI etc
+			(these get converted to uppercase in FITs)
+		'''
+		return {
+			'camera': self.camera_props.get('Name', 'anon'),
+			'gain': self.gain,
+			'offset': self.offset,
+			'binning': int(self.binning[0]),
+			'ROI': self.ROI
+			}
+
+
 	def check_exposure(self, *arg):
-		# if ready, get image, otherwise schedule a call in 200ms
+		# if ready, get image, otherwise schedule next check 
 		if self.asicamera.get_exposure_status() != asi.ASI_EXP_WORKING:
 			self.last_capture = self.get_camera_data()
+			# got data, so schedule callback
 			if self.on_capture is not None:
 				Clock.schedule_once(self.on_capture, 0)
 		else:
-			self.capture_event = Clock.schedule_once(self.check_exposure, 0.2)
+			self.capture_event = Clock.schedule_once(
+				self.check_exposure, 
+				self.polling_interval)
 
 	def stop_capture(self):
 		# Cancel any pending reads

@@ -363,7 +363,7 @@
 			"tooltip": "exposure chooser",
 			"control_type": "JButton",
 			"text": "",
-			"action": "toggle",
+			"action": "show",
 			"radial": true
 		}
 	},
@@ -374,7 +374,7 @@
 			"control_type": "JButton",
 			"tooltip": "filter(s) chooser",
 			"text": "",
-			"action": "toggle",
+			"action": "show",
 			"radial": true
 		}
 	},
@@ -387,7 +387,7 @@
 			"radial": true,
 			"tooltip": "select capture script (e.g. normal lights, calibration, etc)",
 			"group": "current_script",
-			"action": "toggle",
+			"action": "show",
 			"initial": 1
 		}
 	},

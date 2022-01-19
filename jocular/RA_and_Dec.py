@@ -85,7 +85,7 @@ class Dec(float):
                 degs = int(degs)
                 mins = int(mins)
                 secs = float(secs)
-                if (degs >= -90) & (degs < 90) & (mins >=0) & (mins < 60) & (secs >= 0) & (secs < 60):
+                if (degs >= -90) & (degs < 90) & (mins >=0) & (mins < 60) & (secs >= 0) & (secs <= 60):
                     if degs >= 0:
                         return float(degs + mins/60 + secs/3600)
                     return float(degs - mins/60 - secs/3600)

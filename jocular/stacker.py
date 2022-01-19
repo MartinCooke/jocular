@@ -13,14 +13,12 @@ from kivy.properties import (BooleanProperty, NumericProperty, OptionProperty,
 from kivy.clock import Clock
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
-from jocular.utils import percentile_clip, s_to_minsec, move_to_dir, purify_name, unique_member
+from jocular.utils import percentile_clip, s_to_minsec, move_to_dir, purify_name, toast
 from jocular.image import Image, fits_in_dir
-from jocular.exposurechooser import exp_to_str
+#from jocular.exposurechooser import exp_to_str
 
 def combine_stack(stk, method='mean'):
     if len(stk) == 1:
@@ -122,12 +120,12 @@ class Stacker(Component, Settings):
         self.recompute()
 
         # get filter/exposure/subtype and send to CaptureScript
-        expo = unique_member([s.exposure for s in self.subs])
+        expo = self.get_prop('exposure')
         if expo is None:
             expo = Component.get('Metadata').get('exposure')
         Component.get('CaptureScript').set_external_details(
             exposure=0 if expo is None else expo, 
-            sub_type=unique_member([s.sub_type for s in self.subs]), 
+            sub_type=self.get_prop('sub_type'), 
             filt=''.join({s.filter for s in self.subs}))
  
     def reset(self):
@@ -157,7 +155,7 @@ class Stacker(Component, Settings):
             self.info('{:} | {:}x{:} | {:}'.format(
                 s_to_minsec(d['total_exposure']), 
                 d['nsubs'], 
-                exp_to_str(d['sub_exposure']), 
+                s_to_minsec(d['sub_exposure']), 
                 d['filters']))
 
     def describe(self):
@@ -409,6 +407,10 @@ class Stacker(Component, Settings):
             Component.get('Snapshotter').info('saved animation')
 
     def make_animated_gif(self):
+        # stop existing animation
+        if hasattr(self, 'play_event'):
+            Clock.unschedule(self.play_event)
+
         self.ims = []
         self.selected_sub = 0
         Clock.schedule_once(self.get_screen, 0)
@@ -457,15 +459,6 @@ class Stacker(Component, Settings):
             return None
         return Component.get('View').do_flips(im)
 
-        # try:
-        #     # if self.sub_or_stack == 'sub':
-        #     #     im = self.subs[self.selected_sub].get_image()
-        #     # else:
-        #     im = self.get_stack()
-        #     return Component.get('View').do_flips(im)
-        # except:
-        #     logger.warning('no image for platesolving')
-        #     return None
 
     def get_centroids_for_platesolving(self):
         try:
@@ -477,6 +470,22 @@ class Stacker(Component, Settings):
     def get_selected_sub_count(self):
         # used by calibrator
         return len([1 for s in self.subs if s.status == 'select'])
+
+
+    def get_prop(self, prop=None, unique=True):
+        ''' find value of specified property  (e.g. exposure time) from 
+            subs on stack; if unique is set return None if more than one 
+            value exists for the property
+        '''
+        if prop is None:
+            return None
+        pvals = {getattr(s, prop, None) for s in self.subs}
+        if len(pvals) == 0 or None in pvals:
+            return None
+        if unique:
+            return getattr(self.subs[0], prop) if len(pvals) == 1 else None
+        return pvals
+
 
     def get_stack(self, filt='all', calibration=False):
         ''' Return stack of selected subs of the given filter if provided. Normally uses 
@@ -553,14 +562,6 @@ class Stacker(Component, Settings):
 
         self.app.gui.has_changed('Stacker', not self.is_empty())
 
-        ''' I don't think we need to set the details here because it is done
-            both in WatchedCamera.save_mono for anything coming in from the watcher
-            and in on_previous_object here in Stacker for previous objects
-        '''
-        # Component.get('CaptureScript').set_external_details(
-        #     exposure=sub.exposure,
-        #     filt=''.join(sub.filter),
-        #     sub_type=sub.sub_type)
 
     def realign(self, *args):
         self.recompute(realign=True)

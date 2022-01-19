@@ -8,12 +8,11 @@ from kivy.clock import Clock
 from kivy.properties import StringProperty
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
-#from kivymd.toast.kivytoast import toast
-from jocular.oldtoast import toast
 
 from jocular.component import Component
-from jocular.devicemanager import DeviceFamily, Device
+from jocular.device import DeviceFamily, Device
 from jocular.ascom import connect_to_ASCOM_device
+from jocular.utils import toast
 
 _filter_types = ['L', 'R', 'G', 'B', 'Ha', 'OIII', 'SII', 'dark', 'spec', '-']
 
