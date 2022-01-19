@@ -19,7 +19,7 @@ class Appearance(Component, Settings):
     ring_font_size = NumericProperty(14)
     # info_font_size = NumericProperty(14)
     form_font_size = NumericProperty(15)
-    transparency = NumericProperty(100)
+    transparency = NumericProperty(0)
     colour_saturation = NumericProperty(50)
     tooltip_delay = NumericProperty(.5)
 
