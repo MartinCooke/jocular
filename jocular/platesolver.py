@@ -232,7 +232,8 @@ class PlateSolver(Component, Settings):
         '''
 
         thresh = Component.get('Aligner').get_intensity_threshold()
-        logger.trace('using intensity threshold {:.5f}'.format(thresh))
+        logger.trace('using intensity threshold {:.5f}'.format(
+            0 if thresh is None else thresh))
 
         # extract stars and their mags
         blobs = blob_dog(
