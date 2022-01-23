@@ -19,16 +19,17 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
+from kivymd.uix.behaviors import HoverBehavior
 
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
-
-# for now
 from kivymd.uix.textfield import MDTextField
 from kivy.uix.behaviors import ToggleButtonBehavior
 from kivymd.uix.button import MDFlatButton
 
 from jocular.utils import angle360
+from jocular.component import Component
+from jocular.tooltip import TooltipBehavior
 
 Builder.load_string(
     '''
@@ -67,8 +68,7 @@ Builder.load_string(
     font_size: app.ring_font_size
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
-    #tooltip_text: ''
-    #tooltip_display_delay: app.tooltip_delay
+    # tooltip_text: ''
 
 <JLever>:
     color: app.lever_color
@@ -181,15 +181,14 @@ Builder.load_string(
 <JMDToggleButton>:
     size_hint: 1, None 
     # group: 'scripts'
-    #tooltip_text: 'tooltip' if app.show_tooltips else ''
-    #tooltip_display_delay: app.tooltip_delay
+    #tooltip_text: 'tooltip from buton' 
     shift_y: dp(40)
     height: dp(36)
     md_bg_color: .25, .25, .25, 1
 
 ''')
 
-class JMDToggleButton(MDFlatButton, ToggleButtonBehavior): # , MDTooltip):
+class JMDToggleButton(MDFlatButton, ToggleButtonBehavior, TooltipBehavior):
     def on_state(self, widget, value):
         if value == 'down':
             widget.md_bg_color = .45, .45, .45, 1
@@ -345,7 +344,7 @@ class Rotatable(Widget, Polar):
         )
 
 
-class JWidget(Widget): # MDTooltip):
+class JWidget(Widget, TooltipBehavior):
     pass
 
 class JRotWidget(JWidget, Rotatable):
@@ -493,6 +492,7 @@ joc_icons = {
     'dot': '1',
     'redo': 'h',  # was '4'
     'new': 'i',
+    'save': 'i',  # until we update
     'warn': '!',
     'error': 'W',
     'solve': 'T',

@@ -201,32 +201,8 @@ class Catalogues(Component, Settings):
 
         return None
 
-
-    # def lookup_name(self, name, *args):
-    #     ''' name is of the form name/object type e.g. SHK 10/CG. Called either after 
-    #         looking up object types (in dso.py), or when a user clicks on a row in the
-    #         dso table (above)
-    #     '''
-    #     if not hasattr(self, 'objects'):
-    #         self.load()
-
-    #     return self.objects.get(name.upper(), None)
-
-
-    # def lookup_OTs(self, name):
-    #     ''' Find all OTs that have this name; note that keys in objects are stored
-    #         in upper case
-    #     '''
-    #     if not hasattr(self, 'objects'):
-    #         self.load()
-    #     name = name.upper() + '/'
-    #     return [n.split('/')[1] for n in self.objects.keys() if n.startswith(name)]
-
-
-
     def is_user_defined(self, key):
         return key in self.user_objects
-
 
     def update_user_object(self, props):
         ''' Called from DSO when object is saved and is new or altered
@@ -234,10 +210,13 @@ class Catalogues(Component, Settings):
 
         name = '{:}/{:}'.format(props['Name'], props['OT']).upper()
 
-        # add/update to user objects
-        self.user_objects[name] = props
+        # add to or update to user objects
+        self.user_objects[name] = props.copy()
+
+        logger.debug('Adding to user objects for {:}: {:}'.format(name, props))
 
         try:
+            logger.trace('Writing props to user_objects: {:}'.format(self.user_objects[name]))
             with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
                 json.dump(self.user_objects, f, indent=1)
             logger.info('{:} {:}'.format(name, props))
@@ -245,7 +224,7 @@ class Catalogues(Component, Settings):
             logger.warning('Unable to save user_objects.json ({:})'.format(e))
 
         # update main DSO list
-        self.dsos[name] = props
+        self.dsos[name] = props.copy()
         self.dsos[name]['U'] = 'Y'
 
 

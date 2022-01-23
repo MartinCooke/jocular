@@ -12,8 +12,8 @@ from kivy.properties import NumericProperty, BooleanProperty
 from kivy.clock import Clock
 
 from jocular.component import Component
-from jocular.gradient import image_stats
-from jocular.utils import toast
+# from jocular.gradient import image_stats
+from jocular.utils import toast, percentile_clip
 
 capture_controls = {'devices', 'script_button', 'capturing', 'exposure_button', 'filter_button'}
 
@@ -97,7 +97,7 @@ class Capture(Component):
         # get next command from generator
         op = next(Component.get('CaptureScript').generator)
 
-        logger.debug(op)
+        # logger.debug(op)
 
         if len(op) == 2:
             op, param = op
@@ -124,7 +124,7 @@ class Capture(Component):
                     self.expo = self.exposure
                     self.exposure_start_time = time.time()
                     Clock.schedule_once(self.tick, 0)
-                self.info('+capturing [{:.1f} fps]'.format(self.fps))
+                self.info('capturing [{:.1f} fps]'.format(self.fps))
             except Exception as e:
                 logger.exception('problem in expose long {:}'.format(e))
 
@@ -136,7 +136,7 @@ class Capture(Component):
                     on_capture=self.send_to_display,
                     on_failure=self.stop_capture,
                     is_faf=True)
-                self.info('+capturing [{:.1f} fps]'.format(self.fps))
+                self.info('capturing [{:.1f} fps]'.format(self.fps))
             except Exception as e:
                 logger.exception('problem in expose short {:}'.format(e))
 
@@ -146,7 +146,7 @@ class Capture(Component):
                 on_capture=self.save_capture,
                 on_failure=self.stop_capture,
                 is_bias=True)
-            self.info('+capturing bias [{:.1f} fps]'.format(self.fps))
+            self.info('capturing bias [{:.1f} fps]'.format(self.fps))
 
         elif op == 'autoflat':
             auto_expo = self.get_flat_exposure()
@@ -189,14 +189,11 @@ class Capture(Component):
         im = Component.get('Camera').get_image()
         capture_props = Component.get('Camera').get_capture_props()
 
-        # probably best here get capture params directly from Camera component
-        # to do
-
         if im is None:
             toast('No image to save')
             return
 
-        # save as 16-bit int FITs
+        # image always comes across scaled 0-1 so rescale to 16-bits
         im *= (2**16 - 1)
 
         if not hasattr(self, 'series_number') or self.series_number is None:
@@ -207,9 +204,12 @@ class Capture(Component):
         capture_props['exposure'] = self.exposure
         capture_props['filter'] = Component.get('FilterWheel').current_filter
         capture_props['temperature'] = Component.get('Session').temperature
-        sub_type = capture_props['sub_type'] = Component.get('CaptureScript').get_sub_type()
-        pref = sub_type if sub_type in {'flat', 'dark'} else capture_props['filter']
-        name = '{:}_{:d}.fit'.format(pref, self.series_number)
+        sub_type = Component.get('CaptureScript').get_sub_type()
+        capture_props['sub_type'] = sub_type
+
+        # check why no bias in below (just a naming convention, but still...)
+        prefix = sub_type if sub_type in {'flat', 'dark'} else capture_props['filter']
+        name = '{:}_{:d}.fit'.format(prefix, self.series_number)
         
         Component.get('ObjectIO').new_sub(
             data=im.astype(np.uint16),
@@ -225,19 +225,23 @@ class Capture(Component):
         im = Component.get('Camera').capture_sub(exposure=expo, 
             return_image=True,
             on_failure=self.stop_capture)
-        return image_stats(im)['central 75%']
+        return percentile_clip(im, perc=75)
 
 
     def get_flat_exposure(self):
-        # make a series of test exposures to get ADU just over half-way (0.5)
+        ''' make a series of test exposures to get ADU (actually
+            normalised to range 0-1) in the middle of the range; note
+            that we only test exposures in the range 0.5-2.5s and aim
+            for ADU in the range 0.3-0.7
+        '''
 
         logger.info('doing autoflat')
 
-        min_exposure, max_exposure = 1, 2.5
-        min_ADU, max_ADU = .3, .8
+        min_exposure, max_exposure = .5, 2.5
+        min_ADU, max_ADU = .3, .7
 
         expos = np.linspace(min_exposure, max_exposure, 5)
-        adus = np.ones(len(expos))      # normalised ADUs actually
+        adus = np.ones(len(expos)) 
 
         # do shortest first in case no point
         adus[0] = self.compute_ADU(expos[0])
@@ -260,7 +264,8 @@ class Capture(Component):
         xvals = np.linspace(min_exposure, max_exposure, 500)
         best = np.argmin(np.abs(adu_target - f(xvals)))
         best_exposure = xvals[best]
-        mesg = 'best exposure for autoflat {:} with ADU {:}'.format(best_exposure, f(best_exposure))
+        mesg = 'best exposure for autoflat {:} with ADU {:}'.format(
+            best_exposure, f(best_exposure))
         toast(mesg)
         logger.info(mesg)
         return float(best_exposure)

@@ -1,10 +1,13 @@
 ''' Luminance channel manipulations, including B & W, stretch etc
 '''
 
+import math
 import numpy as np
+from loguru import logger
 
 from kivy.app import App
 from kivy.uix.label import Label
+#from kivymd.uix.label import MDLabel
 from kivy.uix.boxlayout import BoxLayout
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, NumericProperty, OptionProperty
@@ -14,6 +17,38 @@ from jocular.stretch import stretch
 from jocular.gradient import estimate_gradient, estimate_background, image_stats
 from jocular.component import Component
 from jocular.metrics import Metrics
+from kivy.lang import Builder
+
+Builder.load_string(
+'''
+
+<StatsPanel>:
+    adustr: _adu
+    perstr: _per
+    size_hint: None, None 
+    size: dp(400), dp(100) 
+    orientation: 'vertical'
+    MDLabel:
+        id: _adu
+        size_hint: None, None
+        size: dp(400), dp(25)
+        theme_text_color: 'Custom'
+        text_color: .6, .6, .6, 1
+        font_size: '16sp'
+        halign: 'center'
+    MDLabel:
+        id: _per
+        size_hint: None, None
+        size: dp(400), dp(25)
+        theme_text_color: 'Custom'
+        text_color: .6, .6, .6, 1
+        font_size: '16sp'
+        halign: 'center'
+
+''')
+
+class StatsPanel(BoxLayout):
+    pass
 
 class Monochrome(Component):
 
@@ -94,8 +129,9 @@ class Monochrome(Component):
 
     def display_sub(self, im, do_gradient=False):
         ''' Called by Stacker when user selects sub, and by Capture, when 
-            displaying short subsOnly compute gradient if light sub from stacker, 
-            not when calibration, nor when short
+            displaying short subs. Only compute gradient if light sub from 
+            stacker, not when calibration, nor when short
+            v0.5 added: also compute grad if dims changed
         '''
 
         # ensure we are displaying subs
@@ -106,6 +142,9 @@ class Monochrome(Component):
         self.mono = im
         if do_gradient:
             self.update_gradient(im)
+        # new in v0.5: if shape changes, update gradient
+        elif self._gradient is not None and self._gradient.shape != im.shape:
+            self.update_gradient(im) 
         if self.autoblack:
             self.update_blackpoint(im)
         self.view.display_image(self.luminance())
@@ -185,52 +224,48 @@ class Monochrome(Component):
         return im
 
     def compute_image_stats(self):
-        if hasattr(self, "mono") and self.mono is not None:
-            im = self.mono
-            stats = image_stats(im)
-            for s in [
-                "min",
-                "background",
-                "100 x std. dev.",
-                "central 75%",
-                "99.9 percentile",
-                "99.99 percentile",
-                "max",
-            ]:
-                self.image_stats_fields[s].text = "{:}: {:.1f}%".format(
-                    s, 100 * stats[s]
-                )
-            # self.white = float(stats['99.9 percentile'])
+        if not hasattr(self, "mono") or self.mono is None or not hasattr(self, 'statspanel'):
+            return
+        im = self.mono
+        stats = image_stats(im)
+        stats = {k: 0 if math.isnan(v) else v for k, v in stats.items()}
+        try:
+            adu = {k: int(2**16 * v) for k, v in stats.items()}
+            per = {k: (100 * v) for k, v in stats.items()}
 
-    #  use kv for these?
-    def make_image_stats_panel(self):
-        p = BoxLayout(
-            size_hint=(None, None), size=(dp(200), dp(200)), orientation="vertical"
-        )
-        App.get_running_app().gui.add_widget(p)
-        self.image_stats_fields = {}
-        for s in [
-            "min",
-            "background",
-            "100 x std. dev.",
-            "central 75%",
-            "99.9 percentile",
-            "99.99 percentile",
-            "max",
-        ]:
-            self.image_stats_fields[s] = l = Label(
-                text=s, size_hint=(None, None), size=(dp(200), dp(25))
-            )
-            p.add_widget(l)
-        return p
+            self.statspanel.perstr.text = \
+                'percent {:.1f}-{:.1f} mean {:.1f} bg {:.1f} max {:.1f}'.format(
+                per['min'], per['max'], per['mean'], per['background'], per['99.99'])
+            self.statspanel.adustr.text = \
+                'ADU {:d}-{:d} mean {:.0f} bg {:.0f} max {:.0f}'.format(
+                adu['min'], adu['max'], adu['mean'], adu['background'], adu['99.99'])
+        except:
+            pass
+
+    # def make_image_stats_panel(self):
+    #     p = BoxLayout(
+    #         size_hint=(None, None), 
+    #         size=(dp(400), dp(100)), 
+    #         orientation="vertical"
+    #     )
+    #     App.get_running_app().gui.add_widget(p)
+    #     self.statfields = {
+    #         'adu': MDLabel(halign='center', size_hint=(None, None), size=(dp(400), dp(25))),
+    #         'per': MDLabel(halign='center', size_hint=(None, None), size=(dp(400), dp(25)))
+    #         }
+    #     p.add_widget(self.statfields['adu'])
+    #     p.add_widget(self.statfields['per'])
+
+    #     return p
 
     def on_show_image_stats(self, *args):
+        if not hasattr(self, 'statspanel'):
+            self.statspanel = StatsPanel()
+            App.get_running_app().gui.add_widget(self.statspanel)            
         if self.show_image_stats:
-            if not hasattr(self, "image_stats"):
-                self.image_stats = self.make_image_stats_panel()
             cx, cy = Metrics.get("origin")
-            self.image_stats.center_x = cx
-            self.image_stats.center_y = Window.height - dp(150)
+            self.statspanel.center_x = cx
+            self.statspanel.center_y = dp(150)
             self.compute_image_stats()
         else:
-            self.image_stats.y = 2 * Window.height
+            self.statspanel.y = 2 * Window.height

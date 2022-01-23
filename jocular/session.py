@@ -309,17 +309,16 @@ class Session(Component, Settings):
     @logger.catch()
     def check_for_change(self):
         ''' Check if any property has changed and stack is not empty
-            For new objects, don't check if session has changed as it is
-            continually changing! (clock) 
+            For new objects, don't check if session has changed as clock is
+            continually changing! 
         '''
         props = self.props
         if self.is_new_object:
             props = set(props) - {'session'}
 
         changes = [getattr(self, p) != self.initial_values.get(p, '') for p in props]
+        self.changed = 'session props' if any(changes) else ''
 
-        # tell gui about any changes
-        self.app.gui.has_changed('Session', not Component.get('Stacker').is_empty() and any(changes))
 
     ''' main methods for handling new/previous sessions
     '''

@@ -93,7 +93,8 @@ class Stacker(Component, Settings):
                     os.rename(f, os.path.join(cod, bn))
                     rejected.add(bn)
                 except Exception as e:
-                    logger.exception('problem moving rejected on load {:} ({:})'.format(f, e)) 
+                    logger.exception('problem moving rejected on load {:} ({:})'.format(f, e))
+
         # now load all (which now will include prev rejects)
         for f in fits_in_dir(cod):
             try:
@@ -106,11 +107,10 @@ class Stacker(Component, Settings):
                 self.subs.append(im)
             except Exception as e:
                 logger.exception('problem reading image {:} ({:})'.format(f, e))
-        # if we have loaded up some calibration subs, ensure that we mark things as changed
-        if not self.is_empty():
-            self.app.gui.has_changed('Stacker', self.subs[0].sub_type in {'dark', 'bias', 'flat'})
-            # self.changed = self.subs[0].sub_type in {'dark', 'bias', 'flat'}
-            self.original_exposure = self.subs[0].exposure
+
+        # if not self.is_empty():
+        #      self.original_exposure = self.subs[0].exposure
+
         # store rejected to see if anything has changed and needs saving
         self.orig_rejects = rejected
 
@@ -127,6 +127,7 @@ class Stacker(Component, Settings):
             exposure=0 if expo is None else expo, 
             sub_type=self.get_prop('sub_type'), 
             filt=''.join({s.filter for s in self.subs}))
+
  
     def reset(self):
         # Called when we have a new object and when user clears stack
@@ -236,16 +237,11 @@ class Stacker(Component, Settings):
         for nm in glob.glob(os.path.join(cod, '*.fit*')):
             objio.delete_file(os.path.join(cod, nm))
 
-        #cod = Component.get('ObjectIO').current_object_dir
-        #for nm in glob.glob(os.path.join(cod, '*.fit*')):
-        #    move_to_dir(os.path.join(cod, nm), 'deleted')
-
         # perform necessary resets
         Component.get('Aligner').reset()
         self.reset()
         Component.get('Capture').reset(stop_capturing=False)
-        self.app.gui.has_changed('Stacker', False)
-        #self.changed = False # indicate nothing has changed
+        self.check_for_change()
 
     def delete_sub(self, *args):
         if self.is_empty():
@@ -256,10 +252,9 @@ class Stacker(Component, Settings):
         objio = Component.get('ObjectIO')
         cod = objio.current_object_dir
         objio.delete_file(os.path.join(cod, self.subs[sub_num].name + '.fit'))        
-        #cod = Component.get('ObjectIO').current_object_dir
-        #move_to_dir(os.path.join(cod, self.subs[sub_num].name), 'deleted')
         del self.subs[sub_num]
         self.selected_sub -= 1
+        self.check_for_change()
 
     def on_animating(self, *args):
         if self.is_empty():
@@ -317,11 +312,32 @@ class Stacker(Component, Settings):
         self.update_stack_scroller()    # updates colours
         self.stack_changed()            # will check if sub or stack
 
-        # check if anything has changed
-        if self.subs[0].sub_type == 'light':
-            changed = {s.name for s in self.subs if s.status == 'reject'} != self.orig_rejects or \
-                self.subs[0].exposure != self.original_exposure
-            self.app.gui.has_changed('Stacker', changed)
+
+    def check_for_change(self):
+        ''' whenever there are changes to the stack, check whether anything needs
+            saving
+        '''
+
+        # empty stack implies no changed
+        if self.is_empty():
+            self.changed = ''
+
+        # stack contains calibration subs, so always allow master to be saved
+        elif self.subs[0].sub_type in {'flat', 'dark', 'bias'}:
+            self.changed = 'potential new master'
+
+        # previous object
+        elif Component.get('ObjectIO').existing_object:
+            if {s.name for s in self.subs if s.status == 'reject'} != self.orig_rejects:
+                # used to have this too: self.subs[0].exposure != self.original_exposure
+                self.changed = 'sub select/reject status modififed'
+            else:
+                self.changed = ''
+
+        # live object, stack non-empty, therefore changed
+        else:
+            self.changed = 'new object'
+
 
     def on_spectral_mode(self, *args):
         self.stack_changed()
@@ -331,8 +347,11 @@ class Stacker(Component, Settings):
         deselected/change in stack view/change in mode
         '''
 
+        self.check_for_change()
+
         if self.is_empty():
             return
+
         if self.sub_or_stack == 'sub':
             return
 
@@ -438,17 +457,22 @@ class Stacker(Component, Settings):
             self.stack_changed()
 
         self.update_stack_scroller()
+        self.check_for_change()
 
 
     def get_current_displayed_image(self, first_sub=False):
-        ''' Currently gets displayed image which might be short sub, sub, or stack
+        ''' Called by platesolver to get currently displayed image
+             which might be short sub, sub, or stack
         '''
         if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
             # currently using focus/align/frame
             logger.info('getting last faf image')
             im = Component.get('Capture').last_faf
         elif first_sub:
-            im = self.subs[0].get_image()
+            if not self.is_empty():
+                im = self.subs[0].get_image()
+            else:
+                return None
         elif self.sub_or_stack == 'sub':
             logger.info('getting current sub')
             im = self.subs[self.selected_sub].get_image()
@@ -560,9 +584,6 @@ class Stacker(Component, Settings):
         self.subs.append(sub)
         self.sub_added()
 
-        self.app.gui.has_changed('Stacker', not self.is_empty())
-
-
     def realign(self, *args):
         self.recompute(realign=True)
 
@@ -592,9 +613,12 @@ class Stacker(Component, Settings):
         # Process sub on recompute/realign
 
         sub.image = None  # force reload
-        Component.get('BadPixelMap').process_bpm(sub)
+        sub.image = Component.get('BadPixelMap').remove_hotpix(sub.get_image())
         if sub.sub_type == 'light':
+            logger.trace('start calib')
             Component.get('Calibrator').calibrate(sub)
+            logger.trace('start aligner')
             Component.get('Aligner').process(sub)
+            logger.trace('end aligner')
         elif sub.sub_type == 'flat':
             Component.get('Calibrator').calibrate_flat(sub)

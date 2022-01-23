@@ -42,7 +42,7 @@ class ASICamera(GenericCamera):
 		('square_sensor', {
 			'name': 'equalise aspect ratio',
 			'switch': '',
-			'help': 'make sensor width and height equal (using ROI)'
+			'help': 'make sensor width and height equal'
 			}),
 		('polling_interval', {
 			'name': 'polling interval', 
@@ -163,12 +163,11 @@ class ASICamera(GenericCamera):
 			logger.exception('cannot get gain options ({:})'.format(e))
 			return
 
-
 		# set some properties
 		try:
 			if self.use_min_bandwidth:
 				self.asicamera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD, 
-					self.asicamera.get_controls()['BandWidth']['MinValue'])
+					self.camera_controls['BandWidth']['MinValue'])
 			self.asicamera.disable_dark_subtract()
 			self.asicamera.set_image_type(asi.ASI_IMG_RAW16)
 		except Exception as e:
@@ -197,12 +196,11 @@ class ASICamera(GenericCamera):
 	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
 		binning=None, return_image=False, is_bias=False):
 
-		#logger.debug('start of capture function')
 		if is_bias:
-			# change this to min exposure
-			self.exposure = .001
+			self.exposure = int(self.camera_controls['Exposure']['MinValue']) / 1e6
+		else:
+			self.exposure = exposure
 
-		self.exposure = exposure
 		self.on_failure = on_failure
 		self.on_capture = on_capture
 
@@ -217,12 +215,11 @@ class ASICamera(GenericCamera):
 		try:
 			self.asicamera.set_control_value(
 				asi.ASI_EXPOSURE, int(self.exposure * 1e6))
-			logger.info('setting exposure to {:}'.format(self.exposure))
+			# logger.info('setting exposure to {:}'.format(self.exposure))
 		except Exception as e:
 			toast('camera issue while setting exposure')
 			logger.exception('camera issue while setting exposure ({:})'.format(e))
 
-		#logger.debug('starting exposure')
 		self.asicamera.start_exposure()
 
 		if return_image:
@@ -238,8 +235,6 @@ class ASICamera(GenericCamera):
 			 
 		self.capture_event = Clock.schedule_once(self.check_exposure, 
 			max(self.polling_interval, self.exposure))
-
-		#logger.debug('end of capture function')
 
 
 	def dims_changed(self):
@@ -294,13 +289,11 @@ class ASICamera(GenericCamera):
 		try:
 			''' apparently offset is called brightness
 			'''  
-			# self.asicamera.set_control_value(asi.ASI_OFFSET, int(self.offset))
 			self.asicamera.set_control_value(asi.ASI_BRIGHTNESS, int(self.offset))
 			logger.info('setting offset to {:.0f}'.format(self.offset))
 		except Exception as e:
 			toast('problem setting offset')
 			logger.exception('problem setting offset ({:})'.format(e))
-
 
 	def get_camera_data(self):
 		''' see capture method in
@@ -316,12 +309,18 @@ class ASICamera(GenericCamera):
 		''' return dict of props such as gain, ROI etc
 			(these get converted to uppercase in FITs)
 		'''
+		start_x, start_y, width, height = self.asicamera.get_roi()
 		return {
 			'camera': self.camera_props.get('Name', 'anon'),
 			'gain': self.gain,
 			'offset': self.offset,
 			'binning': int(self.binning[0]),
-			'ROI': self.ROI
+			'ROI': self.ROI,
+			'equal_aspect': self.square_sensor,
+			'ROI_x': start_x,
+			'ROI_y': start_y,
+			'ROI_w': width,
+			'ROI_h': height
 			}
 
 

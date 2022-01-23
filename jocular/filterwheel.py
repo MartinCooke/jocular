@@ -20,10 +20,10 @@ class FilterWheel(Component, DeviceFamily):
 
 	modes = {
 		'Single': 'SingleFW',
-		'Simulator': 'SimulatorFW',
+		#'Simulator': 'SimulatorFW',
 		'Manual': 'ManualFW', 
-		'SX EFW': 'SXFW',
-		'ASCOM': 'ASCOMFW'
+		'SX EFW': 'SXFW'
+		#'ASCOM': 'ASCOMFW'
 	}
 
 	default_mode = 'Single'
@@ -181,15 +181,15 @@ class SingleFW(GenericFW):
 			success_action()
 
 
-class SimulatorFW(GenericFW):
+# class SimulatorFW(GenericFW):
 
-	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
-		if success_action is not None:
-			success_action()
+# 	def select_position(self, position=None, name=None, success_action=None, failure_action=None):
+# 		if success_action is not None:
+# 			success_action()
 
-	def connect(self):
-		self.connected = True
-		self.status = 'Filterwheel simulator active'
+# 	def connect(self):
+# 		self.connected = True
+# 		self.status = 'Filterwheel simulator active'
 
 
 class ManualFW(GenericFW):
@@ -272,8 +272,9 @@ class SXFW(GenericFW):
 			# wait three seconds before informing controller it has been done
 			logger.debug('success so setting up action {:}'.format(success_action))
 			Clock.schedule_once(success_action, 3)
-		except:
-			# controller will handle this
+		except Exception as e:
+			logger.debug('failed to select position ({:})'.format(e))
+			# controller will handle this further
 			if failure_action is not None:
 				failure_action()
 

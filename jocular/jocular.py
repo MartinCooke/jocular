@@ -140,6 +140,8 @@ class Jocular(MDApp):
                 self.transparency = int(v) / 100
             elif p == 'colour_saturation':
                 self.theme_cls.accent_hue = sat_to_hue(v)
+            elif p == 'tooltip_delay':
+                self.tooltip_delay = v
 
         self.gui = GUI()
 

@@ -67,7 +67,6 @@ class Observations(Component):
         except Exception as e:
             logger.exception(e)
 
-
     def rebuild_table(self, dt=None):
         self.observations_table.data = self.get_observations()         
         self.observations_table.update()
@@ -82,7 +81,8 @@ class Observations(Component):
             name='Observations',
             description='click on DSO name to load',
             cols={
-                'Name': {'w': 250, 'align': 'left', 'sort': {'catalog':''}, 'action': self.load_dso},
+                'Name': {'w': 250, 'align': 'left', 'sort': {'catalog':''}, 
+                    'action': self.load_dso},
                 'OT': {'w': 40},
                 'Con': {'w': 50},
                 'Session': {'w': 140, 'sort': {'DateFormat': '%d %b %y %H:%M'}},
@@ -97,9 +97,8 @@ class Observations(Component):
             initial_sort_direction='reverse'
             )    
 
+
     def show_observations(self, *args):
-        '''Called from menu to browse DSOs; open on first use
-        '''
 
         if not hasattr(self, 'observations_table'):
             self.observations_table = self.build_observations()

@@ -13,11 +13,9 @@ Builder.load_string('''
 
 <StatusLabel>:
     size_hint: 1, None
-    # height: dp(24) 
     height: dp(int(app.form_font_size[:-2]) + 2)
     halign: 'right'
     markup: True
-    # font_size: app.info_font_size
     font_size: app.form_font_size
     text_size: self.size
     size: self.texture_size
@@ -30,18 +28,12 @@ Builder.load_string('''
     size_hint: None, None
     orientation: 'vertical'
     padding: dp(5), dp(2)
-    #size: app.gui.height / 8 + (app.gui.width - app.gui.height) / 2, app.gui.height / 2
     size: '300dp', app.gui.height / 2
     pos: app.gui.width - self.width if root.show_status else app.gui.width, 0
     Label:
         size_hint: 1, 1
 
 <StatusBox>:
-    # canvas:
-    #     Color: 
-    #         rgba: .5, .5 , .5, 1
-    #     Line:
-    #         points: self.x, self.y, self.x + self.width, self.y 
     component: _component
     size_hint: 1, None
     height: dp(40)
@@ -53,11 +45,7 @@ Builder.load_string('''
         size_hint: 1, .3
         halign: 'right'
         font_size: '12sp'
-        # font_size: app.form_font_size
-        # color: .5, .5, .5, 1
         color: app.hint_color
-
-
 ''')
 
 class StatusLabel(MDLabel):

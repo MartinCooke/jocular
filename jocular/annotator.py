@@ -125,11 +125,11 @@ Builder.load_string(
 <AnnotFOV>:
     canvas:
         Color:
-            rgb: 1, .4, .4
+            rgb: .4, .4, .4
             a: 1 if self.visible else 0
         Line:
             points: [self.sx - self.length/2, self.sy, self.sx + self.length/2, self.sy]
-            width: 4
+            width: 3
     color: 1, .4, .4, 1
 
 '''

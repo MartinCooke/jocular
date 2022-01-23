@@ -1,5 +1,4 @@
 ''' Handles DSO details including lookup and catalogue entry
-    Code is quite complex due to need for 2-way format conversion etc
 '''
 
 import math
@@ -194,10 +193,6 @@ def validated_prop(val, prop):
     return False
 
 
-
-''' Main classes here
-'''
-
 class DSO_panel(MDBoxLayout):
     ''' visual representation of editable DSO properties
     '''
@@ -373,7 +368,8 @@ class DSO(Component):
 
         orig = {p: prop_to_str(p, self.original_props.get(p, '')) for p in  self.props}
         now = {p: prop_to_str(p, getattr(self, p)) for p in self.props}
-        self.app.gui.has_changed('DSO', orig != now)
+        self.changed = 'DSO properties changed' if orig != now else ''
+        # self.app.gui.has_changed('DSO', orig != now)
         return orig != now
  
     def on_save_object(self):
@@ -391,14 +387,18 @@ class DSO(Component):
             'Other': self.Other.strip()
             }
 
+        logger.trace('Checking for change')
+
         # existing object and not changed => do nothing
-        if not self.check_for_change() and self.cats.lookup(props['Name'], OT=props['OT']) is not None:
+        if Component.get('ObjectIO').existing_object and not self.check_for_change():
+            logger.trace('Existing object and has not changed')
             return
  
-        ''' add to user DSO catalogue if new or modified and has 
+        ''' add to user DSO catalogue if new or update if modified and has 
             well-formed name/OT/RA/Dec
         ''' 
         if props['Name'] and props['OT'] and props['RA'] is not None and props['Dec'] is not None:
+            logger.trace('New or modified object and has Name/OT/RA/Dec so updating user catalogue')
             self.cats.update_user_object(props)
  
         # update metadata

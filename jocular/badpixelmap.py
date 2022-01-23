@@ -1,8 +1,5 @@
-''' Maintains and applies bad pixel map that persists between sessions
-    new in V0.3: creates a new BPM for each sensor shape encountered to avoid applying
-    BPM to the wrong sensor and to enable multiple sensors to be used 
-    in v0.5, don't bother to load/save map due to lots of combinations of ROI etc
-    just do it 'online'
+''' v0.5 simply apply hotpixel removal in each frame
+    simplified from original bad pixel map
 '''
 
 import numpy as np
@@ -18,77 +15,40 @@ from jocular.settingsmanager import Settings
 class BadPixelMap(Component, Settings):
 
     apply_BPM = BooleanProperty(True)
-    bpm_frames = NumericProperty(3)
+    sigmas = NumericProperty(5)
 
     tab_name = 'Bad pixel map'
     configurables = [
         ('apply_BPM', {'name': 'remove hot pixels?', 'switch': '',
             'help': 'Switching this off can help diagnose tracking issues'}),
-        ('bpm_frames', {'name': 'successive subs to create BPM', 'float': (1, 10, 1),
-            'help': 'Only treat as a bad pixel if it occurs in this many subs in succession',
-            'fmt': '{:.0f} subs'})
+        ('sigmas', {'name': 'outlier rejection threshold', 'float': (1, 6, 1),
+            'help': 'reject any pixel if this many sigmas from mean of 8-neighbourhood (factory: 5)',
+            'fmt': '{:.0f} sigmas'})
         ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        self.bpm = None
-        self.bplist = []
-        self.frame_count = 0
 
-    # def load_BPM(self, shape):
-    #     # load BPM for this shape, creating if necessary
-
-    #     self.bplist = []  # acts as a circular buffer of BPs from recent frames
-    #     self.frame_count = 0
-    #     self.bpm = None
-    #     self.bpm_shape = shape
-    #     self.bpm_name = 'BPM_{:}x{:}.npy'.format(shape[0], shape[1])
-    #     path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
-    #     if os.path.exists(path):
-    #         bpm = np.load(path)
-    #         self.update_bpm({(x, y) for x, y in zip(bpm[0], bpm[1])})
-    #         logger.info('loaded bad pixel map with {:} members'.format(len(bpm[0])))
-    #     else:
-    #         logger.info('creating new bad pixel map')
-
-    def on_close(self):
-        pass
-        # self.save_BPM()
-
-    def process_bpm(self, sub):
-
-        if not self.apply_BPM:
-            return
-
-        # # we don't have one yet, so create one of correct shape
-        # if self.bpm is None:
-        #     self.load_BPM(sub.shape)
-
-        # # we have one, but it is the wrong shape (ie different sensor) so save & load
-        # elif self.bpm_shape != sub.shape:
-        #     self.save_BPM()
-        #     self.load_BPM(sub.shape)
-
-        im = sub.get_image()
-        badpix = self.find_hot_pixels(im)
-
-        # only update map if it is a light sub
-        if sub.sub_type == 'light':
-            self.update_bpm(badpix)
-            if self.bpm is not None:
-                logger.debug('{:} pix, {:} in map'.format(len(badpix), len(self.bpm)))
-        self.do_bpm(im, self.bpm)
-
+    def remove_hotpix(self, im, apply_BPM=False):
+        ''' Called by Stacker, in which case whether we apply or not is determined
+            by BPM settings, and by calibrator, in which apply_BPM will
+            be set to true
+        '''
+        if self.apply_BPM or apply_BPM:
+            hotpix = self.find_hot_pixels(im)
+            logger.trace('removing {:} hot pixels'.format(len(hotpix)))
+            return self.do_bpm(im, hotpix)
+        else:
+            return im
 
     def find_hot_pixels(self, im):
         '''Return hot pixel candidates.
-        We look for non-edge pixels whose intensity is significantly greater
+        Look for non-edge pixels whose intensity is significantly greater
         than their neighbours. Approach is conservative in order to
-        find all hot pixels, since (a) we remove any imposters by comparing
-        across most recent 'bpm_frames' when building the hot pixel map; and (b) in the
-        EAA use case the only adverse effect is to replace a few non-hot pixels
-        by their median. Returns a set of (row, col) coordinates
+        find all hot pixels, since for EAA the only adverse effect is to 
+        replace a few non-hot pixels by their median. Returns a set of (row, col) 
+        coordinates.
 
         10ms for Lodestar, 50ms for ASI 290MM
         ''' 
@@ -99,8 +59,8 @@ class BadPixelMap(Component, Settings):
         # divide im by local sum in 3x3 region
         im2 = im_norm / convolve(im_norm, np.ones((3, 3)), mode='constant')
 
-        # Define hot pix as more than 5 SD from mean
-        hp_cands = (im2 > np.mean(im2) + 5*np.std(im2))
+        # Define hot pix as more than 'sigmas' SD from mean
+        hp_cands = (im2 > np.mean(im2) + self.sigmas * np.std(im2))
 
         # set boundaries to zero
         hp_cands[0, :] = 0
@@ -113,36 +73,9 @@ class BadPixelMap(Component, Settings):
 
         return {(r, c) for r, c in zip(hps[0], hps[1])}
 
-    def do_bpm(self, im, bpm=None):
+    def do_bpm(self, im, bpm):
         # Replace each pixel in bad pixel map by median of neighbours
-        if bpm is None:
-            bpm = self.bpm
-        if bpm is not None:
-            for r, c in bpm:
-                im[r, c] = np.median(im[r-1:r+2, c-1:c+2].ravel())
+        for r, c in bpm:
+            im[r, c] = np.median(im[r-1:r+2, c-1:c+2].ravel())
         return im
  
-    def compute_bpm(self):
-        # Use intersection of bad pixels from previous N frames to compute bad pixel map
-        if self.bplist:
-            self.bpm = self.bplist[0]
-            for bpl in self.bplist[1:]:
-                self.bpm = self.bpm.intersection(bpl)
-
-    def update_bpm(self, bpm):
-        # Add new BPM set to BPM, recomputing BPM
-        if len(self.bplist) == self.bpm_frames:
-            self.bplist[self.frame_count % self.bpm_frames] = bpm
-        else:
-            self.bplist.append(bpm)
-        self.frame_count += 1
-        self.compute_bpm()
-
-    # def save_BPM(self):
-    #     # Save as npy file
-    #     if self.bpm is None:
-    #         return
-    #     bpm = np.array([[x for x, y in self.bpm], [y for x, y in self.bpm]])
-    #     path = os.path.join(self.app.get_path('calibration'), self.bpm_name)
-    #     np.save(path, bpm)
-    #     logger.info('saved map with {:} members'.format(len(bpm[0])))

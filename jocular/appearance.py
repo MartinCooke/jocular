@@ -17,7 +17,6 @@ class Appearance(Component, Settings):
     lever_color = NumericProperty(32)
     hint_color = NumericProperty(32)
     ring_font_size = NumericProperty(14)
-    # info_font_size = NumericProperty(14)
     form_font_size = NumericProperty(15)
     transparency = NumericProperty(0)
     colour_saturation = NumericProperty(50)
@@ -53,11 +52,6 @@ class Appearance(Component, Settings):
             'fmt': '{:.0f} percent',
             'help': ''
             }),
-        # ('info_font_size', {
-        #     'name': 'panel font size', 'float': (10, 24, 1),
-        #     'help': 'Font size for information/annotation panels',
-        #     'fmt': '{:.0f} points'
-        #     }),
         ('ring_font_size', {
             'name': 'ring font size', 'float': (10, 24, 1),
             'help': 'Font size for labels used on the ring',
@@ -70,7 +64,7 @@ class Appearance(Component, Settings):
             }),
         ('tooltip_delay', {
             'name': 'tooltip delay', 'float': (0, 5, .5),
-            'help': 'Time before tooltip appears',
+            'help': 'Time before tooltip appears (set to max to switch off)',
             'fmt': '{:.1f} seconds'
             }),
         ]
@@ -83,9 +77,6 @@ class Appearance(Component, Settings):
     # until I can work out how to use them directly
     def on_ring_font_size(self, *args):
         self.app.ring_font_size = '{:.0f}sp'.format(self.ring_font_size)
-
-    # def on_info_font_size(self, *args):
-    #     self.app.info_font_size = '{:.0f}sp'.format(self.info_font_size)
     
     def on_form_font_size(self, *args):
         self.app.form_font_size = '{:.0f}sp'.format(self.form_font_size)
@@ -99,10 +90,6 @@ class Appearance(Component, Settings):
         self.app.theme_cls.primary_hue = sat_to_hue(self.colour_saturation)
 
     def on_lowlight_color(self, *args):
-        # hues = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', 'A100', 'A200', 'A400', 'A700']
-        # val = hues[int(len(hues) * self.lowlight_color / 100)]
-        # self.app.theme_cls.primary_hue = val    
-
         lg = max(20, min(int(self.lowlight_color), 100)) / 100
         self.app.lowlight_color = [lg, lg, lg, 1]
 

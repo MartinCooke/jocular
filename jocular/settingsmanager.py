@@ -38,7 +38,6 @@ class SettingsManager(Component, Panel):
 		for cls in self.instances.values():
 			cls.apply_and_save_settings()
 
-
 	def on_show(self):
 		''' Rebuild and display settings screen
 		'''
@@ -52,7 +51,7 @@ class SettingsManager(Component, Panel):
 		hb.add_widget(Label(size_hint=(1, 1)))
 		self.spinner = Spinner(
 			text=self.current_panel,
-			values=self.instances.keys(),
+			values=sorted(self.instances.keys()),
 			size_hint=(None, 1), width=dp(140), font_size='20sp')
 		self.spinner.bind(text=self.setting_panel_changed)
 		hb.add_widget(self.spinner)

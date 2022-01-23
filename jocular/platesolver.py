@@ -110,6 +110,9 @@ class PlateSolver(Component, Settings):
     focal_length = NumericProperty(800)
     pixel_height = NumericProperty(8.4)
     n_stars_in_image = NumericProperty(30)
+    min_sigma = NumericProperty(3)
+    max_sigma = NumericProperty(5)
+    #star_thresh = NumericProperty(.001)
     min_matches = NumericProperty(10)
     mag_range = NumericProperty(5)    # don't allow user to set this
     first_match = BooleanProperty(False)
@@ -155,6 +158,22 @@ class PlateSolver(Component, Settings):
             'boolean': {'first match': True, 'best match': False},
             'help': 'tradeoff speed and accuracy'
             }),
+        ('min_sigma', {
+            'name': 'min sigma', 'float': (1, 5, 1),
+            'fmt': '{:.0f}',
+            'help': 'used in star extraction (factory: 3)'
+            }),
+        ('max_sigma', {
+            'name': 'max sigma', 'float': (1, 7, 1),
+            'fmt': '{:.0f}',
+            'help': 'used in star extraction (factory: 5)'
+            })
+        # ('star_thresh', {
+        #     'name': 'star threshold', 'float': (.0001, .005, .0001),
+        #     'fmt': '{:.4f}',
+        #     'help': 'used in star extraction (factory: .001)'
+        #     })
+
         # ('star_source', {
         #     'name': 'get stars from', 
         #     'options': ['first sub', 'current sub', 'stack', 'displayed image'],
@@ -197,9 +216,12 @@ class PlateSolver(Component, Settings):
 
         # can't solve, so try solving first image in stack
         if not self._solve(im):
+            logger.warning('failed to solve -- trying first sub')
             im = Component.get('Stacker').get_current_displayed_image(first_sub=True)
             if not self._solve(im):
-                toast('Failed to solve: is image flipped correctly?')
+                logger.warning('failed to solve first sub')
+                # toast('Failed to solve: is image flipped correctly?')
+                # self.info('failed (check LR/UD flips)')
                 return
 
         Component.get('Annotator').annotate()
@@ -209,8 +231,16 @@ class PlateSolver(Component, Settings):
         ''' Attempts to solve 'im'; returns True if successful
         '''
 
+        thresh = Component.get('Aligner').get_intensity_threshold()
+        logger.trace('using intensity threshold {:.5f}'.format(thresh))
+
         # extract stars and their mags
-        blobs = blob_dog(im, min_sigma=3, max_sigma=5, threshold=.001, overlap=0)[:, [1, 0]]
+        blobs = blob_dog(
+            im, 
+            min_sigma=self.min_sigma, 
+            max_sigma=self.max_sigma, 
+            threshold=thresh, 
+            overlap=0)[:, [1, 0]]
         centroids = star_centroids(im, blobs)
         x = centroids[:, 0]
         y = centroids[:, 1]
@@ -230,7 +260,10 @@ class PlateSolver(Component, Settings):
         x_im, y_im, im_mags = x[inds], y[inds], mags[inds]
 
         if len(x_im) < self.min_matches:
-            logger.warning('Too few stars to platesolve (min: {:})'.format(len(x_im)))
+            msg = 'Not enough stars to platesolve ({:})'.format(len(x_im))
+            toast(msg)
+            self.info(msg)
+            #logger.warning('Too few stars to platesolve ({:})'.format(len(x_im)))
             return False
 
         # get reference stars for search field (NB larger fov is worse)
@@ -258,9 +291,12 @@ class PlateSolver(Component, Settings):
 
         # check if we have a result
         if matches is None:
+            toast('no match')
             logger.warning('no match, {:} im stars, {:} ref stars'.format(
                 len(x_im), len(ras)))
             return False
+
+        toast('Solved ({:} matched)'.format(len(matches)), duration=.7)
 
         # use result to find transform from ref in cartesian to im  in pixels
         src = np.vstack([ras, decs]).T[[j for (i, j) in matches], :]
@@ -299,7 +335,7 @@ class PlateSolver(Component, Settings):
             str(RA(self.tile_ra0)),
             str(Dec(self.tile_dec0)))
 
-        toast('Solved ({:} matched)'.format(len(matches)), duration=.7)
+        # toast('Solved ({:} matched)'.format(len(matches)), duration=.7)
         logger.info(desc)
         self.info('{:.2f}\u00b0 x {:.2f}\u00b0 | {:} | {:}'.format(
             self.FOV_w, self.FOV_h,

@@ -67,8 +67,8 @@ class ExposureChooser(Panel, Component):
                 text=name, 
                 size_hint=(.2, None),
                 group='expos',
-                font_size='20sp',
-                height=dp(28),
+                font_size='18sp',
+                height=dp(24),
                 on_press=partial(self.exposure_selected, expo))
 
     def build(self, *args):

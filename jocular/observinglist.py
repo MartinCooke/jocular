@@ -92,7 +92,8 @@ class ObservingList(Component, Settings):
         # load DSOs
         try:
             # return a COPY of the basic dsos to prevent unwanted side effects
-            self.objects = Component.get('Catalogues').get_basic_dsos().copy()
+            self.objects = {k: v.copy() 
+                for k, v in Component.get('Catalogues').get_basic_dsos().items()}
         except Exception as e:
             logger.exception('problem loading DSOs ({:})'.format(e))
             toast('problem loading DSOs')

@@ -12,9 +12,58 @@
 			"initial": -10
 		}
 	},
+	"ObjectIO": {
+		"new_DSO": {
+			"angle": 60,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "new",
+			"text": "new",
+			"tooltip": "start a new observation",
+			"action": "confirm_new_object"
+		},
+		"save_DSO": {
+			"angle": 54.625,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "new",
+			"text": "save",
+			"tooltip": "save observation",
+			"action": "check_save"
+		},
+		"load_previous": {
+			"angle": 49.25,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "prev",
+			"tooltip": "choose an earlier observation to reload",
+			"text": "prev",
+			"action": "confirm_previous_object"
+		},
+		"quit": {
+			"angle": 17,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "quit",
+			"tooltip": "close Jocular, after doing any necessary saves",
+			"text": "quit",
+			"action": "confirm_quit"
+		}
+	},
+	"ObservingList": {
+		"show_list": {
+			"angle": 43.875,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"tooltip": "display DSO table with support for observation planning and lists",
+			"icon": "list",
+			"text": "dso",
+			"action": "show"
+		}
+	},
 	"PlateSolver": {
 		"solve": {
-			"angle": 36,
+			"angle": 33.125,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "solve",
@@ -38,7 +87,7 @@
 			"initial": 0
 		},
 		"show_reticle": {
-			"angle": 30,
+			"angle": 27.75,
 			"location": "mid_ring",
 			"control_type": "JToggleButton",
 			"icon": "reticle",
@@ -48,27 +97,18 @@
 			"initial": false
 		},
 		"fit": {
-			"angle": 42,
+			"angle": 38.5,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "fit",
 			"tooltip": "reorient image and scale to fit to window",
 			"text": "fit",
 			"action": "fit_to_window"
-		},
-		"quit": {
-			"angle": 19,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"icon": "quit",
-			"tooltip": "close Jocular, after doing any necessary saves",
-			"text": "quit",
-			"action": "confirm_close"
 		}
 	},
 	"SettingsManager": {
 		"settings": {
-			"angle": 24,
+			"angle": 22.375,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "settings",
@@ -79,7 +119,7 @@
 	},
 	"Calibrator": {
 		"apply_dark": {
-			"angle": 336,
+			"angle": 334,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -89,7 +129,7 @@
 			"initial": true
 		},
 		"apply_flat": {
-			"angle": 331,
+			"angle": 328,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -98,18 +138,8 @@
 			"save": true,
 			"initial": false
 		},
-		"apply_bias": {
-			"angle": 326,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"radial": false,
-			"tooltip": "apply bias from library if available",
-			"text": "bias",
-			"save": true,
-			"initial": false
-		},
 		"open_calibration": {
-			"angle": 332,
+			"angle": 331.5,
 			"location": "outer_ring",
 			"control_type": "JButton",
 			"tooltip": "display table of calibration masters",
@@ -308,39 +338,6 @@
 			"tooltip": "show/hide Jocular status indicators",
 			"text": "status",
 			"initial": true
-		}
-	},
-	"ObjectIO": {
-		"new_DSO": {
-			"angle": 60,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"icon": "new",
-			"text": "save",
-			"tooltip": "start a new observation",
-			"action": "confirm_new_object"
-		}
-	},
-	"Observations": {
-		"load_previous": {
-			"angle": 54,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"icon": "prev",
-			"tooltip": "choose an earlier observation to reload",
-			"text": "prev",
-			"action": "show_observations"
-		}
-	},
-	"ObservingList": {
-		"show_list": {
-			"angle": 48,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"tooltip": "display DSO table with support for observation planning and lists",
-			"icon": "list",
-			"text": "dso",
-			"action": "show"
 		}
 	},
 	"Capture": {

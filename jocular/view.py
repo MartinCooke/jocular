@@ -16,7 +16,6 @@ from kivy.graphics.texture import Texture
 from kivy.graphics.transformation import Matrix
 from kivy.properties import BooleanProperty, NumericProperty, BoundedNumericProperty
 from kivy.core.window import Window
-from kivy.base import stopTouchApp
 
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
@@ -118,7 +117,6 @@ class View(Component, Settings):  # must be in this order
     min_zoom = NumericProperty(.5)
     max_zoom = NumericProperty(30)
     zoom_power = NumericProperty(1)
-    confirm_quit = BooleanProperty(True)
  
     configurables = [
         ('flip_UD', {
@@ -140,11 +138,7 @@ class View(Component, Settings):  # must be in this order
         ('zoom_power', {
             'name': 'zoom power', 'float': (.5, 2, .1),
             'fmt': 'zoom ^ {:.2f}',
-            'help': 'apply a power curve to provide more sensitivity'}),
-        ('confirm_quit', {
-            'name': 'confirm on quit?', 
-            'switch': '',
-            'help': 'Require confirmation before quitting Jocular'})
+            'help': 'apply a power curve to provide more sensitivity'})
         ]
 
     def __init__(self, **kwargs):
@@ -213,29 +207,6 @@ class View(Component, Settings):  # must be in this order
         mat = Matrix().scale(scale, scale, scale)
         self.scatter.apply_transform(mat, anchor=Metrics.get('origin'))
         self.update_state()
-
-    def confirm_close(self, *args):
-        if self.confirm_quit:
-            self.dialog = MDDialog(
-                auto_dismiss=False,
-                text="Are you sure you wish to quit?",
-                buttons=[
-                    MDFlatButton(text="YES", 
-                        on_press=self.close),
-                    MDFlatButton(
-                        text="CANCEL", 
-                        on_press=self._cancel)
-                ],
-            )
-            self.dialog.open()
-        else:
-            self.close()
-
-    def _cancel(self, *args):
-        self.dialog.dismiss()
-
-    def close(self, *args):
-        stopTouchApp()
 
     def on_orientation(self, *args):
         # rotate anchored on window center

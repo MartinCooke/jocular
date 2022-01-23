@@ -16,6 +16,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.label import Label
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
+from kivy.base import stopTouchApp
 
 from jocular.component import Component
 from jocular.utils import add_if_not_exists, generate_observation_name, move_to_dir, toast
@@ -117,129 +118,107 @@ class ObjectIO(Component):
     def on_close(self):
         self.closing = True
 
-    @logger.catch()
     def confirm_new_object(self, *args):
-        ''' Called when user clicks 'new' on interface. 
-            Here we give user a chance to change certain settings such as
-            sub type and exposure, decide whether to pull out, add
-            temperature if dark, create master and potentially others
+        ''' user clicks new on interface, so check for save
+        '''
+        self.check_save(callback=self.new_object)
+
+    def confirm_previous_object(self, *args):
+        ''' user clicks previous object
+        '''
+        self.check_save(callback=Component.get('Observations').show_observations)
+
+    def confirm_quit(self, *args):
+        ''' user has pressed quit, so check for save
+        '''
+        self.check_save(callback=stopTouchApp)
+
+    def do_callback(self):
+        if hasattr(self, 'callback'):
+            if self.callback is None:
+                self.new_object()
+            else:
+                self.callback()
+
+    def check_save(self, callback=None):
+        ''' Called if user selects New, Previous, Save or Quit
+        '''
+
+        logger.debug('')
+        self.callback = callback
+
+        # nothing to save
+        if not Component.any_changes():
+            self.do_callback()
+            return
+
+        # something has changed so confirm with user
+        changes = Component.changes()
+
+        self.dialog = MDDialog(
+            auto_dismiss=False, 
+            text='Save current observation?\n\nReason(s): {:}'.format(
+                ', '.join(list(changes.values()))), 
+            buttons=[
+                MDFlatButton(text="SAVE", on_press=self._save),
+                # MDFlatButton(text="SAVE (ADVANCED)", on_press=self._save_after_edit),
+                MDFlatButton(text="NO",  on_press=self._no_save),
+                MDFlatButton(text="CANCEL", on_press=self._cancel)
+            ])
+        self.dialog.open()
+
+
+    def _save(self, *args):
+        self.dialog.dismiss()
+        self.save()
+
+    def _save_after_edit(self, *args):
+        toast('not yet re-implemented')
+        self.dialog.dismiss()
+ 
+    def _no_save(self, callback, *args):
+        self.dialog.dismiss()
+        self.do_callback()
+
+    def _cancel(self, *args):
+        self.dialog.dismiss()
+
+    def save(self, *args):
+        ''' save sub metadata and potentially master also
         '''
 
         stacker = Component.get('Stacker')
-        if stacker.is_empty():
-            self.new_object()
-            return
+        metadata = Component.get('Metadata')
 
-        self.change_fits_headers = False   # force user to set this to True
-
-        # find name, sub_type, exposure and temperature
         name = Component.get('DSO').Name
-        if name.lower()[:4] in {'dark', 'flat', 'bias'}:
-            sub_type = name.lower()[:4]
-        else:
-            sub_type = stacker.get_prop('sub_type')
+        sub_type = stacker.get_prop('sub_type')
+        calib = sub_type in {'dark', 'flat', 'bias'}
 
         exposure = stacker.get_prop('exposure')
         temperature = Component.get('Session').temperature
 
-        # nothing to save
-        if self.current_object_dir is None:
-            self.new_object()
-            return
-
-        # previous object but unchanged
-        if self.existing_object and not self.app.gui.something_has_changed():
-            self.new_object()
-            return
-
-        # we have something to confirm so set up dialog
-        color = self.app.theme_cls.primary_color
-        text = 'Please confirm that you wish to save. You may also change the following properties if required.'
-        if self.existing_object:
-            text = 'Your previous object has changed. ' + text
-
-        content = SaveDialogContent(
-            text=text,
-            exposure=exposure,
-            sub_type=sub_type,
-            temperature=temperature)
-
-        buttons = [MDFlatButton(text='CANCEL', on_press=self.cancel_save, text_color=color)]
-
-        # allow user to save or discard changes
-        if self.existing_object:
-            buttons += [
-                MDFlatButton(
-                    text='SAVE CHANGES', 
-                    on_press=partial(self.do_save, content),
-                    text_color=color),
-                MDFlatButton(
-                    text='DISCARD CHANGES', 
-                    on_press=self.dont_save,
-                    text_color=color)
-            ]
-        else:
-            buttons += [
-                MDFlatButton(
-                    text='SAVE', 
-                    on_press=partial(self.do_save, content),
-                    text_color=color)
-                ]
-
-        self.dialog = MDDialog(
-            auto_dismiss=False,
-            type='custom',
-            content_cls=content,
-            buttons=buttons
-            )
-        self.dialog.open()
-
-
-    def cancel_save(self, *args):
-        ''' just dismiss dialog
-        '''
-        self.dialog.dismiss()
-
-    def dont_save(self, *args):
-        ''' User doesn't want to save the changes made to previous object
-        '''
-        self.dialog.dismiss()
-        self.new_object()
-
-    def do_save(self, content, *args):
-
-        self.dialog.dismiss()
-
-        metadata = Component.get('Metadata')
-        stacker = Component.get('Stacker')
-        # subs = Component.get('Stacker').subs
-
-        # save master if requested
-        if content.save_master:
-            # form capture properties: might streamline this
-            if content.temperature == -40:
-                content.temperature = None
+        if calib:
+            if temperature == -40:
+                temperature = None
             capture_props = {
-                'exposure': content.exposure, 
-                'temperature': content.temperature,
+                'exposure': exposure, 
+                'temperature': temperature,
                 'filter': stacker.get_prop('filter'),
                 'gain': stacker.get_prop('gain'),
                 'offset': stacker.get_prop('offset'),
                 'binning': stacker.get_prop('binning'),
                 'ROI': stacker.get_prop('ROI'),
+                'equal_aspect': stacker.get_prop('equal_aspect'),
                 'camera': stacker.get_prop('camera'),
-                'sub_type': content.sub_type
+                'calibration_method': stacker.get_prop('calibration_method'),
+                'sub_type': sub_type
             }
-
             Component.get('Calibrator').create_master(capture_props=capture_props)
 
-        # save info.json, handle rejects, and update observations table
-
-        # not clear this is useful?
         metadata.set(
-            {'exposure': content.exposure, 
-            'sub_type': content.sub_type,
-            'temperature': content.temperature})
+            {'exposure': exposure, 
+            'sub_type': sub_type,
+            'temperature': temperature})
 
         oldpath = self.current_object_dir
         Component.save_object()
@@ -266,17 +245,105 @@ class ObjectIO(Component):
                 during save_object so ensure metadata is reset with these new values
             '''
             metadata.set(
-                {'exposure': content.exposure, 
-                'sub_type': content.sub_type,
-                'temperature': content.temperature})
-            metadata.save(newpath, change_fits_headers=content.change_fits_headers)
+                {'exposure': exposure, 
+                'sub_type': sub_type,
+                'temperature': temperature})
+            # metadata.save(newpath, change_fits_headers=content.change_fits_headers)
+            metadata.save(newpath)
             Component.get('Observations').update(oldpath, newpath)
             Component.get('ObservingList').new_observation()
             toast('Saved to {:}'.format(newpath))
         except Exception as e:
             logger.exception('OSError saving info3.json to {:} ({:})'.format(newpath, e))
 
-        self.new_object()
+        # do next action
+        self.do_callback()
+
+
+
+
+    # @logger.catch()
+    # def confirm_new_object(self, *args):
+    #     ''' Called when user clicks 'new' on interface. 
+    #         Here we give user a chance to change certain settings such as
+    #         sub type and exposure, decide whether to pull out, add
+    #         temperature if dark, create master and potentially others
+    #     '''
+
+    #     # check for any changes since last save
+    #     changes = Component.changes()
+    #     print('changes:', changes)
+
+    #     stacker = Component.get('Stacker')
+    #     if stacker.is_empty():
+    #         self.new_object()
+    #         return
+
+    #     self.change_fits_headers = False   # force user to set this to True
+
+    #     # find name, sub_type, exposure and temperature
+    #     name = Component.get('DSO').Name
+    #     if name.lower()[:4] in {'dark', 'flat', 'bias'}:
+    #         sub_type = name.lower()[:4]
+    #     else:
+    #         sub_type = stacker.get_prop('sub_type')
+
+    #     exposure = stacker.get_prop('exposure')
+    #     temperature = Component.get('Session').temperature
+
+    #     # nothing to save
+    #     if self.current_object_dir is None:
+    #         self.new_object()
+    #         return
+
+    #     # previous object but unchanged
+    #     # alter this logic
+    #     if self.existing_object and not self.app.gui.something_has_changed():
+    #         self.new_object()
+    #         return
+
+    #     # we have something to confirm so set up dialog
+    #     color = self.app.theme_cls.primary_color
+    #     text = 'Please confirm that you wish to save. You may also change the following properties if required.'
+    #     if self.existing_object:
+    #         text = 'Your previous object has changed. ' + text
+
+    #     content = SaveDialogContent(
+    #         text=text,
+    #         exposure=exposure,
+    #         sub_type=sub_type,
+    #         temperature=temperature)
+
+    #     buttons = [MDFlatButton(text='CANCEL', on_press=self.cancel_save, text_color=color)]
+
+    #     # allow user to save or discard changes
+    #     if self.existing_object:
+    #         buttons += [
+    #             MDFlatButton(
+    #                 text='SAVE CHANGES', 
+    #                 on_press=partial(self.do_save, content),
+    #                 text_color=color),
+    #             MDFlatButton(
+    #                 text='DISCARD CHANGES', 
+    #                 on_press=self.dont_save,
+    #                 text_color=color)
+    #         ]
+    #     else:
+    #         buttons += [
+    #             MDFlatButton(
+    #                 text='SAVE', 
+    #                 on_press=partial(self.do_save, content),
+    #                 text_color=color)
+    #             ]
+
+    #     self.dialog = MDDialog(
+    #         auto_dismiss=False,
+    #         type='custom',
+    #         content_cls=content,
+    #         buttons=buttons
+    #         )
+    #     self.dialog.open()
+
 
     def new_object(self, *args):
         if self.closing:
@@ -298,23 +365,33 @@ class ObjectIO(Component):
 
     def new_sub(self, data=None, name=None, capture_props=None):
         ''' Called by Capture or WatchedCamera
-            capture_props is a dictionary that contains additional key/values
-            that we want to save in the FITs header (eg gain) 
+            capture_props is a dictionary of properties such
+            as exposure, sub type, gain etc
         '''
 
         if data is None or name is None:
             return
 
+        stacker = Component.get('Stacker')
+
+        # check dimensions
+        if not stacker.is_empty():
+            if data.shape != stacker.subs[0].image.shape:
+                toast('sub dimensions {:} incompatible with current stack {:}'.format(
+                    data.shape, stacker.subs[0].image.shape))
+                return
+
         logger.debug('New sub | {:}'.format(capture_props))
         sub_type = capture_props['sub_type']
-        stacker = Component.get('Stacker')
  
         if self.current_object_dir is None:
             # new object, so check if calibration or light
             if sub_type in {'dark', 'flat', 'bias'}:
                 self.current_object_dir = os.path.join(self.session_dir, 
                     generate_observation_name(self.session_dir, prefix=sub_type))
-                stacker.sub_type = sub_type  # is this needed any more?
+                # not clear if this next line is needed bcs stacker doesn't
+                # have a sub_type component
+                stacker.sub_type = sub_type 
                 Component.get('DSO').Name = sub_type
             else:
                 self.current_object_dir = os.path.join(self.session_dir, 

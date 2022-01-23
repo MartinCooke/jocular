@@ -276,7 +276,7 @@ class WatchedCamera(GenericCamera):
 			im *= (2**16)
 			Component.get('ObjectIO').new_sub(
 				data=im.astype(np.uint16),
-				name='{:}_{:}'.format(filt, nm),
+				name='{:}_{:}'.format(capture_props['filter'], nm),
 				capture_props=capture_props)
 
 		# signal to interface the values being used

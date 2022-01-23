@@ -49,4 +49,4 @@ class Notes(MDBoxLayout, Component):
 
     def notes_changed(self, *args):
         self.notes = self.observing_notes.text
-        self.app.gui.has_changed('Notes', self.notes != self.orig_notes)
+        self.changed = '' if self.notes == self.orig_notes else 'observing notes'

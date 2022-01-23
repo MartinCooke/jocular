@@ -40,6 +40,17 @@ def save_image(data=None, path=None, capture_props=None):
         ('TEMPERAT', 'CCD-TEMP')
     ]
 
+    comments = {
+        'equal_aspect': 'aspect ratio has been equalised',
+        'ROI': 'region of interest represented as proportion of sensor, centred on centre',
+        'calibration_method': 'calibration method (for master flats)'
+    }
+
+    conversions = {
+        'equal_aspect': 'equalasp',
+        'calibration_method': 'calibrat'
+    }
+
     exposure = capture_props.get('exposure', None)
     sub_type = capture_props.get('sub_type', 'L')
     filt = capture_props.get('filter', 'L')
@@ -64,9 +75,11 @@ def save_image(data=None, path=None, capture_props=None):
             hdr['NSUBS'] = nsubs 
 
         # add any other keys that are not in the header
+        # ensuring that any conversions are done
         for k, v in capture_props.items():
-            if v is not None and k.upper() not in hdr:
-                hdr[k.upper()] = v
+            newk = conversions.get(k, k).upper()
+            if v is not None and newk not in hdr:
+                hdr[newk] = (v, comments.get(k, ''))
 
         # duplicate values for alternative keys
         for key, altkey in dupes:
@@ -104,8 +117,10 @@ class Image:
     # map from various FITS header names to Image attribute names
     hmap = {
         'exposure': 'exposure', 'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
-        'filter': 'filter', 'filt': 'filter', 'gain': 'gain', 'camera': 'camera', 'offset': 'offset',
-        'ROI': 'ROI', 'roi': 'ROI', 'binning': 'binning',
+        'filter': 'filter', 'filt': 'filter', 'gain': 'gain', 'camera': 'camera', 
+        'offset': 'offset', 'ROI': 'ROI', 'roi': 'ROI', 'binning': 'binning', 
+        'ROI_x': 'ROI_x', 'ROI_y': 'ROI_y', 'ROI_w': 'ROI_w', 'ROI_h': 'ROI_h',
+        'equalasp': 'equal_aspect', 'calibrat': 'calibration_method',
         'subtype': 'sub_type', 'sub_type': 'sub_type', 'imagetyp': 'sub_type',
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
         'nsubs': 'nsubs', 'stackcnt': 'nsubs'}
@@ -127,8 +142,13 @@ class Image:
         'camera': None,
         'binning': None,
         'ROI': None,
+        'ROI_x': None,
+        'ROI_y': None,
+        'ROI_w': None,
+        'ROI_h': None,
+        'equal_aspect': None,
+        'calibration_method': 'None',
         'nsubs': None}
-
 
 
     def __init__(self, path=None, verbose=False, check_image_data=False):
@@ -155,9 +175,10 @@ class Image:
                         self.image = hdu1[0].data / 2 ** bp
                 else:
                     self.image = None
-        except Exception:
+        except Exception as e:
             self.image = None
-            raise ImageNotReadyException('Cannot read fits header for {:}'.format(path))
+            raise ImageNotReadyException(
+                'Cannot read fits header for {:} ({:})'.format(path, e))
 
 
         if verbose:

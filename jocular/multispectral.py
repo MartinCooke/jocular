@@ -72,15 +72,6 @@ class MultiSpectral(Component, Settings):
             'help': 'done prior to colour scaling (subtract gradents recommended)'})
         ]
 
-        # ('subtract_background', {
-        #     'name': 'subtract background?', 
-        #     'switch': '',
-        #     'help': 'Automatically estimate and remove background in each channel'}),
-        # ('subtract_gradients', {
-        #     'name': 'subtract colour gradients?', 
-        #     'switch': '',
-        #     'help': 'Automatically estimate and remove colour gradients in each channel'})
-
     saturation = NumericProperty(0)
     colour_stretch = NumericProperty(.5)
     redgreen = NumericProperty(0)

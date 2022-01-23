@@ -13,8 +13,9 @@ from kivy.properties import StringProperty, ListProperty
 class Component(EventDispatcher):
 
     components = OrderedDict()
-    infoline = StringProperty('')   # ensures each component can signal its status for technical panel
+    infoline = StringProperty('')   # component signals state for status panel
     save_settings = ListProperty([])
+    changed = StringProperty('')
 
     @classmethod
     def get(cls, name):
@@ -48,23 +49,32 @@ class Component(EventDispatcher):
     @classmethod
     def initialise_new_object(cls):
         logger.info('initialising for new object')
-        for c in cls.components.keys():
-            cls.components[c].on_new_object()
-        App.get_running_app().gui.reset_changes()
+        for v in cls.components.values():
+            v.changed = ''
+            v.on_new_object()
+        App.get_running_app().gui.is_changed(False)
 
     @classmethod
     def initialise_previous_object(cls):
         # ensure metadata is first and stacker the last to be initialised
         logger.info('initialising for previous object')
         comps = ['Metadata'] + list(cls.components.keys() - {'Stacker', 'Metadata'}) + ['Stacker']
-        for c in comps:
-            cls.components[c].on_previous_object()
-        App.get_running_app().gui.reset_changes()
+        for v in cls.components.values():
+            v.changed = ''
+            v.on_previous_object()
+        App.get_running_app().gui.is_changed(False)
  
     @classmethod
+    def changes(cls):
+        ''' return a dictionary of changes since last save
+        '''
+        return {c: v.changed for c, v in cls.components.items() if v.changed != ''}
+
+    @classmethod
     def save_object(cls):
-        for c in cls.components.keys():
-            cls.components[c].on_save_object()
+        for v in cls.components.values():
+            v.on_save_object()
+            v.changed = ''
 
     @classmethod
     def close(cls):
@@ -84,6 +94,18 @@ class Component(EventDispatcher):
             cls.get('Status').bind_status(name, inst)
             #inst.info('loaded')
 
+    @classmethod
+    def check_for_change(cls):
+        ''' Only changed if at least one component reports a change
+            and the stack is non-empty
+        '''
+        App.get_running_app().gui.is_changed(cls.any_changes())
+
+    @classmethod
+    def any_changes(cls):
+        nonempty = not cls.get('Stacker').is_empty()
+        return (cls.changes() != {}) and nonempty
+
     def redraw(self, *args): 
         pass
 
@@ -99,6 +121,12 @@ class Component(EventDispatcher):
 
     def on_close(self, *args): 
         pass
+
+    def on_changed(self, *args):
+        ''' Called when any of the component 'changed' is altered
+            Check if any changes from any component and communicate to GUI
+        '''
+        Component.check_for_change()
 
     def info(self, message=None, prefix=None, typ='normal'):
         self.infoline = message

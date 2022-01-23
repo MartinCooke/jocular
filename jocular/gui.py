@@ -166,7 +166,7 @@ class GUI(FloatLayout):
 		thickness = Metrics.get('ring_thickness')
 
 		# location of capture 'saddle'
-		angle = [-11, 9]
+		angle = [-10, 8]
 		min_a, max_a = angle360(90 - angle[0]), angle360(90 - angle[1])
 		greys = {'background': .02, 'outer': .2, 'middle': .17, 'inner': .12, 'image': 0, 'capture_ring': .2}
 		start_angle = {'capture_ring': angle360(min(min_a, max_a))}
@@ -239,7 +239,8 @@ class GUI(FloatLayout):
 			'Monochrome', 'MultiSpectral', 'ObjectIO', 'Aligner',
 			'DeviceManager', 'Camera', 'FilterWheel', 
 			'ExposureChooser', 'FilterChooser', 'SettingsManager',
-			'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator']:
+			'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator',
+			'Tooltip']:
 			Component.get(c)
 
 		# bind status to components
@@ -327,20 +328,9 @@ class GUI(FloatLayout):
 		elif control_type == 'JButton':
 			w = JButton(angle=angle, origin=orig, radius=rad, text=text, radial=radial)
 
-		# elif control_type == 'JFilterButton':
-		# 	w = JFilterButton(angle=angle, origin=orig, radius=rad, text=text, radial=radial)
-
 		# to do: see if we can combine with JButton
 		elif control_type == 'JIconButton':
-			w = JIconButton(angle=angle, origin=orig, radius=rad, myicon=text) #, tooltip_text='tooltip')
- 
-		# elif control_type == 'JIconButton':
-		#     w = JIconButtonTooltips(angle=angle, origin=orig, radius=rad, icon=text)
-		#     	# tooltip_text='tooltip')
-
-		# elif control_type == 'JIconButton':
-		#     w = JMDIconButton(angle=angle, origin=orig, radius=rad, icon='telescope') #, tooltip_text='tooltip')
-
+			w = JIconButton(angle=angle, origin=orig, radius=rad, myicon=text)
 
 		elif control_type == 'JLabel':
 			w = JLabel(angle=angle, origin=orig, radius=rad, text=spec.get('text', ''))
@@ -398,7 +388,7 @@ class GUI(FloatLayout):
 			self.add_widget(w)
 			w.bind(on_press=partial(self.on_action, wname))
 
-		# w.tooltip_text = tooltip
+		w.tooltip_text = tooltip
 		spec['widget'] = w
 		self.gui[wname] = spec
 
@@ -530,32 +520,12 @@ class GUI(FloatLayout):
 		'''
 		pass # actually done in Component now
 
-	@logger.catch()
-	def has_changed(self, component, value):
-		logger.debug('changed {:} {:}'.format(component, value))
-		self.changed_components[component] = value
-		self.check_changes()
 
-	def reset_changes(self):
-		self.changed_components = {}
-		self.check_changes()
-
-	def something_has_changed(self):
-		''' check if any component has registered a change
-		'''
-		return any(list(self.changed_components.values())) and not Component.get('Stacker').is_empty()
-
-	def check_changes(self):
-		if self.something_has_changed():
-			self.disable(names=['load_previous', 'quit'])
-			spec = self.gui['new_DSO']
-			if spec['widget'].text.endswith('new'):
-				spec['widget'].text = spec['widget'].text[:-3] + 'save'
+	def is_changed(self, needs_save):
+		if needs_save:
+			self.enable(names=['save_DSO'])
 		else:
-			self.enable(names=['load_previous', 'quit'])
-			spec = self.gui['new_DSO']
-			if spec['widget'].text.endswith('save'):
-				spec['widget'].text = spec['widget'].text[:-4] + 'new'
+			self.disable(names=['save_DSO'])
 
 
 	''' uses plyer, but that is super-ugly on Windows, but keep code in case

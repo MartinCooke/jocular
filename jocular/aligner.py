@@ -164,6 +164,13 @@ class Aligner(Component, Settings):
         return np.array(stars)[[i for (v, i) in sorted((v, i) for (i, v) in enumerate(intens))][::-1]]
 
 
+    def get_intensity_threshold(self):
+        ''' used by platesolver to find current star intensity threshold
+        '''
+        if hasattr(self, 'star_intensity'):
+            return self.star_intensity
+        return .001
+
     def find_intensity_threshold(self, im):
         ''' Binary search to find intensity threshold for star extraction 
             producing ideal star count 
@@ -208,8 +215,11 @@ class Aligner(Component, Settings):
             return
 
         # extract stars & compute centroids before aligning, if possible
+        logger.trace('. get image')
         im = sub.get_image()
+        logger.trace('. extract stars')
         raw_stars = self.extract_stars(im)
+        logger.trace('. centroids')
         centroids = star_centroids(im, raw_stars)
 
         # store centroids for later platesolving
@@ -224,10 +234,12 @@ class Aligner(Component, Settings):
             self.mags = centroids[:, 2]
             self.align_count = 1
         else:
+            logger.trace('. align')
             warped = self.align(sub, centroids[:, :2])
             if warped is not None:
                 sub.centroids[:, :2] = warped
             # self.align(sub, centroids[:, :2])
+            logger.trace('. aligned finish')
 
         sc = np.array(self.starcounts)
         self.info('{:}/{:} frames | {:}-{:} stars'.format(

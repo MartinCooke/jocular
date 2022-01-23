@@ -1,6 +1,7 @@
 '''  Fast gradient and background estimation
 '''
 
+import math
 import numpy as np
 from numpy.polynomial import polynomial
 from loguru import logger
@@ -58,16 +59,22 @@ def estimate_gradient(im):
 
 
 def image_stats(im):
-
+ 
     mean_back, std_back = estimate_background(im)
+    if math.isnan(mean_back):
+        mean_back = 0
+    if math.isnan(std_back):
+        std_back = 0
+
     imr = im.ravel()
 
     return {
         'background': mean_back,
-        '100 x std. dev.': 100 * std_back,
-        'central 75%': percentile_clip(imr, perc=75),
-        '99.99 percentile': np.percentile(imr, 99.99),
-        '99.9 percentile': np.percentile(imr, 99.9),
+        'std. dev.': std_back,
+        #'central 75%': percentile_clip(imr, perc=75),
+        '99.99': np.percentile(imr, 99.99),
+        #'99.9 percentile': np.percentile(imr, 99.9),
         'min': np.min(imr),
-        'max': np.max(imr)
+        'max': np.max(imr),
+        'mean': np.mean(imr)
         }

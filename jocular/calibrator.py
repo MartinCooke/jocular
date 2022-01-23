@@ -7,50 +7,79 @@ from scipy.stats import trimboth
 
 from kivy.app import App
 from loguru import logger
-from kivy.properties import BooleanProperty, DictProperty, NumericProperty
+from kivy.properties import BooleanProperty, DictProperty, NumericProperty, StringProperty
 from kivy.core.window import Window
 
 from jocular.table import Table
-from jocular.utils import make_unique_filename, toast
+from jocular.utils import make_unique_filename, toast, percentile_clip
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.image import Image, save_image, fits_in_dir
 from jocular.exposurechooser import exp_to_str
+from jocular.gradient import image_stats, estimate_background
 
 date_time_format = '%d %b %y %H:%M'
 
+def none_to_empty(x):
+    return '' if x is None else x
+
 class Calibrator(Component, Settings):
 
-    save_settings = ['apply_dark', 'apply_flat', 'apply_bias']
+    save_settings = ['apply_dark', 'apply_flat']
 
     masters = DictProperty({})
     apply_flat = BooleanProperty(False)
     apply_dark = BooleanProperty(False)
-    apply_bias = BooleanProperty(False)
 
     use_l_filter = BooleanProperty(True)
+    remove_hot_pixels = BooleanProperty(True)
+    fd_exposure_tol = NumericProperty(.1)
     exposure_tol = NumericProperty(5)
     temperature_tol = NumericProperty(5)
     dark_days_tol = NumericProperty(1)
-    flat_days_tol = NumericProperty(60)
+    flat_calibration = StringProperty('bias')
 
     tab_name = 'Calibration'
 
     configurables = [
-        ('use_l_filter', {'name': 'use light flat?', 'switch': '',
-                'help': 'If there is no flat for the given filter, use a light flat if it exists'}),
-        ('exposure_tol', {'name': 'exposure tolerance', 'float': (0, 30, 1), 
+        ('flat_calibration', {
+            'name': 'flat calibration method', 
+            'options': ['bias', 'flat-dark', 'constant'],
+            'help': 'how to calibrate flat subs when generating a master flat'
+            }),
+        ('fd_exposure_tol', {
+            'name': 'flat-dark exposure tol', 
+            'float': (0, 2, .1),
+            'fmt': '{:.1f} seconds',
+            'help': 'If using flat-darks, how close must exposure be (seconds)'
+            }),
+        ('use_l_filter', {
+            'name': 'use L flat?', 
+            'switch': '',
+            'help': 'If there is no flat for the given filter, use a L flat if it exists'
+            }),
+        ('exposure_tol', {
+            'name': 'exposure tolerance', 
+            'float': (0, 30, 1), 
             'fmt': '{:.0f} seconds',
-            'help': 'When selecting a dark, select those within this exposure tolerance'}),
-        ('temperature_tol', {'name': 'temperature tolerance', 'float': (0, 40, 1),
+            'help': 'When selecting a dark, select those within this exposure tolerance'
+            }),
+        ('temperature_tol', {
+            'name': 'temperature tolerance', 
+            'float': (0, 40, 1),
             'fmt': '{:.0f} degrees',
-            'help': 'When selecting a dark, restrict to those within this temperature tolerance'}),
-        ('dark_days_tol', {'name': 'dark age tolerance', 'float': (0, 300, 1),
+            'help': 'When selecting a dark, restrict to those within this temperature tolerance'
+            }),
+        ('dark_days_tol', {
+            'name': 'dark age tolerance', 'float': (0, 300, 1),
             'fmt': '{:.0f} days',
-            'help': 'Maximum age of darks to use if no temperature was specified'}),
-        ('flat_days_tol', {'name': 'flat age tolerance', 'float': (0, 300, 1),
-            'fmt': '{:.0f} days',
-            'help': 'Maximum age of flats to use'}),
+            'help': 'Maximum age of darks to use if no temperature was specified'
+            }),
+        ('remove_hot_pixels', {
+            'name': 'remove hot pixels?', 
+            'switch': '',
+            'help': 'Note that this is only done when creating calibration masters'
+            })
     ]
 
 
@@ -89,14 +118,15 @@ class Calibrator(Component, Settings):
         self.masters[m.fullname] = m
         self.library[m.fullname] = {
             'name': m.name,
-            'camera': str(m.camera) if m.camera is not None else '',
+            'camera': none_to_empty(m.camera),
             'type': m.sub_type,
             'exposure': exp_to_str(m.exposure) if m.exposure is not None else '',
             'temperature': str(m.temperature) if m.temperature is not None else '',
-            'gain': m.gain if m.gain is not None else '',
-            'offset': m.offset if m.offset is not None else '',
-            'bin': m.binning if m.binning is not None else '',
-            'ROI': str(m.ROI) if m.ROI is not None else '',
+            'gain': none_to_empty(m.gain),
+            'offset': none_to_empty(m.offset),
+            'bin': none_to_empty(m.binning),
+            'calibration_method': none_to_empty(m.calibration_method),
+            'ROI': none_to_empty(m.ROI),
             'filter': m.filter,
             'created': m.create_time.strftime(date_time_format),
             'shape_str': m.shape_str,
@@ -106,15 +136,20 @@ class Calibrator(Component, Settings):
 
 
     def create_master(self, capture_props=None):
-        ''' Called by ObjectIO to save an existing stack capture by Jocular as a calibration master
+        ''' Called by ObjectIO to save an existing stack capture by 
+            Jocular as a calibration master
         '''
 
         if 'filter' not in capture_props:
-            toast('Cannot create master: unknown filter')
+            toast('Cannot create master: unknown filter', 5)
             return
 
         stacker = Component.get('Stacker')
         sub_type = capture_props['sub_type']
+
+        if sub_type == 'flat' and capture_props['calibration_method'] == 'None':
+            toast('Cannot create master flat: flat is uncalibrated', 5)
+            return
 
         ''' Get hold of master from stacker, forcing the use of stack
             combination method that the user has chosen
@@ -122,23 +157,23 @@ class Calibrator(Component, Settings):
         master = stacker.get_stack(capture_props['filter'], calibration=True)
         capture_props['nsubs'] = stacker.get_selected_sub_count()
 
-        ''' Apply bad pixel mapping to calibration frames
-            If dark, find hot pixels in master and remove, otherwise use existing BPM
-            NB not fully tested
+        ''' Remove hot pixels from calibration frame
         '''
-        bpm = Component.get('BadPixelMap')
-        if sub_type == 'dark':
-            master = bpm.do_bpm(master, bpm.find_hot_pixels(master))
-            logger.debug('created BPM from darks and applied it')
-        else:
-            master = bpm.do_bpm(master)
-            logger.debug('applied BPM to master')
+        master = Component.get('BadPixelMap').remove_hotpix(
+            master, 
+            apply_BPM=self.remove_hot_pixels)
 
-        ''' Flats were divided thru by their robust mean to account for level differences 
-            but then scaled to 50% to enable B/W controls; so multiply by 2
+        ''' Flats were divided thru by their robust mean to account for 
+            level differences but then scaled to 50% to enable B/W controls; 
+            Here, normalise to unity based on central region
         '''
         if sub_type == 'flat':
-            master = 2 * master
+            w, h = master.shape
+            w1, w2 = int(w / 3), int(2 * w / 3)
+            h1, h2 = int(h / 3), int(2 * h / 3)
+            imr = master[h1: h2, w1: w2]
+            robust_mean = percentile_clip(imr.ravel(), perc=75)
+            master = master / robust_mean
 
         self.save_master(data=master, capture_props=capture_props)
 
@@ -156,15 +191,20 @@ class Calibrator(Component, Settings):
         self.add_to_library(Image(path))
 
         # add to notes field of current DSO
-        notes = ' '.join(['{:} {:}'.format(k, v) for k, v in capture_props.items() 
-            if k in {'exposure', 'filter', 'temperature', 'gain', 'offset', 'camera', 'ROI', 'binning'}])
+        notes = 'Exposure {:}\n'.format(exp_to_str(capture_props.get('exposure', 0)))
+        notes += '\n'.join(['{:} {:}'.format(k, v) for k, v in capture_props.items() 
+            if k in {'filter', 'temperature', 'gain', 'offset', 'camera', 'ROI', 
+                'binning', 'equal_aspect', 'calibration_method'}])
         Component.get('Notes').notes = notes
 
         logger.info('new master {:}'.format(capture_props))
 
 
     def calibrate(self, sub):
-        # Given a light sub, apply calibration. Fails silently if no suitable calibration masters. 
+        ''' Given a light sub, apply calibration. Fails silently if no suitable 
+            calibration masters. Note that all flat masters are assumed to be
+            calibrated (ie bias or flat-dark has been subtracted)
+        '''
 
         sub.calibrations = set({})
 
@@ -172,15 +212,15 @@ class Calibrator(Component, Settings):
             self.info('no masters')
             return
 
-        if not (self.apply_dark or self.apply_bias or self.apply_flat):
+        if not (self.apply_dark or self.apply_flat):
             self.info('none')
             return
 
-        # get all masters (check speed, but should be quick)
+        # get all masters anywa (~1ms)
         dark = self.get_dark(sub)
         flat = self.get_flat(sub)
         bias = self.get_bias(sub)
-
+        
         logger.debug('D {:} F {:} B {:}'.format(dark, flat, bias))
 
         D = self.get_master(dark)
@@ -189,39 +229,31 @@ class Calibrator(Component, Settings):
 
         im = sub.get_image()
 
-        if self.apply_dark and self.apply_flat:
-            if dark is not None and flat is not None:
-                im = (im - D) / F
+        # to apply dark we just need a dark
+        if self.apply_dark and dark is not None:
+            im = im - D
+            sub.calibrations = {'dark'}
+
+        # to apply flat we need a flat and either a bias or a dark
+        if self.apply_flat and flat is not None:
+            if 'dark' in sub.calibrations:
+                im = im / F
                 sub.calibrations = {'dark', 'flat'}
-            elif dark is not None:
-                im = im - D
-                sub.calibrations = {'dark'}
-            elif flat is not None:
-                if bias is not None:
-                    sub.calibrations = {'flat', 'bias'}
-                    im = (im - B) / F
-                else:
-                    sub.calibrations = {'flat'}
-                    im = im / F # inadvisable, but we allow it for expt purposes
+            elif bias is not None:
+                im = (im - B) / F
+                sub.calibrations = {'bias', 'flat'}
+            # else:
+            #     # manufacture a constant dark using background
+            #     mean_back, std_back = estimate_background(im)
+            #     offset = mean_back - 5 * std_back
+            #     im = ((im - offset) / F)  + offset
+            #     sub.calibrations = {'syn-dark', 'flat'}
 
-        elif self.apply_dark:
-            if dark is not None:
-                im = im - D
-                sub.calibrations = {'dark'}
-
-        elif self.apply_flat:
-            if flat is not None:
-                if bias is not None:
-                    sub.calibrations = {'flat', 'bias'}
-                    im = (im - B) / F
-                else:
-                    sub.calibrations = {'flat'}
-                    im = im / F
-
-        elif self.apply_bias:
-            if bias is not None:
-                sub.calibrations = {'bias'}
-                im = im - B
+        # restore background to avoid clipping in next step 
+        if 'bias' in sub.calibrations:
+            im = im + np.mean(B)
+        elif 'dark' in sub.calibrations:
+            im = im + np.mean(D)
 
         # limit
         im[im < 0] = 0
@@ -234,31 +266,30 @@ class Calibrator(Component, Settings):
         else:
             self.info('none suitable')
 
-
-    def find_masters(self, sub, sub_type):
-        ''' return dict of subs that match basic properties
-            such as shape, camera, ROI etc
+    def get_dark(self, sub, exposure_tol=None):
+        ''' find darks with same camera, gain, offset, ROI, binning, shape, and
+            with an exposure that is within tolerance
+            NB for backwards compat, don't enforce camera if sub doesn't have one
         '''
-        return {k: v for k, v in self.masters.items()
-                if  v.shape == sub.shape and 
-                    v.sub_type == sub_type and 
-                    v.ROI == sub.ROI and
-                    v.camera == sub.camera and
-                    v.gain == sub.gain and
-                    v.offset == sub.offset}
-       
-
-    def get_dark(self, sub):
-        # Find suitable dark for this sub given its parameters
 
         if sub.exposure is None:
             return None
 
-        # choose darks that meet requirements
-        darks = {k: v for k, v in self.find_masters(sub, 'dark').items()
-                    if  v.exposure is not None and
-                        abs(v.exposure - sub.exposure) < self.exposure_tol}
+        if exposure_tol is None:
+            exposure_tol = self.exposure_tol
 
+        darks = {k: v for k, v in self.masters.items()
+                    if v.sub_type == 'dark' and
+                        v.binning == sub.binning and 
+                        v.ROI == sub.ROI and
+                        v.shape == sub.shape and
+                        v.gain == sub.gain and
+                        v.offset == sub.offset and
+                        v.camera == (sub.camera if sub.camera is not None else v.camera) and
+                        v.exposure is not None and
+                        abs(v.exposure - sub.exposure) <= self.exposure_tol
+                }
+                    
         temperature = Component.get('Session').temperature
 
         if temperature is not None:
@@ -273,17 +304,50 @@ class Calibrator(Component, Settings):
         return darks[0] if len(darks) > 0 else None
 
 
-    def get_bias(self, sub):
-        # get the most recent bias
+    def get_flatdark(self, sub):
+        ''' simply a dark within flat-dark exposure tolerance
+        '''
+        darks = self.get_dark(sub, exposure_tol=self.fd_exposure_tol)
+        if len(darks) == 0:
+            logger.debug('no matching flatdark')
+            return None
 
-        bias = {k: v.age for k, v in self.find_masters(sub, 'bias').items()}
+        # find the one with the closest exposure
+        for k in sorted(darks, key=darks.get):
+            logger.debug('matching flatdark {:}'.format(k))
+            return k
+
+
+    def get_bias(self, sub):
+        ''' find bias with same camera, gain, offset, ROI, binning, and shape
+            NB for backwards compat, don't enforce camera if sub doesn't have one
+        '''
+
+        bias = {k: v.age for k, v in self.masters.items()
+                    if v.sub_type == 'bias' and
+                        v.binning == sub.binning and 
+                        v.ROI == sub.ROI and
+                        v.shape == sub.shape and
+                        v.gain == sub.gain and
+                        v.offset == sub.offset and
+                        v.camera == (sub.camera if sub.camera is not None else v.camera)
+                }
 
         return min(bias, key=bias.get) if len(bias) > 0 else None
  
 
     def get_flat(self, sub):
+        ''' find flat with same camera, ROI, binning, and shape
+            NB for backwards compat, don't enforce props if sub doesn't have them
+        '''
 
-        flats = self.find_masters(sub, 'flat')
+        flats = {k: v for k, v in self.masters.items()
+                    if v.sub_type == 'flat' and
+                        v.binning == (sub.binning if sub.binning is not None else v.binning) and 
+                        v.ROI == (sub.ROI if sub.ROI is not None else v.ROI) and
+                        v.shape == sub.shape and
+                        v.camera == (sub.camera if sub.camera is not None else v.camera)
+                }
 
         # flat in required filter
         if sub.filter is not None:
@@ -299,15 +363,13 @@ class Calibrator(Component, Settings):
         if len(flats_in_filt) == 0:
             return None
 
-        # find any within day tolerance, noting that this compares the date of the flat with
-        # the date of the sub (i.e. not necessarily the current date)
+        # map from flat to difference between sub create time and master create time
         flats = {k: abs(v.create_time - sub.create_time).days for k,v in flats_in_filt.items()}
-        flats = {k: v for k, v in flats.items() if v <= self.flat_days_tol}
 
-        # find most recent if there is a choice
+        # find closest in date
         for k in sorted(flats, key=flats.get):
             return k
-        return None
+
 
     def get_master(self, name):
         if name is None:
@@ -320,30 +382,51 @@ class Calibrator(Component, Settings):
         return max(c, key=c.get)
 
     def calibrate_flat(self, sub):
-        ''' Perform calibrations on flat which include subtracting bias if
-        available , and rescaling so the mean intensity is .5 (because outlier rejection 
-        methods used to combine flat subs work best with normalised frames due to changing 
-        light levels; the value of .5 is so that we can use B & W controls; we rescale to 
-        a mean of 1 when saving since this is what a good flat needs for dividing)
+        ''' Perform calibrations on flat which include subtracting 
+        bias/flat-dark/constant if possible, then rescaling so the 
+        mean intensity is .5 (because outlier rejection methods used 
+        to combine flat subs work best with normalised 
+        frames due to changing light levels; the value of .5 is so that we can 
+        use B & W controls; then normalise by robust mean of central region so that
+        when in use this region is unaffected.
+
+        Called by Stacker when flats are added to the stack
         '''
 
         im = sub.get_image()
+        sub.calibration_method = 'None'
 
-        # subtract bias if available
-        bias = self.get_bias(sub)
-        if bias is not None:
-            im = im - self.get_master(bias)
+        # calibrate using selected method
+        if self.flat_calibration == 'flat-dark':
+            # look for suitable masters within exposure tolerance
+            # if none found, look for bias
+            flatdark = self.get_flatdark(sub)
+            if flatdark is not None:
+                im = im - self.get_master(flatdark)
+                sub.calibration_method = 'flat-dark'
+            
+        elif self.flat_calibration == 'bias':
+            bias = self.get_bias(sub)
+            if bias is not None:
+                im = im - self.get_master(bias)
+                sub.calibration_method = 'bias'
 
-        # normalise by mean of image in central 3rd zone 
-        perc = 75  # retain central 75% of points when computing mean 
+        elif self.flat_calibration == 'constant':
+            # estimate background and subtract 5 sds to get potential lower bound
+            bias = self.get_bias(sub)
+            if bias is not None:
+                mean_back, std_back = estimate_background(self.get_master(bias))
+                im = im - (mean_back - 5 * std_back)
+                sub.calibration_method = 'constant'
+
+        # normalise by mean of image in central zone 
         w, h = im.shape
         w1, w2 = int(w / 3), int(2 * w / 3)
         h1, h2 = int(h / 3), int(2 * h / 3)
         imr = im[h1: h2, w1: w2]
-        robust_mean = np.mean(trimboth(np.sort(imr.ravel(), axis=0), 
-            (100 - perc)/100, axis=0), axis=0)
-
+        robust_mean = percentile_clip(imr.ravel(), perc=75)
         sub.image = .5 * im / robust_mean
+
 
     
     def build_calibrations(self):
@@ -356,7 +439,8 @@ class Calibrator(Component, Settings):
             name='Calibration masters',
             description='Calibration masters',
             cols={
-                'Name': {'w': 120, 'align': 'left', 'field': 'name'},
+                'Name': {'w': 120, 'align': 'left', 'field': 'name', 
+                    'action': self.show_calibration_frame},
                 'Camera': {'w': 140, 'align': 'left', 'field': 'camera', 'type': str},
                 'Type': {'w': 60, 'field': 'type', 'align': 'left'},
                 'Exposure': {'w': 80, 'field': 'exposure'},
@@ -365,6 +449,7 @@ class Calibrator(Component, Settings):
                 'Offset': {'w': 60, 'field': 'offset', 'type': int},
                 'ROI': {'w': 80, 'field': 'ROI', 'type': str},
                 'Bin': {'w': 45, 'field': 'bin', 'type': int},
+                'Calib': {'w': 120, 'field': 'calibration_method', 'type': str},
                 'Filter': {'w': 80, 'field': 'filter'},
                 'Created': {'w': 120, 'field': 'created', 'sort': {'DateFormat': date_time_format}},
                 'Size': {'w': 110, 'field': 'shape_str'},
@@ -388,6 +473,20 @@ class Calibrator(Component, Settings):
             self.app.gui.add_widget(self.calibration_table, index=0)
 
         self.calibration_table.show()    
+
+    def show_calibration_frame(self, row):
+        self.calibration_table.hide()
+        # convert row.key to str (it is numpy.str by default)
+        # get image from path
+        try:
+            path = os.path.join(self.calibration_dir, str(row.key))
+            im = Image(path)
+            if im.sub_type == 'flat':
+                im.image /= 2
+            Component.get('Monochrome').display_sub(im.image)
+        except Exception as e:
+            logger.error('{:}'.format(e))
+
 
     def move_to_delete_folder(self, *args):
         objio = Component.get('ObjectIO')

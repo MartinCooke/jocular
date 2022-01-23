@@ -15,6 +15,7 @@ from loguru import logger
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.properties import OptionProperty
+from kivy.metrics import dp
 from kivy.uix.label import Label
 from kivymd.uix.label import MDLabel
 from kivy.uix.boxlayout import BoxLayout
@@ -94,8 +95,9 @@ class CaptureScript(Panel, Component):
         return JMDToggleButton(
                 text=name, 
                 group='scripts',
-                font_size='20sp',
-                #tooltip_text=self.tooltips.get(name, ''),
+                font_size='18sp',
+                height=dp(24),
+                tooltip_text=self.tooltips.get(name, ''),
                 on_press=self.script_chosen)
 
     def build(self, *args):
@@ -114,6 +116,7 @@ class CaptureScript(Panel, Component):
         bl.add_widget(MDLabel(size_hint=(.3, 1)))
         bl_right = BoxLayout(
             size_hint=(.4, 1),
+            spacing=dp(5),
             orientation='vertical')
         bl.add_widget(bl_right)
         bl.add_widget(Label(size_hint=(.3, 1)))
@@ -190,7 +193,13 @@ class CaptureScript(Panel, Component):
         self.update()
         if self.current_script == 'align':
             Component.get('View').fit_to_window(zero_orientation=False)
-        self.app.gui.set('show_reticle', self.current_script == 'align', update_property=True)
+            self.prev_transp = Component.get('Appearance').transparency
+            Component.get('Appearance').transparency = 100
+            self.app.gui.set('show_reticle', True, update_property=True)
+        else:
+            Component.get('Appearance').transparency = \
+                self.prev_transp if hasattr(self, 'prev_transp') else 0
+            self.app.gui.set('show_reticle', False, update_property=True)
         self.app.gui.set('80' if self.current_script == 'flat' else 'mean' , 
             True, update_property=True)
 
