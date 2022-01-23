@@ -369,6 +369,8 @@ class DSO(Component):
         orig = {p: prop_to_str(p, self.original_props.get(p, '')) for p in  self.props}
         now = {p: prop_to_str(p, getattr(self, p)) for p in self.props}
         self.changed = 'DSO properties changed' if orig != now else ''
+        if orig != now:
+            logger.trace('orig {:}  now {:}'.format(orig, now))
         # self.app.gui.has_changed('DSO', orig != now)
         return orig != now
  
@@ -389,10 +391,21 @@ class DSO(Component):
 
         logger.trace('Checking for change')
 
+
+        # update metadata
+        if props['Name'] == '':
+            props['Name'] = 'anon'
+        Component.get('Metadata').set(props)
+
+        known_props = self.cats.lookup(props['Name'], OT=props['OT'])
+
         # existing object and not changed => do nothing
-        if Component.get('ObjectIO').existing_object and not self.check_for_change():
-            logger.trace('Existing object and has not changed')
-            return
+        if known_props is not None:
+            orig = {p: prop_to_str(p, known_props.get(p, '')) for p in self.props}
+            now = {p: prop_to_str(p, getattr(self, p)) for p in self.props}
+            if orig == now:
+                logger.trace('known object and has not changed')
+                return
  
         ''' add to user DSO catalogue if new or update if modified and has 
             well-formed name/OT/RA/Dec
@@ -401,10 +414,6 @@ class DSO(Component):
             logger.trace('New or modified object and has Name/OT/RA/Dec so updating user catalogue')
             self.cats.update_user_object(props)
  
-        # update metadata
-        if props['Name'] == '':
-            props['Name'] = 'anon'
-        Component.get('Metadata').set(props)
 
 
     def current_object_coordinates(self):
