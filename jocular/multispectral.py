@@ -208,13 +208,23 @@ class MultiSpectral(Component, Settings):
         elif self.compensation == 'subtract background':
             ims = [im - estimate_background(im)[0] for im in ims]
 
-        # it turns out this value is absolutely critical because setting it too low means that stars get saturated
-        # whereas too high, or just using the absolute max leads to a colour space is too compressed (too grey).
-
+        ''' the percentile is absolutely critical: setting too low
+            leads to saturated stars; too high leads to a washed-out
+            colour space
+        '''
         max_pixel_vals = [np.percentile(im.ravel(), 99.99) for im in ims]
+
+        ''' divide all images by the largest of these; this expands the
+            colour dynamic range without affected colour ratios; the expanded
+            range helps when L is combined
+        '''
         ims = [im / max(max_pixel_vals) for im in ims]
 
-        # now limit image to 0-1 because we are about to stretch
+        ''' limit image to 0-1 because we are about to stretch
+            (while it shouldn't be necessary as we've just divided by
+            max feature, there may be some brighter hot pixels 
+            above unity)
+        '''
         self.normed_RGB = [_limit(im) for im in ims]
 
         # rest of process
