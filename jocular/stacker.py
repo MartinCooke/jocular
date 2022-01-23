@@ -468,6 +468,12 @@ class Stacker(Component, Settings):
             # currently using focus/align/frame
             logger.info('getting last faf image')
             im = Component.get('Capture').last_faf
+        elif self.is_empty():
+            # try to get FAF if current stack is empty
+            try:
+                im = Component.get('Capture').last_faf
+            except:
+                return None
         elif first_sub:
             if not self.is_empty():
                 im = self.subs[0].get_image()
@@ -615,10 +621,10 @@ class Stacker(Component, Settings):
         sub.image = None  # force reload
         sub.image = Component.get('BadPixelMap').remove_hotpix(sub.get_image())
         if sub.sub_type == 'light':
-            logger.trace('start calib')
+            #logger.trace('start calib')
             Component.get('Calibrator').calibrate(sub)
-            logger.trace('start aligner')
+            #logger.trace('start aligner')
             Component.get('Aligner').process(sub)
-            logger.trace('end aligner')
+            #logger.trace('end aligner')
         elif sub.sub_type == 'flat':
             Component.get('Calibrator').calibrate_flat(sub)
