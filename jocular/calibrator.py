@@ -440,7 +440,7 @@ class Calibrator(Component, Settings):
             description='Calibration masters',
             cols={
                 'Name': {'w': 120, 'align': 'left', 'field': 'name', 
-                    'action': self.show_calibration_frame},
+                'action': self.show_calibration_frame},
                 'Camera': {'w': 140, 'align': 'left', 'field': 'camera', 'type': str},
                 'Type': {'w': 60, 'field': 'type', 'align': 'left'},
                 'Exposure': {'w': 80, 'field': 'exposure'},
