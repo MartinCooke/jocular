@@ -242,10 +242,19 @@ class PlateSolver(Component, Settings):
             max_sigma=self.max_sigma, 
             threshold=thresh, 
             overlap=0)[:, [1, 0]]
+
+        if len(blobs) < self.min_matches:
+            msg = 'Not enough stars to platesolve ({:})'.format(len(blobs))
+            toast(msg)
+            self.info(msg)
+            #logger.warning('Too few stars to platesolve ({:})'.format(len(x_im)))
+            return False
+
         centroids = star_centroids(im, blobs)
         x = centroids[:, 0]
         y = centroids[:, 1]
         flux = centroids[:, 2]
+
 
 
         self.im_height, self.im_width = im.shape

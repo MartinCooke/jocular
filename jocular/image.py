@@ -184,7 +184,7 @@ class Image:
                 'Cannot read fits header for {:} ({:})'.format(path, e))
 
 
-        if verbose:
+        if True:
             for k, v in hdr.items():
                 logger.trace('{:9s} = {:}'.format(k, v))
 

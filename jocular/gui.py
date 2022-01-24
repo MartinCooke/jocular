@@ -166,7 +166,7 @@ class GUI(FloatLayout):
 		thickness = Metrics.get('ring_thickness')
 
 		# location of capture 'saddle'
-		angle = [-10, 8]
+		angle = [-9, 7]
 		min_a, max_a = angle360(90 - angle[0]), angle360(90 - angle[1])
 		greys = {'background': .02, 'outer': .2, 'middle': .17, 'inner': .12, 'image': 0, 'capture_ring': .2}
 		start_angle = {'capture_ring': angle360(min(min_a, max_a))}

@@ -36,7 +36,7 @@ class ASICamera(GenericCamera):
 			'help': ''}),
 		('ROI', {
 			'name': 'ROI',
-			'options': ['full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
+			'options': ['custom', 'full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
 			'help': 'region of interest relative to full frame'
 			}),
 		('square_sensor', {
@@ -237,12 +237,41 @@ class ASICamera(GenericCamera):
 			max(self.polling_interval, self.exposure))
 
 
+	def set_ROI(self, ROI):
+		''' ROI provides as xmin, xmax, ymin, ymax
+		'''
+		if not self.connected:
+			return
+
+		# if ROI is unclicked, use settings on interface
+		if ROI is None:
+			self.ROI = 'full'
+			self.dims_changed()
+			return	
+
+		start_x, end_x, start_y, end_y = ROI
+		self.asicamera.set_roi(
+			bins=int(self.binning[0]),
+			start_x=start_x,
+			start_y=start_y,
+			width=8 * ((end_x - start_x) // 8),
+			height=8 * ((end_y - start_y) // 8))
+		self.ROI = 'custom'
+		logger.debug(ROI)
+
+
 	def dims_changed(self):
 		''' called if binning, ROI or square_sensor changes
 		'''
 		if not self.connected:
 			return
 		binning = int(self.binning[0])
+
+		# if ROI is set, ignore
+		# although we might want to allow binning
+		if self.ROI == 'custom':
+			return
+
 		regs = {
 			'full': 1, 
 			'three-quarters': 3/4,

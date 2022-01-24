@@ -64,10 +64,14 @@ class Aligner(Component, Settings):
         ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
             'help': 'Find an appropriate threshold to detect this many stars on the first sub',
             'fmt': '{:.0f} stars'}),
-        ('min_sigma', {'name': 'min sigma', 'float': (1, 10, 1),
-            'fmt': '{:.0f}'}),
-        ('max_sigma', {'name': 'max sigma', 'float': (1, 10, 1),
-            'fmt': '{:.0f}'})
+        # ('min_sigma', {
+        #     'name': 'min sigma', 'float': (1, 10, 1),
+        #     'fmt': '{:.0f}',
+        #     'help': 'Used in DoG blob extraction stage (factory: 3)'}),
+        # ('max_sigma', {
+        #     'name': 'max sigma', 'float': (1, 10, 1),
+        #     'fmt': '{:.0f}',
+        #     'help': 'Used in DoG blob extraction stage (factory: 5)'})
         ]
 
     def __init__(self):
@@ -79,6 +83,7 @@ class Aligner(Component, Settings):
         self.reset()
 
     def reset(self):
+        self.star_intensity = None
         self.keystars = None
         self.mags = None
         self.warp_model = None
@@ -167,7 +172,7 @@ class Aligner(Component, Settings):
     def get_intensity_threshold(self):
         ''' used by platesolver to find current star intensity threshold
         '''
-        if hasattr(self, 'star_intensity'):
+        if self.star_intensity is not None:
             return self.star_intensity
         return .001
 

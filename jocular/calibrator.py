@@ -23,6 +23,36 @@ date_time_format = '%d %b %y %H:%M'
 def none_to_empty(x):
     return '' if x is None else x
 
+def subregion(m, s):
+    ''' Return x and y limits of master (m) that correspond 
+        to sub (s), or None if not possible to use this master
+    '''
+
+    if m is None:
+        return None
+
+    # extract region covered by m and s
+    mx = 0 if m.ROI_x is None else m.ROI_x
+    my = 0 if m.ROI_y is None else m.ROI_y
+    sx = 0 if s.ROI_x is None else s.ROI_x
+    sy = 0 if s.ROI_y is None else s.ROI_y
+    mw = m.shape[0] if m.ROI_w is None else m.ROI_w
+    mh = m.shape[1] if m.ROI_h is None else m.ROI_h
+    sw = s.shape[0] if s.ROI_w is None else s.ROI_w
+    sh = s.shape[1] if s.ROI_h is None else s.ROI_h
+
+    # forms subregion bounds
+    x0 = sx - mx
+    x1 = x0 + sw
+    y0 = sy - my
+    y1 = y0 + sh
+
+    # if s fits within m, return bounds
+    if x0 >= 0 and y0 >= 0 and x1 <= mw and y1 <= mh:
+        return (x0, x1, y0, y1)
+
+    return None
+
 class Calibrator(Component, Settings):
 
     save_settings = ['apply_dark', 'apply_flat']
@@ -216,7 +246,7 @@ class Calibrator(Component, Settings):
             self.info('none')
             return
 
-        # get all masters anywa (~1ms)
+        # get all masters anyway (~1ms)
         dark = self.get_dark(sub)
         flat = self.get_flat(sub)
         bias = self.get_bias(sub)
@@ -231,16 +261,19 @@ class Calibrator(Component, Settings):
 
         # to apply dark we just need a dark
         if self.apply_dark and dark is not None:
-            im = im - D
+            dx0, dx1, dy0, dy1 = subregion(self.masters[dark], sub)
+            im = im - D[dx0: dx1, dy0: dy1]
             sub.calibrations = {'dark'}
 
         # to apply flat we need a flat and either a bias or a dark
         if self.apply_flat and flat is not None:
             if 'dark' in sub.calibrations:
-                im = im / F
+                fx0, fx1, fy0, fy1 = subregion(self.masters[flat], sub)
+                im = im / F[fx0: fx1, fy0: fy1]
                 sub.calibrations = {'dark', 'flat'}
             elif bias is not None:
-                im = (im - B) / F
+                bx0, bx1, by0, by1 = subregion(self.masters[bias], sub)
+                im = (im - B[bx0: bx1, by0: by1]) / F[fx0: fx1, fy0: fy1]
                 sub.calibrations = {'bias', 'flat'}
             # else:
             #     # manufacture a constant dark using background
@@ -266,6 +299,13 @@ class Calibrator(Component, Settings):
         else:
             self.info('none suitable')
 
+    ''' TO DO: enable ROI of masters
+        need a 'compatible' function that checks offsets
+        and also a function that returns offsets that can be used
+        during the calibration process itself 
+    '''
+
+
     def get_dark(self, sub, exposure_tol=None):
         ''' find darks with same camera, gain, offset, ROI, binning, shape, and
             with an exposure that is within tolerance
@@ -280,9 +320,10 @@ class Calibrator(Component, Settings):
 
         darks = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'dark' and
-                        v.binning == sub.binning and 
-                        v.ROI == sub.ROI and
-                        v.shape == sub.shape and
+                        v.binning == sub.binning and
+                        subregion(v, sub) != None and
+                        #v.ROI == sub.ROI and
+                        #v.shape == sub.shape and
                         v.gain == sub.gain and
                         v.offset == sub.offset and
                         v.camera == (sub.camera if sub.camera is not None else v.camera) and
@@ -326,8 +367,9 @@ class Calibrator(Component, Settings):
         bias = {k: v.age for k, v in self.masters.items()
                     if v.sub_type == 'bias' and
                         v.binning == sub.binning and 
-                        v.ROI == sub.ROI and
-                        v.shape == sub.shape and
+                        subregion(v, sub) != None and
+                        #v.ROI == sub.ROI and
+                        #v.shape == sub.shape and
                         v.gain == sub.gain and
                         v.offset == sub.offset and
                         v.camera == (sub.camera if sub.camera is not None else v.camera)
@@ -344,8 +386,9 @@ class Calibrator(Component, Settings):
         flats = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'flat' and
                         v.binning == (sub.binning if sub.binning is not None else v.binning) and 
-                        v.ROI == (sub.ROI if sub.ROI is not None else v.ROI) and
-                        v.shape == sub.shape and
+                        subregion(v, sub) != None and
+                        #v.ROI == (sub.ROI if sub.ROI is not None else v.ROI) and
+                        #v.shape == sub.shape and
                         v.camera == (sub.camera if sub.camera is not None else v.camera)
                 }
 

@@ -156,7 +156,7 @@ class Catalogues(Component, Settings):
         except:
             pass
 
-        # cause user objects to overwrite
+        # force user objects to overwrite
         for k, v in self.user_objects.items():
             nm = k.upper()
             self.dsos[nm] = v

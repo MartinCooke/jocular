@@ -14,11 +14,15 @@ from kivy.lang import Builder
 from kivy.uix.scatter import Scatter
 from kivy.graphics.texture import Texture
 from kivy.graphics.transformation import Matrix
-from kivy.properties import BooleanProperty, NumericProperty, BoundedNumericProperty
+from kivy.properties import (
+    BooleanProperty, NumericProperty, 
+    BoundedNumericProperty, ListProperty
+    )
 from kivy.core.window import Window
 
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.dialog import MDDialog
+from jocular.utils import toast
 
 from jocular.utils import angle360
 from jocular.component import Component
@@ -111,6 +115,8 @@ class View(Component, Settings):  # must be in this order
     brightness = NumericProperty(1)
     is_dimmed = BooleanProperty(False)
     transparency = NumericProperty(0)
+    apply_ROI = BooleanProperty(False)
+    ROI = ListProperty(None, allownone=True)
 
     flip_UD = BooleanProperty(False)
     flip_LR = BooleanProperty(False)
@@ -153,6 +159,7 @@ class View(Component, Settings):  # must be in this order
         self.image_selected = False
         self.old_transparency = self.transparency
         self.old_brightness = self.brightness
+        self.ROI = None
         logger.debug('View scatter {:}'.format(self.scatter))
 
     def on_new_object(self):
@@ -220,7 +227,7 @@ class View(Component, Settings):  # must be in this order
             return
         shape = self.last_image.shape
         h, w = shape[0], shape[1]  # done like this because might be 3-D
-        if  w < 101:
+        if w < 101:
             return
         z = self.zoom_to_lever(Window.height / h)
         App.get_running_app().gui.set('zoom', z)
@@ -228,6 +235,45 @@ class View(Component, Settings):  # must be in this order
         if zero_orientation:
             self.orientation = 0
         self.scatter._set_center(Metrics.get('origin'))
+
+
+    def on_apply_ROI(self, *args):
+        ''' force or undo ROI
+        '''
+        if self.last_image is None:
+            return
+        shape = self.last_image.shape
+        h, w = shape[0], shape[1]  # done like this because might be 3-D
+        if not self.apply_ROI:
+            self.ROI = None
+            toast('ROI set to full sensor')
+            return
+
+        xc, yc = Metrics.get('origin')
+        r = Metrics.get('inner_radius')
+        mapping = self.scatter.to_local
+        # distance in pixels for radius
+
+        # pixel coords of centre
+        xcp, ycp = mapping(xc, yc)
+
+        # pixel coords of edge
+        xep, yep = mapping(xc - r, yc)
+
+        # distance in pixels
+        dpix = ((xcp - xep) ** 2 + (ycp - yep) ** 2) ** 0.5
+
+        # either use this or mult by root(2)
+        self.ROI = (
+            int(max(0, xcp - dpix)), 
+            int(min(w, xcp + dpix)),
+            int(max(0, ycp - dpix)), 
+            int(min(h, ycp + dpix))
+        )
+        toast('ROI: {:}, {:} to {:}, {:}'.format(*self.ROI))
+
+    def on_ROI(self, *args):
+        Component.get('Camera').set_ROI(self.ROI)
 
     def on_invert(self, *args):
         if self.last_image is None:
@@ -254,6 +300,7 @@ class View(Component, Settings):  # must be in this order
         self.w, self.h = w, h
         self.colorfmt = colorfmt
         logger.debug('texture reset')
+
 
     def display_blank(self):
         self.display_image(0 * np.ones((self.w, self.h)))

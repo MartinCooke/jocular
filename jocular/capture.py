@@ -63,7 +63,7 @@ class Capture(Component):
             return
             
         self.gui.disable(capture_controls)
-        self.gui.disable({'load_previous', 'new_DSO'})
+        self.gui.disable({'load_previous', 'new_DSO', 'apply_ROI'})
         self.gui.enable({'capturing'})
         logger.debug('camera connected, starting capture')
 
@@ -78,7 +78,7 @@ class Capture(Component):
         Component.get('Camera').stop_capture()
         self.gui.set('capturing', False, update_property=True)
         self.gui.enable(capture_controls)
-        self.gui.enable({'new_DSO'})
+        self.gui.enable({'new_DSO', 'apply_ROI'})
         if Component.get('Stacker').is_empty():
             self.gui.enable({'load_previous'})
         if message is not None:

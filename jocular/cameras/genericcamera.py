@@ -20,6 +20,9 @@ class GenericCamera(Device):
 	def stop_capture(self):
 		pass
 
+	def set_ROI(self, ROI):
+		pass
+
 	def get_pixel_height(self):
 		return None
 

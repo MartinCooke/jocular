@@ -49,6 +49,10 @@ class Camera(Component, EventDispatcher, DeviceFamily):
 		if self.connected():
 			return self.device.get_pixel_height()
 
+	def set_ROI(self, ROI):
+		if self.connected():
+			self.device.set_ROI(ROI)
+
 	def get_capture_props(self):
 		if self.connected():
 			return self.device.get_capture_props()

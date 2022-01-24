@@ -12,14 +12,14 @@ def sat_to_hue(val):
 
 class Appearance(Component, Settings):
 
-    highlight_color = StringProperty('Blue')
+    highlight_color = StringProperty('BlueGray')
     lowlight_color = NumericProperty(50)
     lever_color = NumericProperty(32)
     hint_color = NumericProperty(32)
     ring_font_size = NumericProperty(14)
     form_font_size = NumericProperty(15)
     transparency = NumericProperty(0)
-    colour_saturation = NumericProperty(50)
+    colour_saturation = NumericProperty(67)
     tooltip_delay = NumericProperty(.5)
 
     configurables = [

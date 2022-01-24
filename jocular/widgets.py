@@ -479,7 +479,8 @@ joc_icons = {
     'next_sub': '>',
     'prev_sub': '<',
     'camera': 'b',
-    'reticle': 'v',
+    'reticle': 'r', # was v
+    'ROI': 'v', # was 'd'
     'fit': 'y',
     'stack': 'E',
     'clear': '0',
@@ -490,7 +491,7 @@ joc_icons = {
     'list': 'w',
     'lever': '1',
     'dot': '1',
-    'redo': 'h',  # was '4'
+    'redo': '4',  # was 'h'
     'new': 'i',
     'save': 'i',  # until we update
     'warn': '!',

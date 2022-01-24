@@ -21,14 +21,24 @@ Builder.load_string(
 '''
 
 <TooltipLabel>:
-	theme_text_color: 'Custom'
-	text_color: .8, .8, .8, 1
+    background_color:  app.theme_cls.accent_color
+    canvas.before:
+        Color:
+            rgba: self.background_color if self.text else (0, 0, 0, 0)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    theme_text_color: 'Custom'
+    text_size: self.size
+	text_color: 1, 1, 1, 1
 	size_hint: None, None
 	font_style: 'Subtitle2'
 	text:''
-	halign: 'left'
-	width: dp(250)
-	#height: dp(60)
+	padding: dp(10),dp(10)
+	halign: 'center'
+	valign: 'center'
+	width: dp(200)
+	height: dp(85)
 ''')
 
 class TooltipLabel(MDLabel):

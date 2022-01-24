@@ -112,7 +112,7 @@ class Stacker(Component, Settings):
         #      self.original_exposure = self.subs[0].exposure
 
         # store rejected to see if anything has changed and needs saving
-        self.orig_rejects = rejected
+        self.orig_rejects = {os.path.splitext(r)[0].lower() for r in rejected}
 
         if self.is_empty():
             return
@@ -328,7 +328,7 @@ class Stacker(Component, Settings):
 
         # previous object
         elif Component.get('ObjectIO').existing_object:
-            if {s.name for s in self.subs if s.status == 'reject'} != self.orig_rejects:
+            if {s.name.lower() for s in self.subs if s.status == 'reject'} != self.orig_rejects:
                 # used to have this too: self.subs[0].exposure != self.original_exposure
                 self.changed = 'sub select/reject status modififed'
             else:
