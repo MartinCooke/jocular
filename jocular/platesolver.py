@@ -158,16 +158,16 @@ class PlateSolver(Component, Settings):
             'boolean': {'first match': True, 'best match': False},
             'help': 'tradeoff speed and accuracy'
             }),
-        ('min_sigma', {
-            'name': 'min sigma', 'float': (1, 5, 1),
-            'fmt': '{:.0f}',
-            'help': 'used in star extraction (factory: 3)'
-            }),
-        ('max_sigma', {
-            'name': 'max sigma', 'float': (1, 7, 1),
-            'fmt': '{:.0f}',
-            'help': 'used in star extraction (factory: 5)'
-            })
+        # ('min_sigma', {
+        #     'name': 'min sigma', 'float': (1, 5, 1),
+        #     'fmt': '{:.0f}',
+        #     'help': 'used in star extraction (factory: 3)'
+        #     }),
+        # ('max_sigma', {
+        #     'name': 'max sigma', 'float': (1, 7, 1),
+        #     'fmt': '{:.0f}',
+        #     'help': 'used in star extraction (factory: 5)'
+        #     })
         # ('star_thresh', {
         #     'name': 'star threshold', 'float': (.0001, .005, .0001),
         #     'fmt': '{:.4f}',
@@ -247,8 +247,17 @@ class PlateSolver(Component, Settings):
         y = centroids[:, 1]
         flux = centroids[:, 2]
 
+
         self.im_height, self.im_width = im.shape
-        degrees_per_pixel = self.binning * (self.pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
+
+        self.binned_pixel_height = Component.get('Stacker').get_pixel_height()
+        # if we don't know pixel height, use user-supplied values
+        if self.binned_pixel_height is None:
+            self.binned_pixel_height = self.binning * self.pixel_height
+
+        logger.trace('binned pixel height {:.1f}'.format(self.binned_pixel_height))
+
+        degrees_per_pixel = (self.binned_pixel_height * 1e-6 / self.focal_length) * (206265 / 3.6)
         fov = self.im_height * degrees_per_pixel
 
         # convert flux to relative magnitude
@@ -407,8 +416,8 @@ class PlateSolver(Component, Settings):
 
     def degrees_per_pixel(self):
         arcsec_pp = (
-            self.binning
-            * (self.pixel_height * 1e-6 / (self.focal_length / 1000))
+            (self.binned_pixel_height * 1e-6 / (self.focal_length / 1000))
             * (206265)
         )
         return arcsec_pp / 3600
+
