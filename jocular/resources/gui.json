@@ -14,7 +14,7 @@
 	},
 	"ObjectIO": {
 		"new_DSO": {
-			"angle": 60,
+			"angle": 62,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "new",
@@ -23,7 +23,7 @@
 			"action": "confirm_new_object"
 		},
 		"save_DSO": {
-			"angle": 54.625,
+			"angle": 56.9,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "new",
@@ -32,7 +32,7 @@
 			"action": "check_save"
 		},
 		"load_previous": {
-			"angle": 49.25,
+			"angle": 51.8,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "prev",
@@ -41,7 +41,7 @@
 			"action": "confirm_previous_object"
 		},
 		"quit": {
-			"angle": 17,
+			"angle": 16,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "quit",
@@ -52,7 +52,7 @@
 	},
 	"ObservingList": {
 		"show_list": {
-			"angle": 43.875,
+			"angle": 46.7,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"tooltip": "display DSO table with support for observation planning and lists",
@@ -63,7 +63,7 @@
 	},
 	"PlateSolver": {
 		"solve": {
-			"angle": 33.125,
+			"angle": 41.2,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "solve",
@@ -87,7 +87,7 @@
 			"initial": 0
 		},
 		"show_reticle": {
-			"angle": 27.75,
+			"angle": 26.2,
 			"location": "mid_ring",
 			"control_type": "JToggleButton",
 			"icon": "reticle",
@@ -96,8 +96,18 @@
 			"save": false,
 			"initial": false
 		},
+		"apply_ROI": {
+			"angle": 31.3,
+			"location": "mid_ring",
+			"control_type": "JToggleButton",
+			"icon": "ROI",
+			"tooltip": "apply/unapply ROI to visible eyepiece region",
+			"text": "ROI",
+			"save": false,
+			"initial": false
+		},
 		"fit": {
-			"angle": 38.5,
+			"angle": 36.4,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "fit",
@@ -108,7 +118,7 @@
 	},
 	"SettingsManager": {
 		"settings": {
-			"angle": 22.375,
+			"angle": 21.1,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "settings",
@@ -172,7 +182,7 @@
 	},
 	"Monochrome": {
 		"gradient": {
-			"angle": [249, 259],
+			"angle": [247, 257],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 300],
@@ -194,7 +204,7 @@
 			"major": {"-": 0, "bg": 5, "+": 10}
 		},
 		"noise_reduction": {
-			"angle": [235, 245],
+			"angle": [235, 243],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [-5, 100],
@@ -377,7 +387,7 @@
 	},
 	"CaptureScript": {
 		"script_button": {
-			"angle": 9,
+			"angle": 8,
 			"location": "mid_ring",
 			"control_type": "JButton",
 			"text": "frame",
@@ -390,7 +400,7 @@
 	},
 	"DeviceManager": {
 		"devices": {
-			"angle": 349,
+			"angle": 351,
 			"location": "mid_ring",
 			"control_type": "JButton",
 			"tooltip": "choose camera/watched folder, filterwheel and scope options (scope control not yet supported)",
@@ -445,7 +455,7 @@
 			"save": false
 		},
 		"speed": {
-			"angle": [67, 72],
+			"angle": [69, 73.5],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0.3, 7],
@@ -457,7 +467,7 @@
 			"save": false
 		},
 		"mean": {
-			"angle": 129,
+			"angle": 130,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"tooltip": "combine subs using averaging (best for SNR, no outlier rejection)",
@@ -466,7 +476,7 @@
 			"initial": 1
 		},
 		"90": {
-			"angle": 123,
+			"angle": 124,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"tooltip": "combine retaining central 90% of values at each pixel (mild outlier rejection)",
@@ -474,7 +484,7 @@
 			"group": "combine"
 		},
 		"80": {
-			"angle": 119,
+			"angle": 120,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"text": "80",
@@ -482,7 +492,7 @@
 			"group": "combine"
 		},
 		"70": {
-			"angle": 115,
+			"angle": 116,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"tooltip": "combine retaining central 70% of values at each pixel (strong outlier rejection)",
@@ -490,7 +500,7 @@
 			"group": "combine"
 		},
 		"median": {
-			"angle": 109,
+			"angle": 110,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"tooltip": "combine using middle value at each pixel (strongest outlier rejection, worst SNR)",
@@ -537,7 +547,7 @@
 			"initial": "Ha"
 		},
 		"animating": {
-			"angle": 72,
+			"angle": 73.5,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"tooltip": "animate sequence of subs (good to spot problems) or stack (useful to see SNR improve)",
@@ -546,7 +556,7 @@
 			"save": false
 		},
 		"gif": {
-			"angle": 68,
+			"angle": 70,
 			"location": "inner_ring",
 			"control_type": "JIconButton",
 			"text": "gif",
@@ -627,8 +637,8 @@
 			"save": false
 		},
 		"delete_sub": {
-			"angle": 78,
-			"location": "outer_ring",
+			"angle": 101,
+			"location": "inner_ring",
 			"control_type": "JIconButton",
 			"icon": "clear",
 			"tooltip": "delete current sub (destructive!)",
