@@ -280,8 +280,14 @@ class SXCamera(GenericCamera):
 	def get_capture_props(self):
 		''' Any specific info for caller
 		'''
-		return {'camera': 'Lodestar X2'}
+		return {
+			'camera': 'Lodestar X2',
+			'XPIXSZ': 8.6,
+			'YPIXSZ': 8.3
+			}
 
+	def get_pixel_height(self):
+		return 8.3
 
 	def deinterlace(self, odd8, even8):
 		''' De-interlace Lodestar.

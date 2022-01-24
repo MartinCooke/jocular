@@ -459,11 +459,15 @@ class Stacker(Component, Settings):
         self.update_stack_scroller()
         self.check_for_change()
 
-
     def get_current_displayed_image(self, first_sub=False):
         ''' Called by platesolver to get currently displayed image
              which might be short sub, sub, or stack
         '''
+        # first, get pixel height from camera, but override this
+        # if info can come from sub instead (as it might be a previous
+        # captured image)
+        self.pixel_height = Component.get('Camera').get_pixel_height()
+
         if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
             # currently using focus/align/frame
             logger.info('getting last faf image')
@@ -487,8 +491,18 @@ class Stacker(Component, Settings):
             im = self.get_stack()
         if im is None:
             return None
+
+        # if we get to here then we have a sub on the stack
+        # rather than a FAF image, so get pixel height
+        if not self.is_empty():
+            self.pixel_height = self.subs[0].YPIXSZ
         return Component.get('View').do_flips(im)
 
+    def get_pixel_height(self):
+        if hasattr(self, 'pixel_height'):
+            return self.pixel_height
+        else:
+            return None
 
     def get_centroids_for_platesolving(self):
         try:

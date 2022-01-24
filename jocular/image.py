@@ -123,7 +123,8 @@ class Image:
         'equalasp': 'equal_aspect', 'calibrat': 'calibration_method',
         'subtype': 'sub_type', 'sub_type': 'sub_type', 'imagetyp': 'sub_type',
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
-        'nsubs': 'nsubs', 'stackcnt': 'nsubs'}
+        'nsubs': 'nsubs', 'stackcnt': 'nsubs',
+        'XPIXSZ': 'XPIXSZ', 'YPIXSZ': 'YPIXSZ'}
 
     # map from possible found filter names to the Jocular scheme
     filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
@@ -146,6 +147,8 @@ class Image:
         'ROI_y': None,
         'ROI_w': None,
         'ROI_h': None,
+        'XPIXSZ': None,
+        'YPIXSZ': None,
         'equal_aspect': None,
         'calibration_method': 'None',
         'nsubs': None}

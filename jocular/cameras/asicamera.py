@@ -320,9 +320,16 @@ class ASICamera(GenericCamera):
 			'ROI_x': start_x,
 			'ROI_y': start_y,
 			'ROI_w': width,
-			'ROI_h': height
+			'ROI_h': height,
+			'XPIXSZ': self.camera_props['PixelSize'], # this before binning I think
+			'YPIXSZ': self.camera_props['PixelSize']
 			}
 
+	def get_pixel_height(self):
+		try:
+			return self.camera_props['PixelSize'] * int(self.binning[0])
+		except:
+			return None
 
 	def check_exposure(self, *arg):
 		# if ready, get image, otherwise schedule next check 
