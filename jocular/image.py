@@ -1,5 +1,5 @@
 ''' Represents a sub or a master calibration image; handles all 
-    FITs reading/writing and metadata from FITs header and filename parsing
+    FITs reading/writing plus metadata from FITs header/filename parsing
 '''
 
 import os
@@ -13,6 +13,81 @@ from loguru import logger
 from jocular import __version__
 from jocular.exposurechooser import str_to_exp
 
+''' map from FITs names (converted to lower case) to Image attributes; 
+    (1) can have multiple names mapping to same attribute
+    (2) keys must be lower case for lookup, even though UC in FITs
+    (3) values must have case as used in Image props and rest of program
+    (4) any that are not same in UC must be specified in imagepropmap
+'''
+fitspropmap = {
+        'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
+        'filt': 'filter',
+        'roi': 'ROI', 
+        'roi_x': 'ROI_x', 'roi_y': 'ROI_y', 'roi_w': 'ROI_w', 'roi_h': 'ROI_h',
+        'equalasp': 'equal_aspect', 
+        'calibrat': 'calibration_method',
+        'subtype': 'sub_type', 'imagetyp': 'sub_type',
+        'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
+        'stackcnt': 'nsubs',
+        'xpixsz': 'pixel_width', 'ypixsz': 'pixel_height'
+        }
+
+''' used to map from image prop names to fits name if they are difference; 
+    can't use inverse of fitspropmap as it is not unique
+'''
+imagepropsmap = {
+    'equal_aspect': 'equalasp',
+    'calibration_method': 'calibrat',
+    'pixel_width': 'xpixsz',
+    'pixel_height': 'ypixsz',
+    'temperature': 'temperat'
+}
+
+fitscomments = {
+    'equal_aspect': 'aspect ratio has been equalised',
+    'ROI': 'region of interest represented as proportion of sensor, centred on centre',
+    'calibration_method': 'calibration method applied to master flats'
+}
+
+''' properties we must have (even if None) in each Image instance
+    these are overridden by name and FITs properties
+'''
+default_props = {
+    'exposure': None, 
+    'sub_type': 'light', 
+    'filter': 'L', 
+    'temperature': None,
+    'gain': None,
+    'offset': None,
+    'camera': None,
+    'binning': 1,
+    'ROI': None,
+    'ROI_x': None,
+    'ROI_y': None,
+    'ROI_w': None,
+    'ROI_h': None,
+    'pixel_width': None,
+    'pixel_height': None,
+    'equal_aspect': None,
+    'calibration_method': 'None',
+    'nsubs': None}
+
+# map from possible found filter names to the Jocular scheme
+filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
+    'blue': 'B', 'dark': 'dark',  
+    'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII',
+    'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
+
+def convert_fits_props(hdr):
+    ''' form dict from Image prop to value but don't include unknown FITs props
+    '''
+    props = {}
+    for k, v in hdr.items():
+        ktran = fitspropmap.get(k.lower(), k.lower())
+        if ktran in default_props:
+            props[ktran] = v
+    return props
+
 def is_fit(f):
     return f.lower().endswith('.fit') or f.lower().endswith('.fits')
 
@@ -25,11 +100,11 @@ def fits_in_dir(path):
     fits = {f: os.path.getmtime(f) for f in fits}
     return sorted(fits, key=fits.get)
 
-
 def save_image(data=None, path=None, capture_props=None):
-    ''' saves sub or master
-        capture_props is a dict of additional keys/values to save e.g. gain
+    ''' saves sub or master to path
+        capture_props is a dict to save e.g. gain, offset, expo
     '''
+
     dupes = [
         ('SUBTYPE', 'IMAGETYP'),
         ('EXPOSURE', 'EXPTIME'), 
@@ -39,17 +114,6 @@ def save_image(data=None, path=None, capture_props=None):
         ('BINNING', 'YBINNING'),
         ('TEMPERAT', 'CCD-TEMP')
     ]
-
-    comments = {
-        'equal_aspect': 'aspect ratio has been equalised',
-        'ROI': 'region of interest represented as proportion of sensor, centred on centre',
-        'calibration_method': 'calibration method (for master flats)'
-    }
-
-    conversions = {
-        'equal_aspect': 'equalasp',
-        'calibration_method': 'calibrat'
-    }
 
     exposure = capture_props.get('exposure', None)
     sub_type = capture_props.get('sub_type', 'L')
@@ -77,9 +141,9 @@ def save_image(data=None, path=None, capture_props=None):
         # add any other keys that are not in the header
         # ensuring that any conversions are done
         for k, v in capture_props.items():
-            newk = conversions.get(k, k).upper()
+            newk = imagepropsmap.get(k.lower(), k).upper()
             if v is not None and newk not in hdr:
-                hdr[newk] = (v, comments.get(k, ''))
+                hdr[newk] = (v, fitscomments.get(k, ''))
 
         # duplicate values for alternative keys
         for key, altkey in dupes:
@@ -95,7 +159,8 @@ def save_image(data=None, path=None, capture_props=None):
         logger.warning('unable to save to {:} ({:})'.format(path, e))
 
 def update_fits_header(path, exposure=None, sub_type=None, temperature=None):
-    ''' modify headers
+    ''' modify headers; not used currently but will be used when advanced
+        save is re-implemented in ObjectIO
     '''
     try:
         with fits.open(path, mode='update') as hdu:
@@ -108,56 +173,21 @@ def update_fits_header(path, exposure=None, sub_type=None, temperature=None):
                 hdr['TEMPERAT'] = temperature
             hdu.close()
     except Exception as e:
-        logger.exception('Unable to reader fits header for {:} ({:})'.format(path, e))
+        logger.exception('Unable to read fits header for {:} ({:})'.format(path, e))
         return
 
 
 class Image:
-
-    # map from various FITS header names to Image attribute names
-    hmap = {
-        'exposure': 'exposure', 'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
-        'filter': 'filter', 'filt': 'filter', 'gain': 'gain', 'camera': 'camera', 
-        'offset': 'offset', 'ROI': 'ROI', 'roi': 'ROI', 'binning': 'binning', 
-        'ROI_x': 'ROI_x', 'ROI_y': 'ROI_y', 'ROI_w': 'ROI_w', 'ROI_h': 'ROI_h',
-        'equalasp': 'equal_aspect', 'calibrat': 'calibration_method',
-        'subtype': 'sub_type', 'sub_type': 'sub_type', 'imagetyp': 'sub_type',
-        'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
-        'nsubs': 'nsubs', 'stackcnt': 'nsubs',
-        'XPIXSZ': 'XPIXSZ', 'YPIXSZ': 'YPIXSZ'}
-
-    # map from possible found filter names to the Jocular scheme
-    filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
-        'blue': 'B', 'dark': 'dark',  
-        'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII',
-        'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
-
-    # default props
-    default_props = {
-        'exposure': None, 
-        'sub_type': 'light', 
-        'filter': 'L', 
-        'temperature': None,
-        'gain': None,
-        'offset': None,
-        'camera': None,
-        'binning': None,
-        'ROI': None,
-        'ROI_x': None,
-        'ROI_y': None,
-        'ROI_w': None,
-        'ROI_h': None,
-        'XPIXSZ': None,
-        'YPIXSZ': None,
-        'equal_aspect': None,
-        'calibration_method': 'None',
-        'nsubs': None}
-
+    ''' Represents sub or master
+    '''
 
     def __init__(self, path=None, verbose=False, check_image_data=False):
         ''' Generate Image instance from path. Throw ImageNotReadyException 
             in cases where re-reading on next event cycle might be successful.
         '''
+
+        # while testing
+        verbose = True
 
         if path is None:
             return
@@ -183,8 +213,8 @@ class Image:
             raise ImageNotReadyException(
                 'Cannot read fits header for {:} ({:})'.format(path, e))
 
-
-        if True:
+        if verbose:
+            logger.trace('From FITS header')
             for k, v in hdr.items():
                 logger.trace('{:9s} = {:}'.format(k, v))
 
@@ -213,11 +243,7 @@ class Image:
             logger.exception(e)
 
         # extract any relevant information from FITs header
-        fits_props = {}
-        for k, v in hdr.items():
-            if k.lower() in self.hmap:
-                if hdr[k] is not None:
-                    fits_props[self.hmap[k.lower()]] = v
+        fits_props = convert_fits_props(hdr)
 
         try:
             # is it a master?
@@ -235,7 +261,7 @@ class Image:
             name_props = self.parse_sub(self.name)
 
         # form properties by overriding
-        props = {**self.default_props, **name_props, **fits_props}
+        props = {**default_props, **name_props, **fits_props}
 
         # rationalise properties
         try:
@@ -259,7 +285,7 @@ class Image:
                 v = v[:-6].strip()
             if v.startswith('filter'):
                 v = v[6:].strip()
-            props['filter'] = self.filter_map.get(v, v)   # untested change in v0.5
+            props['filter'] = filter_map.get(v, v)   # untested change in v0.5
 
             # temperature format might be a number, or followed by C
             if props['temperature'] is not None:
@@ -281,8 +307,8 @@ class Image:
         except Exception as e:
             logger.exception(e)
 
-        # now assign relevant properties (and some defaults) to Sub
-        for p in self.default_props.keys():
+        # assign properties to Image instance
+        for p in default_props:
             setattr(self, p, props[p])
 
         self.status = 'select'
@@ -290,33 +316,45 @@ class Image:
         self.keyframe = False
         self.calibrations = {'dark': False, 'flat': False, 'bias': False}
 
-        # if verbose:
-        if True:
-            self.describe(fits_props=fits_props, name_props=name_props)
+        self.describe(
+            fits_props=fits_props, 
+            name_props=name_props, 
+            verbose=verbose)
 
-    def describe(self, fits_props=None, name_props=None):
-        # for debugging
+
+    def describe(self, fits_props=None, name_props=None, verbose=False):
         created_by = 'Jocular' if self.created_by_jocular else 'alien'
         if self.is_master:
             logger.debug('{:} Master {:}'.format(created_by, self.name))
         else:
             logger.debug('{:} Sub {:}'.format(created_by, self.name))
+        if not verbose:
+            return
+
+        # list essential props
+        for p in default_props:
+            logger.trace('{:} = {:}'.format(p, getattr(self, p)))
+
+        # some image stats
         im = self.get_image()
-        logger.trace('{:9s} {:14s} ({:} days) {:5s} expo {:} filt {:} gain {:} bin {:} {:} {:}'.format(
-            self.shape_str, 
-            self.create_time.strftime('%d %b %y %H:%M'),
-            self.age,
-            self.sub_type,
-            self.exposure,
-            self.filter,
-            'no' if self.gain is None else self.gain,
-            self.binning,
-            str(self.temperature) + 'C' if self.temperature is not None else '',
-            str(self.nsubs) + ' subs in master' if self.nsubs is not None else ''))
-        logger.trace('from FITS: {:}'.format(fits_props))
-        logger.trace('from name: {:}'.format(name_props))
         logger.trace('min {:.4f} max {:.4f} mean {:.4f}'.format(
             np.min(im), np.max(im), np.mean(im)))
+
+        # may be other props we want to output at some point
+        # logger.trace('{:9s} {:14s} ({:} days) {:5s} expo {:} filt {:} gain {:} bin {:} {:} {:}'.format(
+        #     self.shape_str, 
+        #     self.create_time.strftime('%d %b %y %H:%M'),
+        #     self.age,
+        #     self.sub_type,
+        #     self.exposure,
+        #     self.filter,
+        #     'no' if self.gain is None else self.gain,
+        #     self.binning,
+        #     str(self.temperature) + 'C' if self.temperature is not None else '',
+        #     str(self.nsubs) + ' subs in master' if self.nsubs is not None else ''))
+        # logger.trace('from FITS: {:}'.format(fits_props))
+        # logger.trace('from name: {:}'.format(name_props))
+
 
 
     def parse_sub(self, nm):
@@ -363,8 +401,8 @@ class Image:
         for p in parts[1:]:
             try:
                 k, v = p.split(key_value_sep)
-                if k in self.hmap:
-                    props[self.hmap[k]] = v 
+                if k.lower() in self.fitspropmap:
+                    props[self.self.fitspropmap[k]] = v 
             except:
                 pass
 

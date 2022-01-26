@@ -99,12 +99,13 @@
 		"apply_ROI": {
 			"angle": 31.3,
 			"location": "mid_ring",
-			"control_type": "JToggleButton",
+			"control_type": "JIconButton",
 			"icon": "ROI",
 			"tooltip": "apply/unapply ROI to visible eyepiece region",
 			"text": "ROI",
 			"save": false,
-			"initial": false
+			"initial": false,
+			"action": "apply_ROI"
 		},
 		"fit": {
 			"angle": 36.4,

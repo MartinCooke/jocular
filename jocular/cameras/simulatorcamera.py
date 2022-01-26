@@ -28,6 +28,7 @@ class SimulatorCamera(GenericCamera):
 
 		self.last_capture = None
 		self.ims = None
+		self.ROI = None
 
 		''' choose capture directory at random
 		'''
@@ -66,6 +67,11 @@ class SimulatorCamera(GenericCamera):
 		self.capture_event = Clock.schedule_once(
 			partial(self.check_exposure, on_capture), max(0.01, exposure))
 
+	def get_capture_props(self):
+		return {
+			'camera': 'simulator'
+		}
+
 	def check_exposure(self, on_capture, dt):
 		# if ready, get image, otherwise schedule a call in 200ms
 		self.last_capture = self.get_camera_data()
@@ -83,9 +89,18 @@ class SimulatorCamera(GenericCamera):
 				impath = self.ims[np.random.randint(len(self.ims))]
 				logger.info('Serving fits image {:}'.format(impath))
 				im = Image(impath)
-				return im.get_image() 
+				if self.ROI is None:
+					return im.get_image() 
+				xstart, width, ystart, height = self.ROI
+				return im.get_image() [ystart: ystart + height, xstart: xstart + width]
 			except Exception as e:
 				logger.exception(e)
 		# in the event of failure to get image, return noise
 		return min(1, (self.exposure / 10)) * np.random.random((500, 500))
+
+	def set_ROI(self, ROI):
+		'''
+		'''
+		self.ROI = ROI
+
 

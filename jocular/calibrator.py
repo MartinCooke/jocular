@@ -41,6 +41,12 @@ def subregion(m, s):
     sw = s.shape[0] if s.ROI_w is None else s.ROI_w
     sh = s.shape[1] if s.ROI_h is None else s.ROI_h
 
+    # print('master x/y/w/h/shape', m.ROI_x, m.ROI_y, m.ROI_w, m.ROI_h, m.shape)
+    # print('sub.   x/y/w/h/shape', s.ROI_x, s.ROI_y, s.ROI_w, s.ROI_h, s.shape)
+    # print('master x/y/w/h/shape', mx, my, mw, mh, m.shape)
+    # print('sub.   x/y/w/h/shape', s.ROI_x, s.ROI_y, s.ROI_w, s.ROI_h, s.shape)
+
+
     # forms subregion bounds
     x0 = sx - mx
     x1 = x0 + sw
@@ -262,18 +268,20 @@ class Calibrator(Component, Settings):
         # to apply dark we just need a dark
         if self.apply_dark and dark is not None:
             dx0, dx1, dy0, dy1 = subregion(self.masters[dark], sub)
-            im = im - D[dx0: dx1, dy0: dy1]
+            logger.trace('Dark subregion {:} {:} {:} {:}'.format(
+                dx0, dx1, dy0, dy1))
+            im = im - D[dy0: dy1, dx0: dx1]
             sub.calibrations = {'dark'}
 
         # to apply flat we need a flat and either a bias or a dark
         if self.apply_flat and flat is not None:
             if 'dark' in sub.calibrations:
                 fx0, fx1, fy0, fy1 = subregion(self.masters[flat], sub)
-                im = im / F[fx0: fx1, fy0: fy1]
+                im = im / F[fy0: fy1, fx0: fx1]
                 sub.calibrations = {'dark', 'flat'}
             elif bias is not None:
                 bx0, bx1, by0, by1 = subregion(self.masters[bias], sub)
-                im = (im - B[bx0: bx1, by0: by1]) / F[fx0: fx1, fy0: fy1]
+                im = (im - B[by0: by1, bx0: bx1]) / F[fy0: fy1, fx0: fx1]
                 sub.calibrations = {'bias', 'flat'}
             # else:
             #     # manufacture a constant dark using background

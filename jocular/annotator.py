@@ -94,7 +94,7 @@ Builder.load_string(
 <Annotation>:
     size_hint: None, None
     size: self.texture_size
-    font_size: '15sp'
+    font_size: '15sp' if self.pinned else '20sp'
     text_size: None, None  # forces size to be that of text
     color: (self.label_color if self.pinned else self.marker_color) + [self.visible]
     pos: (self.lab_x - self.width / 2, self.lab_y - self.height / 2) if self.center and not self.pinned else (self.lab_x, self.lab_y)
@@ -248,7 +248,7 @@ class AnnotCluster(Annotation):
 class AnnotQuasar(Annotation):
     # a couple of lines set a few pix from QSO
     length = NumericProperty(20)  # indicator line length in pixels
-    gap = NumericProperty(10)  # gap from quasar to line in pixels
+    gap = NumericProperty(20)  # gap from quasar to line in pixels
 
 
 class AnnotFOV(Annotation):
@@ -490,7 +490,6 @@ class Annotator(Component):
 
         # create annotation labels
         mapping = Component.get('View').scatter.to_parent
-        # mapping = Component.get('View').to_parent
         xc, yc = Metrics.get('origin')
         r2 = Metrics.get('inner_radius') ** 2
         gui = App.get_running_app().gui

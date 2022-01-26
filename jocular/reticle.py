@@ -83,23 +83,25 @@ class Reticle(Component, Widget):
         super().__init__(**kwargs)
         # don't add arrows
         # until mount control working
-        if False:
-            for direction in ['left', 'right', 'up', 'down']:
-                for rate in [1, 2, 3]:
-                    arrow = Arrow(
-                        direction=direction, rate=rate, reticle=self,
-                        on_press=partial(self.move, direction, rate),
-                        on_release=self.stop_moving)
-                    self.add_widget(arrow)
+        # for direction in ['left', 'right', 'up', 'down']:
+        #     for rate in [1, 2, 3]:
+        #         arrow = Arrow(
+        #             direction=direction, rate=rate, reticle=self,
+        #             on_press=partial(self.move, direction, rate),
+        #             on_release=self.stop_moving)
+        #         self.add_widget(arrow)
 
-    def on_show(self, *args):
-        if self.show:
-            # check if we have a mount connected
-            self.mount = Component.get('Telescope').connected()
 
-    def move(self, direction, rate, widget):
-        # supposedly rate is in degrees per second so reduce it as follows
-        Component.get('Telescope').move(direction=direction, rate=rate)
+    # use these if ever get mount control going
+    
+    # def on_show(self, *args):
+    #     if self.show:
+    #         # check if we have a mount connected
+    #         self.mount = Component.get('Telescope').connected()
 
-    def stop_moving(self, *args):
-        Component.get('Telescope').stop_moving()
+    # def move(self, direction, rate, widget):
+    #     # supposedly rate is in degrees per second so reduce it as follows
+    #     Component.get('Telescope').move(direction=direction, rate=rate)
+
+    # def stop_moving(self, *args):
+    #     Component.get('Telescope').stop_moving()

@@ -13,7 +13,7 @@
 "RN": {"name": "reflection nebula", "col": [188, 143, 143]},
 "BS": {"name": "bright star", "col": [72, 209, 204]},
 "ST": {"name": "star", "col": [72, 209, 204]},
-"VS": {"name": "variable star", "col": [72, 255, 204]},
+"VS": {"name": "variable star", "col": [172, 200, 255]},
 "DS": {"name": "multiple star", "col": [72, 255, 180]},
 "G2": {"name": "G2V star", "col": [72, 209, 204]},
 "CS": {"name": "carbon star", "col": [72, 209, 204]},

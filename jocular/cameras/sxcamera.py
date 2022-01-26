@@ -282,8 +282,8 @@ class SXCamera(GenericCamera):
 		'''
 		return {
 			'camera': 'Lodestar X2',
-			'XPIXSZ': 8.6,
-			'YPIXSZ': 8.3
+			'pixel_width': 8.6,
+			'pixel_height': 8.3
 			}
 
 	def get_pixel_height(self):

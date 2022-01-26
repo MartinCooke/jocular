@@ -131,6 +131,7 @@ class Stacker(Component, Settings):
  
     def reset(self):
         # Called when we have a new object and when user clears stack
+        self.stop_load() # new in v0.5
         self.stack_cache = {}
         self.orig_rejects = set({}) # new
         self.subs.clear()
@@ -463,7 +464,7 @@ class Stacker(Component, Settings):
         ''' Called by platesolver to get currently displayed image
              which might be short sub, sub, or stack
         '''
-        # first, get pixel height from camera, but override this
+        # first, get (binned) pixel height from camera, but override this
         # if info can come from sub instead (as it might be a previous
         # captured image)
         self.pixel_height = Component.get('Camera').get_pixel_height()
@@ -495,7 +496,9 @@ class Stacker(Component, Settings):
         # if we get to here then we have a sub on the stack
         # rather than a FAF image, so get pixel height
         if not self.is_empty():
-            self.pixel_height = self.subs[0].YPIXSZ
+            ph = self.subs[0].pixel_height
+            self.pixel_height = None if ph is None else ph * self.subs[0].binning
+
         return Component.get('View').do_flips(im)
 
     def get_pixel_height(self):
@@ -619,15 +622,20 @@ class Stacker(Component, Settings):
                 while self.subs[0].filter not in {'B', 'Ha'}:
                     np.random.shuffle(self.subs)
         self.selected_sub = -1
-        Clock.schedule_once(self._reprocess_sub, 0)
+        self.reprocess_event = Clock.schedule_once(self._reprocess_sub, 0)
 
     def _reprocess_sub(self, dt):
         if self.selected_sub + 1 < len(self.subs):
             self.process(self.subs[self.selected_sub + 1])
             self.selected_sub += 1
-            Clock.schedule_once(self._reprocess_sub, 0)
+            self.reprocess_event = Clock.schedule_once(self._reprocess_sub, 0)
         else:
+            self.reprocess_event = None
             self.stack_changed()
+
+    def stop_load(self):
+        if hasattr(self, 'reprocess_event') and self.reprocess_event is not None:
+            Clock.unschedule(self.reprocess_event)
 
     def process(self, sub):
         # Process sub on recompute/realign

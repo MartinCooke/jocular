@@ -245,18 +245,24 @@ class ASICamera(GenericCamera):
 
 		# if ROI is unclicked, use settings on interface
 		if ROI is None:
-			self.ROI = 'full'
+			if hasattr(self, 'previous_ROI'):
+				self.ROI = self.previous_ROI
+			else:
+				self.ROI = 'full'
+			toast('ROI changed to {:}'.format(self.ROI))
 			self.dims_changed()
 			return	
 
-		start_x, end_x, start_y, end_y = ROI
+		start_x, width, start_y, height = ROI
 		self.asicamera.set_roi(
 			bins=int(self.binning[0]),
 			start_x=start_x,
 			start_y=start_y,
-			width=8 * ((end_x - start_x) // 8),
-			height=8 * ((end_y - start_y) // 8))
+			width=8 * (width // 8),
+			height=2 * (height // 2))
+		self.previous_ROI = self.ROI
 		self.ROI = 'custom'
+		toast('Custom ROI: {:}'.format(ROI))
 		logger.debug(ROI)
 
 
@@ -284,8 +290,8 @@ class ASICamera(GenericCamera):
 		height = int(self.camera_props['MaxHeight'] * div)
 		if self.square_sensor:
 			width = height = min(width, height)
-		width = 8 * (width//8)
-		height = 8 * (height//8)
+		width = 8 * (width // 8)
+		height = 2 * (height // 2)
 		self.asicamera.set_roi(
 			bins=int(self.binning[0]),
 			width=width,
@@ -339,6 +345,7 @@ class ASICamera(GenericCamera):
 			(these get converted to uppercase in FITs)
 		'''
 		start_x, start_y, width, height = self.asicamera.get_roi()
+		# for some reason this seems to set start_y as 2 (for binned?)
 		return {
 			'camera': self.camera_props.get('Name', 'anon'),
 			'gain': self.gain,
@@ -350,8 +357,8 @@ class ASICamera(GenericCamera):
 			'ROI_y': start_y,
 			'ROI_w': width,
 			'ROI_h': height,
-			'XPIXSZ': self.camera_props['PixelSize'], # this before binning I think
-			'YPIXSZ': self.camera_props['PixelSize']
+			'pixel_width': self.camera_props['PixelSize'], # this before binning I think
+			'pixel_height': self.camera_props['PixelSize']
 			}
 
 	def get_pixel_height(self):

@@ -115,7 +115,7 @@ class View(Component, Settings):  # must be in this order
     brightness = NumericProperty(1)
     is_dimmed = BooleanProperty(False)
     transparency = NumericProperty(0)
-    apply_ROI = BooleanProperty(False)
+    # apply_ROI = BooleanProperty(False)
     ROI = ListProperty(None, allownone=True)
 
     flip_UD = BooleanProperty(False)
@@ -159,20 +159,25 @@ class View(Component, Settings):  # must be in this order
         self.image_selected = False
         self.old_transparency = self.transparency
         self.old_brightness = self.brightness
-        self.ROI = None
+        # self.updating_ROI = False
+        # self.ROI = None
         logger.debug('View scatter {:}'.format(self.scatter))
 
     def on_new_object(self):
         # until we receive the new object' sizes we cannot really zoom, so do this on first draw
         self.reset()
+        self.app.gui.enable(['apply_ROI'])       
 
     def on_previous_object(self):
         self.reset()
         # restore orientation for previous objects
-        self.orientation_settings = Component.get('Metadata').get({'orientation'})        
+        self.orientation_settings = Component.get('Metadata').get({'orientation'}) 
+        self.app.gui.disable(['apply_ROI'])       
 
     def reset(self):
         # Keep as separate method because most likely called on stack reset
+        self.ROI = None
+        self.pre_ROI_image = None   # stored so we can undo ROI
         self.last_image = None
         self.reset_texture()
         self.update_state()
@@ -237,22 +242,36 @@ class View(Component, Settings):  # must be in this order
         self.scatter._set_center(Metrics.get('origin'))
 
 
-    def on_apply_ROI(self, *args):
+    def apply_ROI(self, *args):
         ''' force or undo ROI
         '''
+
+        # only allow ROI if we have an image
         if self.last_image is None:
             return
-        shape = self.last_image.shape
-        h, w = shape[0], shape[1]  # done like this because might be 3-D
-        if not self.apply_ROI:
+
+        # if we are undoing a ROI, load pre-ROI image if we have one
+        if self.ROI is not None:
+            if self.pre_ROI_image is not None:
+                self.display_image(self.pre_ROI_image)
+                self.fit_to_window(zero_orientation=False)
+            # signal ROI change
             self.ROI = None
-            toast('ROI set to full sensor')
             return
 
+        ''' before applying a ROI,  store a copy of the current image
+        '''
+        self.pre_ROI_image = self.cached_image.copy()
+
+        # extract its dims
+        shape = self.pre_ROI_image.shape
+        h, w = shape[0], shape[1]  # done like this because might be 3-D
+
         xc, yc = Metrics.get('origin')
-        r = Metrics.get('inner_radius')
+        r = Metrics.get('inner_radius') # could add * 1.05 as a margin
+
+        # converts from screen to image pixels
         mapping = self.scatter.to_local
-        # distance in pixels for radius
 
         # pixel coords of centre
         xcp, ycp = mapping(xc, yc)
@@ -263,17 +282,38 @@ class View(Component, Settings):  # must be in this order
         # distance in pixels
         dpix = ((xcp - xep) ** 2 + (ycp - yep) ** 2) ** 0.5
 
-        # either use this or mult by root(2)
+        # don't allow width < min width
+        min_width = 32
+        dpix = int(max(dpix, min_width // 2))
+  
+        # ensure image is in eyepiece fully
+        if (xcp + dpix > w) or (ycp + dpix > h):
+            toast('Must have image completely in eyepiece to apply ROI')
+            return
+
+        if self.flip_LR:
+            xcp = (w - xcp)
+        if self.flip_UD:
+            ycp = (h - ycp)
+
         self.ROI = (
-            int(max(0, xcp - dpix)), 
-            int(min(w, xcp + dpix)),
-            int(max(0, ycp - dpix)), 
-            int(min(h, ycp + dpix))
-        )
-        toast('ROI: {:}, {:} to {:}, {:}'.format(*self.ROI))
+            max(0, int(xcp) - dpix), 
+            2 * dpix, 
+            max(0, int(ycp) - dpix), 
+            2 * dpix)
+
 
     def on_ROI(self, *args):
-        Component.get('Camera').set_ROI(self.ROI)
+        cam = Component.get('Camera')
+        cam.set_ROI(self.ROI)
+        self.app.gui.gui['apply_ROI']['widget'].color = \
+            self.app.lowlight_color if self.ROI is None else self.app.theme_cls.primary_color
+
+        if self.ROI is not None:
+            xstart, width, ystart, height = self.ROI
+            im = self.pre_ROI_image[ystart: ystart + height, xstart: xstart + width]
+            self.reset_texture(w=width, h=width)
+            self.display_image(im)
 
     def on_invert(self, *args):
         if self.last_image is None:
@@ -293,13 +333,22 @@ class View(Component, Settings):  # must be in this order
         self.display_image(use_cached_image=True)
         self.update_state()
 
+    # def reset_texture(self, w=10, h=10, colorfmt='luminance'):
+    #     self.scatter.ids.image.size = h, w
+    #     self.scatter.ids.image.texture = Texture.create(size=(h, w), colorfmt=colorfmt)
+    #     self.scatter._set_center(Metrics.get('origin'))
+    #     self.h, self.w = h, w
+    #     self.colorfmt = colorfmt
+    #     logger.debug('texture reset')
+
     def reset_texture(self, w=10, h=10, colorfmt='luminance'):
-        self.scatter.ids.image.size = h, w
-        self.scatter.ids.image.texture = Texture.create(size=(h, w), colorfmt=colorfmt)
+        self.scatter.ids.image.size = w, h
+        self.scatter.ids.image.texture = Texture.create(size=(w, h), colorfmt=colorfmt)
         self.scatter._set_center(Metrics.get('origin'))
         self.w, self.h = w, h
         self.colorfmt = colorfmt
-        logger.debug('texture reset')
+        logger.debug('texture reset w {:} h {:} colorfmt {:}'.format(
+            w, h, colorfmt))
 
 
     def display_blank(self):
@@ -335,7 +384,7 @@ class View(Component, Settings):  # must be in this order
         colorfmt = 'luminance' if im.ndim == 2 else 'rgb'
 
         # check if shape or color has changed
-        w, h = im.shape[0], im.shape[1]
+        h, w = im.shape[0], im.shape[1]
         if (w != self.w) or (h != self.h) or (colorfmt != self.colorfmt):
             old_center = self.scatter._get_center()
             self.reset_texture(w=w, h=h, colorfmt=colorfmt)
