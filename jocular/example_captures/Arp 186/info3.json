@@ -1,0 +1,19 @@
+{
+ "exposure": 20.0,
+ "sub_type": "light",
+ "temperature": 4,
+ "orientation": 138.4866582710901,
+ "Notes": "Barred spiral with interesting countertail; fascinating in inverse mode",
+ "Name": "Arp 186",
+ "OT": "PG",
+ "Dec": -8.578888888888889,
+ "Con": "ERI",
+ "Diam": 3.38,
+ "Mag": 13.6,
+ "Other": "N=1",
+ "seeing": "v good",
+ "transparency": "v good",
+ "session_notes": "moonless",
+ "telescope": "Quattro 8\" f4",
+ "camera": "ASI 290MM"
+}

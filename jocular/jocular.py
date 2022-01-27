@@ -39,7 +39,7 @@ class Jocular(MDApp):
     # info_font_size = StringProperty('14sp')
     form_font_size = StringProperty('15sp')
 
-    tooltip_delay = NumericProperty(.5)
+    tooltip_delay = NumericProperty(2)
 
     data_dir = StringProperty(None)
 

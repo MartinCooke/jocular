@@ -20,7 +20,7 @@ class Appearance(Component, Settings):
     form_font_size = NumericProperty(15)
     transparency = NumericProperty(0)
     colour_saturation = NumericProperty(60)
-    tooltip_delay = NumericProperty(.5)
+    tooltip_delay = NumericProperty(2)
 
     configurables = [
         ('highlight_color', {
