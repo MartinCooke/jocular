@@ -22,8 +22,8 @@ class FilterWheel(Component, DeviceFamily):
 		'Single': 'SingleFW',
 		#'Simulator': 'SimulatorFW',
 		'Manual': 'ManualFW', 
-		'SX EFW': 'SXFW'
-		#'ASCOM': 'ASCOMFW'
+		'SX EFW': 'SXFW',
+		'ASCOM': 'ASCOMFW'
 	}
 
 	default_mode = 'Single'
