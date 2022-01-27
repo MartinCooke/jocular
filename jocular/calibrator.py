@@ -3,11 +3,14 @@
 
 import os.path
 import numpy as np
-from scipy.stats import trimboth
+# from scipy.stats import trimboth
+from loguru import logger
 
 from kivy.app import App
-from loguru import logger
-from kivy.properties import BooleanProperty, DictProperty, NumericProperty, StringProperty
+from kivy.properties import (
+    BooleanProperty, DictProperty, 
+    NumericProperty, StringProperty
+    )
 from kivy.core.window import Window
 
 from jocular.table import Table
@@ -16,7 +19,7 @@ from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.image import Image, save_image, fits_in_dir
 from jocular.exposurechooser import exp_to_str
-from jocular.gradient import image_stats, estimate_background
+from jocular.gradient import estimate_background
 
 date_time_format = '%d %b %y %H:%M'
 
@@ -40,12 +43,6 @@ def subregion(m, s):
     mh = m.shape[1] if m.ROI_h is None else m.ROI_h
     sw = s.shape[0] if s.ROI_w is None else s.ROI_w
     sh = s.shape[1] if s.ROI_h is None else s.ROI_h
-
-    # print('master x/y/w/h/shape', m.ROI_x, m.ROI_y, m.ROI_w, m.ROI_h, m.shape)
-    # print('sub.   x/y/w/h/shape', s.ROI_x, s.ROI_y, s.ROI_w, s.ROI_h, s.shape)
-    # print('master x/y/w/h/shape', mx, my, mw, mh, m.shape)
-    # print('sub.   x/y/w/h/shape', s.ROI_x, s.ROI_y, s.ROI_w, s.ROI_h, s.shape)
-
 
     # forms subregion bounds
     x0 = sx - mx
@@ -162,7 +159,7 @@ class Calibrator(Component, Settings):
             'offset': none_to_empty(m.offset),
             'bin': none_to_empty(m.binning),
             'calibration_method': none_to_empty(m.calibration_method),
-            'ROI': none_to_empty(m.ROI),
+            #'ROI': none_to_empty(m.ROI),
             'filter': m.filter,
             'created': m.create_time.strftime(date_time_format),
             'shape_str': m.shape_str,
@@ -229,8 +226,8 @@ class Calibrator(Component, Settings):
         # add to notes field of current DSO
         notes = 'Exposure {:}\n'.format(exp_to_str(capture_props.get('exposure', 0)))
         notes += '\n'.join(['{:} {:}'.format(k, v) for k, v in capture_props.items() 
-            if k in {'filter', 'temperature', 'gain', 'offset', 'camera', 'ROI', 
-                'binning', 'equal_aspect', 'calibration_method'}])
+            if k in {'filter', 'temperature', 'gain', 'offset', 'camera', 
+                'binning', 'calibration_method'}])
         Component.get('Notes').notes = notes
 
         logger.info('new master {:}'.format(capture_props))
@@ -315,7 +312,7 @@ class Calibrator(Component, Settings):
 
 
     def get_dark(self, sub, exposure_tol=None):
-        ''' find darks with same camera, gain, offset, ROI, binning, shape, and
+        ''' find darks with same camera, gain, offset, binning, shape, and
             with an exposure that is within tolerance
             NB for backwards compat, don't enforce camera if sub doesn't have one
         '''
@@ -330,8 +327,6 @@ class Calibrator(Component, Settings):
                     if v.sub_type == 'dark' and
                         v.binning == sub.binning and
                         subregion(v, sub) != None and
-                        #v.ROI == sub.ROI and
-                        #v.shape == sub.shape and
                         v.gain == sub.gain and
                         v.offset == sub.offset and
                         v.camera == (sub.camera if sub.camera is not None else v.camera) and
@@ -368,7 +363,7 @@ class Calibrator(Component, Settings):
 
 
     def get_bias(self, sub):
-        ''' find bias with same camera, gain, offset, ROI, binning, and shape
+        ''' find bias with same camera, gain, offset, binning, and shape
             NB for backwards compat, don't enforce camera if sub doesn't have one
         '''
 
@@ -376,8 +371,6 @@ class Calibrator(Component, Settings):
                     if v.sub_type == 'bias' and
                         v.binning == sub.binning and 
                         subregion(v, sub) != None and
-                        #v.ROI == sub.ROI and
-                        #v.shape == sub.shape and
                         v.gain == sub.gain and
                         v.offset == sub.offset and
                         v.camera == (sub.camera if sub.camera is not None else v.camera)
@@ -387,7 +380,7 @@ class Calibrator(Component, Settings):
  
 
     def get_flat(self, sub):
-        ''' find flat with same camera, ROI, binning, and shape
+        ''' find flat with same camera, binning, and shape
             NB for backwards compat, don't enforce props if sub doesn't have them
         '''
 
@@ -395,8 +388,6 @@ class Calibrator(Component, Settings):
                     if v.sub_type == 'flat' and
                         v.binning == (sub.binning if sub.binning is not None else v.binning) and 
                         subregion(v, sub) != None and
-                        #v.ROI == (sub.ROI if sub.ROI is not None else v.ROI) and
-                        #v.shape == sub.shape and
                         v.camera == (sub.camera if sub.camera is not None else v.camera)
                 }
 
@@ -498,7 +489,7 @@ class Calibrator(Component, Settings):
                 'Temp. C': {'w': 80, 'field': 'temperature', 'type': str},
                 'Gain': {'w': 50, 'field': 'gain', 'type': int},
                 'Offset': {'w': 60, 'field': 'offset', 'type': int},
-                'ROI': {'w': 80, 'field': 'ROI', 'type': str},
+                #'ROI': {'w': 80, 'field': 'ROI', 'type': str},
                 'Bin': {'w': 45, 'field': 'bin', 'type': int},
                 'Calib': {'w': 120, 'field': 'calibration_method', 'type': str},
                 'Filter': {'w': 80, 'field': 'filter'},

@@ -6,8 +6,6 @@ from kivy.app import App
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, StringProperty
 from kivymd.uix.behaviors import HoverBehavior
-from kivy.uix.label import Label
-from kivy.metrics import dp
 from kivymd.uix.label import MDLabel
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -21,10 +19,10 @@ Builder.load_string(
 '''
 
 <TooltipLabel>:
-    background_color:  app.theme_cls.accent_color
+    background_color: app.theme_cls.accent_color
     canvas.before:
         Color:
-            rgba: self.background_color if self.text else (0, 0, 0, 0)
+            rgba: (*self.background_color[:-1], .3) if self.text else (0, 0, 0, 0)
         Rectangle:
             pos: self.pos
             size: self.size

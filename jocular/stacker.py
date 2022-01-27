@@ -249,6 +249,7 @@ class Stacker(Component, Settings):
             return
         sub_num = self.selected_sub
         if sub_num == 0:
+            toast('Cannot delete first sub')
             return
         objio = Component.get('ObjectIO')
         cod = objio.current_object_dir

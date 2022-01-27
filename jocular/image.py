@@ -22,9 +22,7 @@ from jocular.exposurechooser import str_to_exp
 fitspropmap = {
         'exptime': 'exposure', 'expo': 'exposure', 'exp': 'exposure',
         'filt': 'filter',
-        'roi': 'ROI', 
         'roi_x': 'ROI_x', 'roi_y': 'ROI_y', 'roi_w': 'ROI_w', 'roi_h': 'ROI_h',
-        'equalasp': 'equal_aspect', 
         'calibrat': 'calibration_method',
         'subtype': 'sub_type', 'imagetyp': 'sub_type',
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
@@ -36,7 +34,6 @@ fitspropmap = {
     can't use inverse of fitspropmap as it is not unique
 '''
 imagepropsmap = {
-    'equal_aspect': 'equalasp',
     'calibration_method': 'calibrat',
     'pixel_width': 'xpixsz',
     'pixel_height': 'ypixsz',
@@ -44,8 +41,6 @@ imagepropsmap = {
 }
 
 fitscomments = {
-    'equal_aspect': 'aspect ratio has been equalised',
-    'ROI': 'region of interest represented as proportion of sensor, centred on centre',
     'calibration_method': 'calibration method applied to master flats'
 }
 
@@ -61,14 +56,12 @@ default_props = {
     'offset': None,
     'camera': None,
     'binning': 1,
-    'ROI': None,
     'ROI_x': None,
     'ROI_y': None,
     'ROI_w': None,
     'ROI_h': None,
     'pixel_width': None,
     'pixel_height': None,
-    'equal_aspect': None,
     'calibration_method': 'None',
     'nsubs': None}
 

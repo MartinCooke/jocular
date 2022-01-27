@@ -255,8 +255,6 @@ class PlateSolver(Component, Settings):
         y = centroids[:, 1]
         flux = centroids[:, 2]
 
-
-
         self.im_height, self.im_width = im.shape
 
         self.binned_pixel_height = Component.get('Stacker').get_pixel_height()
@@ -396,8 +394,9 @@ class PlateSolver(Component, Settings):
     #         Component.get('Annotator').annotate()
 
     def ra_dec_to_pixels(self, ra, dec):
-        # generate pixel coordinates corresponding to ra and dec
-        # referenced to centre of closest matching tile
+        ''' return pixel coordinates corresponding to ra and dec,
+            referenced to centre of closest matching tile
+        '''
         if self.cart2pix is None:
             return
         if type(ra) != list and type(ra) != np.ndarray:
@@ -409,8 +408,6 @@ class PlateSolver(Component, Settings):
         return d[:, 0], d[:, 1]
 
     def pixels_to_ra_dec(self, x, y):
-        # generate pixel coordinates corresponding to ra and dec
-        # referenced to centre of closest matching tile
         if self.cart2pix is None:
             return
         if type(x) != list and type(x) != np.ndarray:

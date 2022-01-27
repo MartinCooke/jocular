@@ -8,6 +8,7 @@ from jocular.device import DeviceFamily
 
 from jocular.cameras.watchedcamera import WatchedCamera
 from jocular.cameras.sxcamera import SXCamera
+from jocular.cameras.ultrastar import SXUltrastarCamera
 # from jocular.cameras.ascomcamera import ASCOMCamera
 from jocular.cameras.simulatorcamera import SimulatorCamera
 from jocular.cameras.asicamera import ASICamera
@@ -18,8 +19,9 @@ class Camera(Component, EventDispatcher, DeviceFamily):
 		'Watched dir': 'WatchedCamera', 
 		'Simulator': 'SimulatorCamera',
 		#'ASCOM': 'ASCOMCamera',
-		'SX (native)': 'SXCamera',
-		'ASI (native)': 'ASICamera'
+		'ASI': 'ASICamera',
+		'SX Lodestar': 'SXCamera',
+		'SX Ultrastar': 'SXUltrastarCamera'
 	}
 
 	default_mode = 'Watched dir'

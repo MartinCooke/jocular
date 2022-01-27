@@ -22,8 +22,8 @@ class ASICamera(GenericCamera):
 	binning = StringProperty('1 x 1')
 	use_min_bandwidth = BooleanProperty(True)
 	polling_interval = NumericProperty(.2)  # in seconds
-	ROI = StringProperty('full')
-	square_sensor = BooleanProperty(True)
+	#ROI = StringProperty('full')
+	#square_sensor = BooleanProperty(True)
 
 	configurables = [
 		('gain', {'name': 'gain setting', 'float': (0, 1000, 10),
@@ -34,16 +34,16 @@ class ASICamera(GenericCamera):
 			'name': 'bin', 
 			'options': ['1 x 1', '2 x 2', '3 x 3'],
 			'help': ''}),
-		('ROI', {
-			'name': 'ROI',
-			'options': ['custom', 'full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
-			'help': 'region of interest relative to full frame'
-			}),
-		('square_sensor', {
-			'name': 'equalise aspect ratio',
-			'switch': '',
-			'help': 'make sensor width and height equal'
-			}),
+		# ('ROI', {
+		# 	'name': 'ROI',
+		# 	'options': ['custom', 'full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
+		# 	'help': 'region of interest relative to full frame'
+		# 	}),
+		# ('square_sensor', {
+		# 	'name': 'equalise aspect ratio',
+		# 	'switch': '',
+		# 	'help': 'make sensor width and height equal'
+		# 	}),
 		('polling_interval', {
 			'name': 'polling interval', 
 			'float': (.05, 1, .05),
@@ -190,7 +190,7 @@ class ASICamera(GenericCamera):
 		# set initial ROI, binning etc
 		self.on_gain()
 		self.on_offset()
-		self.dims_changed()
+		self.set_ROI(ROI=None)
 
 
 	def capture(self, exposure=None, on_capture=None, on_failure=None, is_faf=False,
@@ -231,82 +231,57 @@ class ASICamera(GenericCamera):
 			if self.asicamera.get_exposure_status() != asi.ASI_EXP_SUCCESS:
 				self.handle_failure('capture problem')
 				return
-			return self.get_camera_data()
+			cd = self.get_camera_data()
+			if cd is None:
+				self.handle_failure('capture problem')
+			return cd
 			 
 		self.capture_event = Clock.schedule_once(self.check_exposure, 
 			max(self.polling_interval, self.exposure))
 
 
-	def set_ROI(self, ROI):
-		''' ROI provides as xmin, xmax, ymin, ymax
+	def set_ROI(self, ROI=None):
+		''' ROI has changed
 		'''
 		if not self.connected:
 			return
+
+		bins=int(self.binning[0])
 
 		# if ROI is unclicked, use settings on interface
 		if ROI is None:
-			if hasattr(self, 'previous_ROI'):
-				self.ROI = self.previous_ROI
-			else:
-				self.ROI = 'full'
-			toast('ROI changed to {:}'.format(self.ROI))
-			self.dims_changed()
-			return	
+			# use full sensor
+			start_x, start_y = 0, 0
+			width = int(self.camera_props['MaxWidth'] / bins)
+			height = int(self.camera_props['MaxHeight'] / bins)
+		else:
+			# use ROI, which assumes binning already applied during framing
+			start_x, width, start_y, height = ROI
+			width = 8 * (width // 8)   # must be mult of 8
+			height = 2 * (height // 2) # and of 2
 
-		start_x, width, start_y, height = ROI
+		# store ROI region in case user changes binning
+		# in future we might want to do this
+		# self.ROI_region = start_x, width, start_y, height
+
+		# note that width is a mult of 8 and height is mult of 2
 		self.asicamera.set_roi(
-			bins=int(self.binning[0]),
+			bins=bins,
 			start_x=start_x,
 			start_y=start_y,
-			width=8 * (width // 8),
-			height=2 * (height // 2))
-		self.previous_ROI = self.ROI
-		self.ROI = 'custom'
-		toast('Custom ROI: {:}'.format(ROI))
-		logger.debug(ROI)
-
-
-	def dims_changed(self):
-		''' called if binning, ROI or square_sensor changes
-		'''
-		if not self.connected:
-			return
-		binning = int(self.binning[0])
-
-		# if ROI is set, ignore
-		# although we might want to allow binning
-		if self.ROI == 'custom':
-			return
-
-		regs = {
-			'full': 1, 
-			'three-quarters': 3/4,
-			'two-thirds': 2/3, 
-			'half': 1/2, 
-			'third': 1/3, 
-			'quarter': 1/4}
-		div = regs[self.ROI] / binning
-		width = int(self.camera_props['MaxWidth'] * div)
-		height = int(self.camera_props['MaxHeight'] * div)
-		if self.square_sensor:
-			width = height = min(width, height)
-		width = 8 * (width // 8)
-		height = 2 * (height // 2)
-		self.asicamera.set_roi(
-			bins=int(self.binning[0]),
 			width=width,
 			height=height)
-		logger.debug('binning {:}  sensor {:4d} x {:4d}'.format(
-			self.binning, width, height))
 
-	def on_ROI(self, *args):
-		self.dims_changed()
+		logger.trace('ROI changed: bins {:} start_x {:} start_y {:} width {:} height {:}'.format(
+			bins, start_x, start_y, width, height))
 
-	def on_square_sensor(self, *args):
-		self.dims_changed()
 
 	def on_binning(self, *args):
-		self.dims_changed()
+		''' If user changes binning then ROI is reset to None
+			for the moment at least
+		'''
+		self.set_ROI(ROI=None)
+
 		
 	def on_gain(self, *args):
 		if not self.connected:
@@ -334,25 +309,31 @@ class ASICamera(GenericCamera):
 		''' see capture method in
 			https://github.com/stevemarple/python-zwoasi/blob/master/zwoasi/__init__.py
 		'''
-		data = self.asicamera.get_data_after_exposure(None)
-		whbi = self.asicamera.get_roi_format()
-		shape = [whbi[1], whbi[0]]
-		img = np.frombuffer(data, dtype=np.uint16)
-		return img.reshape(shape) / 2 ** 16
+
+		# sometimes gets a timeout for reasons that are not clear
+		try:
+			data = self.asicamera.get_data_after_exposure(None)
+			whbi = self.asicamera.get_roi_format()
+			shape = [whbi[1], whbi[0]]
+			img = np.frombuffer(data, dtype=np.uint16)
+			return img.reshape(shape) / 2 ** 16
+		except Exception as e:
+			logger.warning('{:}'.format(e))
+			return None
+
 
 	def get_capture_props(self):
 		''' return dict of props such as gain, ROI etc
 			(these get converted to uppercase in FITs)
 		'''
 		start_x, start_y, width, height = self.asicamera.get_roi()
-		# for some reason this seems to set start_y as 2 (for binned?)
 		return {
 			'camera': self.camera_props.get('Name', 'anon'),
 			'gain': self.gain,
 			'offset': self.offset,
 			'binning': int(self.binning[0]),
-			'ROI': self.ROI,
-			'equal_aspect': self.square_sensor,
+			#'ROI': self.ROI,
+			#'equal_aspect': self.square_sensor,
 			'ROI_x': start_x,
 			'ROI_y': start_y,
 			'ROI_w': width,
@@ -371,9 +352,10 @@ class ASICamera(GenericCamera):
 		# if ready, get image, otherwise schedule next check 
 		if self.asicamera.get_exposure_status() != asi.ASI_EXP_WORKING:
 			self.last_capture = self.get_camera_data()
-			# got data, so schedule callback
-			if self.on_capture is not None:
-				Clock.schedule_once(self.on_capture, 0)
+			if self.last_capture is not None:
+				# got data, so schedule callback
+				if self.on_capture is not None:
+					Clock.schedule_once(self.on_capture, 0)
 		else:
 			self.capture_event = Clock.schedule_once(
 				self.check_exposure, 

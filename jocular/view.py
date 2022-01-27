@@ -20,11 +20,7 @@ from kivy.properties import (
     )
 from kivy.core.window import Window
 
-from kivymd.uix.button import MDFlatButton
-from kivymd.uix.dialog import MDDialog
-from jocular.utils import toast
-
-from jocular.utils import angle360
+from jocular.utils import angle360, toast
 from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.metrics import Metrics

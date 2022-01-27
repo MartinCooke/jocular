@@ -51,6 +51,10 @@ class DeviceFamily:
 			json.dump(self.settings, f, indent=1)       
 
 	def set_mode(self, mode):
+		''' finds and imports class representing chosen mode
+			In future, place all devices in subdirs as in cameras to
+			avoid having to import in 'parent' device 
+		'''
 		self.disconnect()
 		try:
 			if mode in self.modes:
@@ -121,6 +125,9 @@ class Device(EventDispatcher, SettingsBase):
 
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
+		''' register this device with the device manager e.g. so that it
+			appears on the chooser
+		'''
 		if self.family:
 			Component.get('DeviceManager').register(self, name=self.family)
 

@@ -1,34 +1,36 @@
-''' Root widget of the application which handles drawing itself (rings) 
-	and its components. Most elements are defined declaratively in gui.json 
-	in the resources dir.
+''' Root widget of the application which handles drawing itself and 
+	loading components. Most elements are defined declaratively in 
+	gui.json in the resources dir.
 '''
 
 import os
 import json
+import shutil
 
 from functools import partial
 from collections import OrderedDict
 from loguru import logger
 from pathlib import Path
-from kivymd.uix.filemanager import MDFileManager
 
+from kivymd.uix.filemanager import MDFileManager
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.lang import Builder
 
-from jocular.widgets import (JLabel, JToggleButton, JLever, JIconButton,
-	JButton, JMulti)
-
+from jocular.widgets import (
+	JLabel, JToggleButton, JLever, 
+	JIconButton, JButton, JMulti
+	)
 from jocular.utils import angle360
 from jocular.component import Component
 from jocular.metrics import Metrics
 from jocular.ring import Ring
 from jocular.widgets import jicon
-from jocular.utils import get_datadir, start_logging
+from jocular.utils import get_datadir, start_logging, add_if_not_exists
 
-from kivy.lang import Builder
 
 Builder.load_string('''
 
@@ -112,6 +114,17 @@ class Splash(BoxLayout):
 		# close filemanager and splashscreen
 		fm.close()
 		self.hide()
+
+		# if there isn't already a captures/examples directory
+		# create one and move example captures to it
+		try:
+			captures = os.path.join(datadir, 'captures')
+			add_if_not_exists(captures)
+			shutil.move(
+				self.app.get_path('example_captures'), 
+				captures)
+		except Exception as e:
+			logger.warning('Problem moving example captures ({:})'.format(e))
 
 		# and run next steps
 		Clock.schedule_once(self.app.gui.load_components, 0)

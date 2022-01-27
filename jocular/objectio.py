@@ -4,7 +4,6 @@
 
 import os
 import shutil
-from functools import partial
 from datetime import date, datetime
 from loguru import logger
 
@@ -207,8 +206,8 @@ class ObjectIO(Component):
                 'gain': stacker.get_prop('gain'),
                 'offset': stacker.get_prop('offset'),
                 'binning': stacker.get_prop('binning'),
-                'ROI': stacker.get_prop('ROI'),
-                'equal_aspect': stacker.get_prop('equal_aspect'),
+                #'ROI': stacker.get_prop('ROI'),
+                #'equal_aspect': stacker.get_prop('equal_aspect'),
                 'camera': stacker.get_prop('camera'),
                 'calibration_method': stacker.get_prop('calibration_method'),
                 'sub_type': sub_type

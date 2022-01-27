@@ -64,6 +64,7 @@ class Capture(Component):
             
         self.gui.disable(capture_controls)
         self.gui.disable({'load_previous', 'new_DSO'})
+        self.gui.disable({'apply_ROI'})
         self.gui.enable({'capturing'})
         logger.debug('camera connected, starting capture')
 
@@ -103,10 +104,11 @@ class Capture(Component):
             op, param = op
 
         # allow ROI selection during framing captures
-        if op == 'expose short':
-            self.gui.enable({'apply_ROI'})
-        else:
-            self.gui.disable({'apply_ROI'})
+        # not yet working on ASI
+        # if op == 'expose short':
+        #     self.gui.enable({'apply_ROI'})
+        # else:
+        #     self.gui.disable({'apply_ROI'})
 
         # change filter
         if op == 'set filter':

@@ -56,17 +56,7 @@ class SXCamera(GenericCamera):
 			pass
 
 		if self.sxcamera is None:
-			# try to find Ultrastar
-			try:
-				self.sxcamera = usb.core.find(idVendor=0x1278, idProduct=0x0525)
-				if self.sxcamera is not None:
-					self.lodestar = False
-					logger.info('found Ultrastar')
-			except:
-				pass
-
-		if self.sxcamera is None:
-			self.status = 'cannot find Lodestar or Ultrastar'
+			self.status = 'cannot find Lodestar'
 			logger.info(self.status)
 			return
 
@@ -90,8 +80,8 @@ class SXCamera(GenericCamera):
 		self.lswidth, self.mswidth = convert_int(self.width)
 		self.lsheight, self.msheight = convert_int(self.half_height)
 
-		self.status = 'SX {:}: {:} x {:} pixels'.format(
-			'Lodestar' if self.lodestar else 'Ultrastar', self.width, self.height)
+		self.status = 'SX Lodestar: {:} x {:} pixels'.format(
+			self.width, self.height)
 
 	def disconnect(self):
 		if self.connected:

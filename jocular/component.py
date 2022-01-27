@@ -59,9 +59,9 @@ class Component(EventDispatcher):
         # ensure metadata is first and stacker the last to be initialised
         logger.info('initialising for previous object')
         comps = ['Metadata'] + list(cls.components.keys() - {'Stacker', 'Metadata'}) + ['Stacker']
-        for v in cls.components.values():
-            v.changed = ''
-            v.on_previous_object()
+        for c in comps:
+            cls.components[c].changed = ''
+            cls.components[c].on_previous_object()
         App.get_running_app().gui.is_changed(False)
  
     @classmethod

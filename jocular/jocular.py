@@ -61,7 +61,8 @@ class Jocular(MDApp):
             sys.exit('Cannot create subdirectory of Jocular data directory')
 
     def get_path(self, name):
-        # centralised way to handle accessing resources Jocular needs
+        ''' centralised way to access resources
+        '''
 
         # if path, return path to data dir, else return path to resource
         if name in self.subdirs:
@@ -71,12 +72,12 @@ class Jocular(MDApp):
         elif name == 'dsos':
             return os.path.join(self.directory, 'dsos')
 
+        # example captures
+        elif name == 'example_captures':
+            return os.path.join(self.directory, 'example_captures')
+
         elif name in {'configurables.json', 'gui.json', 'object_types.json'}:
             return os.path.join(self.directory, 'resources', name)
-
-        # user-accessible settings
-        # elif name in {'observing_list.json', 'observing_notes.json', 'previous_observations.json'}:
-        #     return os.path.join(self.data_dir, name)
 
         # jocular settings
         elif name.endswith('.json'):
@@ -124,7 +125,7 @@ class Jocular(MDApp):
                 settings = json.load(f)
         except:
             # set up initial values for settings
-            settings = {'highlight_color': 'Blue',  'colour_saturation': 50}
+            settings = {'highlight_color': 'BlueGray',  'colour_saturation': 56}
 
         # apply settings      
         for p, v in settings.items():
