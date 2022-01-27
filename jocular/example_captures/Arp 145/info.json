@@ -1,0 +1,37 @@
+{
+    "Name": "Arp 145",
+    "Con": "AND",
+    "RA": "02h 23 09.7",
+    "Dec": "+41\u00b0 22 12.5",
+    "Diam": "0.78",
+    "OT": "G+",
+    "Mag": "13.80",
+    "session": "15 Nov 17 21:07",
+    "seeing": "not set",
+    "transparency": "not set",
+    "telescope": "SW Quattro 8\" CF f4",
+    "camera": "SX Lodestar X2 mono",
+    "other_kit": "SW AZ-EQ6 in alt-az mode",
+    "observer": "Martin Meredith",
+    "exposure": 15,
+    "sub_type": "light",
+    "rejected": [
+        "Image_Arp.145_2017.11.15_21.08.13_00002.fit"
+    ],
+    "scope": {
+        "zoom": 2.2257099528280513,
+        "orientation": 0,
+        "black": 0.0323347409378856,
+        "white": 0.9320953715859117,
+        "p1": 0.7321202751378719,
+        "gradient": 108.46353155670383,
+        "invert": false,
+        "stretch": "asinh",
+        "stack_combine_method": "mean"
+    },
+    "image_center": [
+        640.0000000000001,
+        399.9999999999999
+    ],
+    "n_subs": 17
+}

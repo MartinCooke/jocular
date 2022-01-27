@@ -1,0 +1,15 @@
+{
+ "Name": "Arp 145",
+ "Con": "AND",
+ "OT": "G+",
+ "rejected": [
+  "Image_Arp.145_2017.11.15_21.08.13_00002.fit"
+ ],
+ "seeing": "not set",
+ "transparency": "not set",
+ "telescope": "SW Quattro 8\" CF f4",
+ "camera": "SX Lodestar X2 mono",
+ "exposure": 15,
+ "sub_type": "light",
+ "orientation": 0
+}
