@@ -152,7 +152,7 @@ def __action_pressed(name, spec, changed, widget, *args):
 	changed(name, spec['action'], spec)
 
 def __filechooser_pressed(name, spec, changed, initpath, *args):
-	fm = MDFileManager()
+	fm = MDFileManager(search='dirs')
 	fm.exit_manager = partial(exit_filemanager, fm)
 	fm.select_path = partial(handle_selection, name, changed, spec, fm)
 	if initpath is None:
