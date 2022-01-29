@@ -153,6 +153,7 @@ class WatchedCamera(GenericCamera):
 		'''
 
 		for path in self.get_possible_fits():
+			s = None
 			if self.capturing:
 
 				try:
@@ -165,12 +166,13 @@ class WatchedCamera(GenericCamera):
 					toast('Invalid fits file')
 					move_to_dir(path, 'invalid')
 
-				try:
-					self.process_sub(s, path)
-				except Exception as e:
-					logger.exception('error processing sub ({:})'.format(e))
-					toast('error processing sub')
-					move_to_dir(path, 'invalid')
+				if s is not None:
+					try:
+						self.process_sub(s, path)
+					except Exception as e:
+						logger.exception('error processing sub ({:})'.format(e))
+						toast('error processing sub')
+						move_to_dir(path, 'invalid')
 			else:				
 				move_to_dir(path, 'unused')
 
