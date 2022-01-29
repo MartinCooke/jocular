@@ -362,6 +362,7 @@ class Session(Component, Settings):
             # any problems we just start a fresh session
             logger.debug('problem loading session: recreating {:}'.format(e))
             self.create_empty_session()
+            self.save_session()
 
         # create date and clock to update it
         self.session = datetime.now().strftime(date_time_format)
