@@ -4,6 +4,7 @@
 import os
 import json
 import sys
+import platform
 
 from kivymd.app import MDApp
 from kivy.metrics import dp
@@ -93,11 +94,17 @@ class Jocular(MDApp):
         elif name == 'ASI':
             # NB these need keeping up to date so perhaps better externalised
             if sys.platform.startswith('linux'):
-                asi = 'libASICamera2.so.1.18'
+                asi = os.path.join('linux', 'libASICamera2.so.1.21')
+                # asi = 'libASICamera2.so.1.18'
             elif sys.platform.startswith('darwin'):
-                asi = 'libASICamera2.dylib.1.18'
+                asi = os.path.join('mac', 'libASICamera2.dylib.1.21')
             else:
-                asi = 'ASICamera2.dll'
+                # detect if 32 or 64 bit windows
+                bits, _ = platform.architecture()
+                if bits.startswith('64'):
+                    asi = os.path.join('win64', 'ASICamera2.dll')
+                else:
+                    asi = os.path.join('win32', 'ASICamera2.dll')
             return os.path.abspath(os.path.join(self.directory, 'resources', asi))
 
         # everything else is in jocular's own resources
