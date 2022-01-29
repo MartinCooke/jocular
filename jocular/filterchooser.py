@@ -78,6 +78,7 @@ class FilterChooser(Panel, Component):
             logger.debug('rebuilding FilterChooser')
             # need to rebuild
             self.state = state
+            self.header.clear_widgets()
             self.contents.clear_widgets()
             self.build_fw()
         self.update_panel()
