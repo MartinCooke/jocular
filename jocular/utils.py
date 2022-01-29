@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import math
+import shutil
 from scipy.stats import trimboth
 from loguru import logger 
 from pathlib import Path
@@ -118,7 +119,9 @@ def s_to_minsec(s):
         return '{:d}m{:d}s'.format(mins, secs)
 
 def move_to_dir(frompath, topath):
-    # move from frompath to topath, making topath dir and creating unique name if necessary
+    ''' move from frompath to topath, making topath dir and 
+        creating unique name if necessary
+    '''
 
     try:
         toparent, tobase = os.path.split(topath)
@@ -133,8 +136,10 @@ def move_to_dir(frompath, topath):
         # create unique filename
         dest = make_unique_filename(os.path.join(topath, filename))
 
-        # move
-        os.rename(frompath, dest)        
+        # instead of this
+        # os.rename(frompath, dest)    
+        # use this to handle case of moving from one filesys to another
+        shutil.move(frompath, dest)    
 
     except Exception as e:
         logger.exception('problem moving {:} to {:} ({:})'.format(frompath, topath, e))
