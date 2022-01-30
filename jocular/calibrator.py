@@ -272,8 +272,8 @@ class Calibrator(Component, Settings):
 
         # to apply flat we need a flat and either a bias or a dark
         if self.apply_flat and flat is not None:
+            fx0, fx1, fy0, fy1 = subregion(self.masters[flat], sub)
             if 'dark' in sub.calibrations:
-                fx0, fx1, fy0, fy1 = subregion(self.masters[flat], sub)
                 im = im / F[fy0: fy1, fx0: fx1]
                 sub.calibrations = {'dark', 'flat'}
             elif bias is not None:
