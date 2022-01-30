@@ -233,7 +233,7 @@ class Capture(Component):
         im = Component.get('Camera').capture_sub(exposure=expo, 
             return_image=True,
             on_failure=self.stop_capture)
-        return percentile_clip(im, perc=75)
+        return percentile_clip(im.ravel(), perc=75)
 
 
     def get_flat_exposure(self):
