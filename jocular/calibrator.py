@@ -192,9 +192,12 @@ class Calibrator(Component, Settings):
 
         ''' Remove hot pixels from calibration frame
         '''
-        master = Component.get('BadPixelMap').remove_hotpix(
-            master, 
-            apply_BPM=self.remove_hot_pixels)
+
+        # possibly shouldn't do this for dark/bias frames
+        if sub_type == 'flat':
+            master = Component.get('BadPixelMap').remove_hotpix(
+                master, 
+                apply_BPM=self.remove_hot_pixels)
 
         ''' Flats were divided thru by their robust mean to account for 
             level differences but then scaled to 50% to enable B/W controls; 
