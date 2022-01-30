@@ -327,9 +327,9 @@ class Calibrator(Component, Settings):
                     if v.sub_type == 'dark' and
                         v.binning == sub.binning and
                         subregion(v, sub) != None and
-                        v.gain == sub.gain and
-                        v.offset == sub.offset and
-                        v.camera == (sub.camera if sub.camera is not None else v.camera) and
+                        v.gain == (sub.gain if v.gain is not None else v.gain) and
+                        v.offset == (sub.offset if v.offset is not None else v.offset) and
+                        v.camera == (sub.camera if v.camera is not None else v.camera) and
                         v.exposure is not None and
                         abs(v.exposure - sub.exposure) <= self.exposure_tol
                 }
@@ -371,9 +371,9 @@ class Calibrator(Component, Settings):
                     if v.sub_type == 'bias' and
                         v.binning == sub.binning and 
                         subregion(v, sub) != None and
-                        v.gain == sub.gain and
-                        v.offset == sub.offset and
-                        v.camera == (sub.camera if sub.camera is not None else v.camera)
+                        v.gain == (sub.gain if v.gain is not None else v.gain) and
+                        v.offset == (sub.offset if v.offset is not None else v.offset) and
+                        v.camera == (sub.camera if v.camera is not None else v.camera)
                 }
 
         return min(bias, key=bias.get) if len(bias) > 0 else None
@@ -386,9 +386,9 @@ class Calibrator(Component, Settings):
 
         flats = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'flat' and
-                        v.binning == (sub.binning if sub.binning is not None else v.binning) and 
+                        v.binning == sub.binning and 
                         subregion(v, sub) != None and
-                        v.camera == (sub.camera if sub.camera is not None else v.camera)
+                        v.camera == (sub.camera if v.camera is not None else v.camera)
                 }
 
         # flat in required filter
