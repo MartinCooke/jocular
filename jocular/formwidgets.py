@@ -1,3 +1,4 @@
+import os
 
 from functools import partial
 from loguru import logger
@@ -155,6 +156,13 @@ def __filechooser_pressed(name, spec, changed, initpath, *args):
 	fm = MDFileManager(search='dirs')
 	fm.exit_manager = partial(exit_filemanager, fm)
 	fm.select_path = partial(handle_selection, name, changed, spec, fm)
+	# check if initpath is writeable and if not, bring up in home dir
+	if initpath is not None:
+		try:
+			with open(os.path.join(initpath, '.written'), 'w') as f:
+				f.write('can write')
+		except Exception as e:
+			initpath = None
 	if initpath is None:
 		initpath = str(Path.home())
 	fm.show(initpath)

@@ -107,6 +107,7 @@ class WatchedCamera(GenericCamera):
 		except:
 			self.status = 'Cannot write to {:}'.format(self.watched_dir)
 			self.connected = False
+			self.watched_dir is None
 			return
 
 		# start watcher
@@ -146,11 +147,16 @@ class WatchedCamera(GenericCamera):
 
 	def get_possible_fits(self):
 		wdir = self.watched_dir
+		if wdir is None or not os.path.exists(wdir):
+			return []
 		return [os.path.join(wdir, d) for d in os.listdir(wdir) if is_fit(d)]
 
 	def watch(self, dt):
 		''' Monitor watched directory.
 		'''
+
+		if self.watched_dir is None or not os.path.exists(self.watched_dir):
+			return
 
 		for path in self.get_possible_fits():
 			s = None
