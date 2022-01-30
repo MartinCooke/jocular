@@ -186,6 +186,10 @@ class ObjectIO(Component):
         ''' save sub metadata and potentially master also
         '''
 
+        if self.current_object_dir is None:
+            logger.warning('trying to save but current_object_dir is None')
+            return
+
         stacker = Component.get('Stacker')
         metadata = Component.get('Metadata')
 
