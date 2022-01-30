@@ -250,19 +250,14 @@ class ASICamera(GenericCamera):
 
 		# if ROI is unclicked, use settings on interface
 		if ROI is None:
-			# use full sensor
-			start_x, start_y = 0, 0
-			width = int(self.camera_props['MaxWidth'] / bins)
-			height = int(self.camera_props['MaxHeight'] / bins)
-		else:
-			# use ROI, which assumes binning already applied during framing
-			start_x, width, start_y, height = ROI
-			width = 8 * (width // 8)   # must be mult of 8
-			height = 2 * (height // 2) # and of 2
+			self.asicamera.set_roi(bins=bins)
+			logger.trace('ROI changed: to full sensor, bin {:} '.format(bins))
+			return
 
-		# store ROI region in case user changes binning
-		# in future we might want to do this
-		# self.ROI_region = start_x, width, start_y, height
+		# use ROI, which assumes binning already applied during framing
+		start_x, width, start_y, height = ROI
+		width = 8 * (width // 8)   # must be mult of 8
+		height = 2 * (height // 2) # and of 2
 
 		# note that width is a mult of 8 and height is mult of 2
 		self.asicamera.set_roi(
