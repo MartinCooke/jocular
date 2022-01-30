@@ -241,8 +241,8 @@ class Image:
         try:
             # is it a master?
             self.is_master = self.name.startswith('master') or \
-                fits_props.get('sub_type', '').lower().startswith('master') or \
-                fits_props.get('nsubs', 0) > 1
+                fits_props.get('sub_type', '').lower().startswith('master') # or \
+                # fits_props.get('nsubs', 0) > 1
 
         except Exception as e:
             logger.exception(e)
@@ -402,15 +402,32 @@ class Image:
         return props
 
     def get_image(self):
+        ''' Changed to represent subs as float32
+        '''
         if self.image is None:
             try:
                 with fits.open(self.path) as hdu:
                     bp = hdu[0].header['BITPIX']
-                    if bp < 0:
-                        self.image = hdu[0].data
-                    else:
-                        self.image = hdu[0].data / 2 ** bp
+                    self.image = np.array(hdu[0].data, dtype=np.float32)
+                    #self.image = np.array(hdu[0].data, dtype=np.float64)
+                    if bp > 0:
+                        self.image /= (2 ** bp)
             except Exception as e:
                 logger.warning('cannot read image data from {:} ({:})'.format(self.path, e))
         return self.image
+
+    # def get_image(self):
+    #     ''' If anywhere, this is the place to ensure it is float32
+    #     '''
+    #     if self.image is None:
+    #         try:
+    #             with fits.open(self.path) as hdu:
+    #                 bp = hdu[0].header['BITPIX']
+    #                 if bp < 0:
+    #                     self.image = hdu[0].data
+    #                 else:
+    #                     self.image = hdu[0].data / 2 ** bp
+    #         except Exception as e:
+    #             logger.warning('cannot read image data from {:} ({:})'.format(self.path, e))
+    #     return self.image
 
