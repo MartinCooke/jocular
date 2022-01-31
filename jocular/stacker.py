@@ -465,42 +465,76 @@ class Stacker(Component, Settings):
         ''' Called by platesolver to get currently displayed image
              which might be short sub, sub, or stack
         '''
-        # first, get (binned) pixel height from camera, but override this
-        # if info can come from sub instead (as it might be a previous
-        # captured image)
-        self.pixel_height = Component.get('Camera').get_pixel_height()
-
-        if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
-            # currently using focus/align/frame
-            logger.info('getting last faf image')
-            im = Component.get('Capture').last_faf
-        elif self.is_empty():
-            # try to get FAF if current stack is empty
+ 
+        if self.is_empty():
+            ''' we have no image on the stack so must be faffing
+                and pixel height therefore has to come from camera
+            '''
             try:
                 im = Component.get('Capture').last_faf
+                if im is None:
+                    logger.trace('last_faf is None')
+                    return None
+                self.pixel_height = Component.get('Camera').get_pixel_height()
+                logger.trace('using faf with pixel height {:}'.format(self.pixel_height))
             except:
+                logger.trace('no stack and no short subs either')
                 return None
-        elif first_sub:
-            if not self.is_empty():
-                im = self.subs[0].get_image()
-            else:
-                return None
-        elif self.sub_or_stack == 'sub':
-            logger.info('getting current sub')
-            im = self.subs[self.selected_sub].get_image()
-        else:
-            logger.info('getting current stack')
-            im = self.get_stack()
-        if im is None:
-            return None
 
-        # if we get to here then we have a sub on the stack
-        # rather than a FAF image, so get pixel height
-        if not self.is_empty():
+        else:
+            ''' we have stacked images
+            '''
+            if first_sub:
+                logger.trace('using first sub')
+                im = self.subs[0].get_image()
+            elif self.sub_or_stack == 'sub':
+                logger.info('using current sub')
+                im = self.subs[self.selected_sub].get_image()
+            else:
+                logger.info('using current stack')
+                im = self.get_stack()
+
+            # get pixel height from sub; not clear if we should
+            # be mult by binning though
             ph = self.subs[0].pixel_height
             self.pixel_height = None if ph is None else ph * self.subs[0].binning
 
         return Component.get('View').do_flips(im)
+
+               
+
+        # if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
+        #     # currently using focus/align/frame
+        #     logger.info('getting last faf image')
+        #     im = Component.get('Capture').last_faf
+        # elif self.is_empty():
+        #     # try to get FAF if current stack is empty
+        #     try:
+        #         im = Component.get('Capture').last_faf
+        #     except:
+        #         print('here')
+        #         return None
+        # elif first_sub:
+        #     if not self.is_empty():
+        #         im = self.subs[0].get_image()
+        #     else:
+        #         return None
+        # elif self.sub_or_stack == 'sub':
+        #     logger.info('getting current sub')
+        #     im = self.subs[self.selected_sub].get_image()
+        # else:
+        #     logger.info('getting current stack')
+        #     im = self.get_stack()
+        # if im is None:
+        #     return None
+
+        # # if we get to here then we have a sub on the stack
+        # # rather than a FAF image, so get pixel height
+        # if not self.is_empty():
+        #     ph = self.subs[0].pixel_height
+        #     self.pixel_height = None if ph is None else ph * self.subs[0].binning
+
+        # return Component.get('View').do_flips(im)
 
     def get_pixel_height(self):
         if hasattr(self, 'pixel_height'):
