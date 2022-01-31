@@ -166,7 +166,8 @@ class WatchedCamera(GenericCamera):
 					s = Image(path, check_image_data=True)
 				except ImageNotReadyException as e:
 					# give it another chance on next event cycle
-					logger.debug('image not ready {:} ({:})'.format(path, e))
+					# logger.debug('image not ready {:} ({:})'.format(path, e))
+					pass
 				except Exception as e:
 					logger.exception('other issue {:} ({:})'.format(path, e))
 					toast('Invalid fits file')
@@ -235,12 +236,29 @@ class WatchedCamera(GenericCamera):
 			Component.get('ObjectIO').delete_file(path)
 
 
+
 	def save_mono(self, sub, im, nm, filt=None, sub_type=None):
 		''' Save image, binning if required, constructing details from Image instance
 		'''
 
 		cs = Component.get('CaptureScript')
-		capture_props = {}
+
+		# add header info from sub into capture_props
+		# note that this is just the essential info that
+		# survives even after jocular has done its
+		# processes
+		capture_props = { p: getattr(sub, p) if hasattr(sub, p) else None 
+			for p in ['gain', 'offset', 'camera', 'pixel_height', 'pixel_width']}
+
+		# if jocular has binned, changed pixel dims
+		b = self.binning
+		if b != 'no':
+			binfac = int(b[0])
+			if capture_props['pixel_height'] is not None:
+				capture_props['pixel_height'] *= binfac
+			if capture_props['pixel_width'] is not None:
+				capture_props['pixel_width'] *= binfac
+
 
 		capture_props['exposure'] = {
 			'auto': sub.exposure,
