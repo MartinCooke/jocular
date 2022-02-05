@@ -177,10 +177,16 @@ class ASICamera(GenericCamera):
 
 		try:
 			# whbi = self.asicamera.get_roi_format()
-			self.status = '{:}: {:} x {:}'.format(
+			#if 'temperature' in self.camera_controls:
+			temp = self.asicamera.get_control_value(asi.ASI_TEMPERATURE)[0]
+			#else:
+			#	temp = None
+			self.status = '{:}: {:} x {:} {:}'.format(
 				self.camera_props.get('Name', 'anon'),
 				self.camera_props.get('MaxWidth', 0),
-				self.camera_props.get('MaxHeight', 0))
+				self.camera_props.get('MaxHeight', 0),
+				'' if temp is None else '{:.0f}C'.format(temp / 10))
+				
 			self.connected = True
 			logger.info(self.status)
 		except Exception as e:
@@ -329,6 +335,7 @@ class ASICamera(GenericCamera):
 			'binning': int(self.binning[0]),
 			#'ROI': self.ROI,
 			#'equal_aspect': self.square_sensor,
+			'temperature': self.get_sensor_temperature(),
 			'ROI_x': start_x,
 			'ROI_y': start_y,
 			'ROI_w': width,
@@ -341,6 +348,12 @@ class ASICamera(GenericCamera):
 		try:
 			return self.camera_props['PixelSize'] * int(self.binning[0])
 		except:
+			return None
+
+	def get_sensor_temperature(self):
+		try:
+			return self.asicamera.get_control_value(asi.ASI_TEMPERATURE)[0] / 10
+		except Exception as e:
 			return None
 
 	def check_exposure(self, *arg):

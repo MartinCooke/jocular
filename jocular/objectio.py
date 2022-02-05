@@ -198,7 +198,11 @@ class ObjectIO(Component):
         calib = sub_type in {'dark', 'flat', 'bias'}
 
         exposure = stacker.get_prop('exposure')
-        temperature = Component.get('Session').temperature
+
+        # try to get temperature from sensor; if not from user
+        temperature = Component.get('Camera').get_sensor_temperature()
+        if temperature is None:
+            temperature = Component.get('Session').temperature
 
         if calib:
             if temperature == -40:

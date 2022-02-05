@@ -211,7 +211,8 @@ class Capture(Component):
 
         capture_props['exposure'] = self.exposure
         capture_props['filter'] = Component.get('FilterWheel').current_filter
-        capture_props['temperature'] = Component.get('Session').temperature
+        if capture_props['temperature'] is None:
+            capture_props['temperature'] = Component.get('Session').temperature
         sub_type = Component.get('CaptureScript').get_sub_type()
         capture_props['sub_type'] = sub_type
 

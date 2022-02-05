@@ -26,6 +26,9 @@ class GenericCamera(Device):
 	def get_pixel_height(self):
 		return None
 
+	def get_sensor_temperature(self):
+		return None
+
 	def get_image(self):
 		if hasattr(self, 'last_capture'):
 			return self.last_capture
