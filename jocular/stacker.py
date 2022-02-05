@@ -641,6 +641,8 @@ class Stacker(Component, Settings):
         self.process(sub)
         self.subs.append(sub)
         self.sub_added()
+        if sub.temperature is not None:
+            Component.get('Session').temperature = sub.temperature
 
     def realign(self, *args):
         self.recompute(realign=True)
