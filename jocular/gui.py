@@ -423,7 +423,7 @@ class GUI(FloatLayout):
 	def set(self, name, value, update_property=False):
 		''' Called by any component that needs to access GUI element, usually
 			for something simple like changing text. Option to pass this
-			change back to component via update property/
+			change back to component via update property
 		'''
 
 		if name not in self.gui:

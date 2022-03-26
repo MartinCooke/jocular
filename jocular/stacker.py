@@ -542,6 +542,19 @@ class Stacker(Component, Settings):
         else:
             return None
 
+    def get_RGB_at_pixel(self, x, y):
+        ''' Used for G2V calibration: really need to do a proper stellar centroid
+            around this pixel
+        '''
+        x = int(x)
+        y = int(y)
+        r, g, b = self.get_stack(filt='R'), self.get_stack(filt='G'), self.get_stack(filt='B')
+        if r is None or g is None or b is None:
+            # print('G2V needs all of RGB')
+            return
+        # print('G2V: R {:} G {:} B {:}'.format(r[y, x], g[y, x], b[y, x]))
+
+
     def get_centroids_for_platesolving(self):
         try:
             return self.subs[self.selected_sub].centroids

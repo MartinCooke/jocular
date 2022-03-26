@@ -27,7 +27,9 @@ fitspropmap = {
         'subtype': 'sub_type', 'imagetyp': 'sub_type',
         'temperat': 'temperature', 'temp': 'temperature', 'ccd-temp': 'temperature',
         'stackcnt': 'nsubs',
-        'xpixsz': 'pixel_width', 'ypixsz': 'pixel_height'
+        'xpixsz': 'pixel_width', 'ypixsz': 'pixel_height',
+        'xbinning': 'binning',
+        'ybinning': 'binning'
         }
 
 ''' used to map from image prop names to fits name if they are difference; 
@@ -97,6 +99,8 @@ def save_image(data=None, path=None, capture_props=None):
     ''' saves sub or master to path
         capture_props is a dict to save e.g. gain, offset, expo
     '''
+
+    # print('save image capture props', capture_props)
 
     dupes = [
         ('SUBTYPE', 'IMAGETYP'),

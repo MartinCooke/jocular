@@ -139,12 +139,17 @@ class Catalogues(Component, Settings):
             # legacy: don't handle user_objects.csv (now using json)
             if not objfile.endswith('user_objects.csv'):
                 # form dict from user_objects
+                cnt = 0
                 with open(objfile, newline='') as f:
                     reader = csv.DictReader(f)
                     for d in reader:
                         nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
                         self.dsos[nm] = d
                         self.dsos[nm]['U'] = ''
+                        cnt += 1
+
+                logger.info('loaded {:} DSOs from {:}'.format(
+                    cnt, objfile))
 
         logger.info('loaded {:} DSOs from {:} catalogues'.format(
             len(self.dsos), len(shipped + usercats)))

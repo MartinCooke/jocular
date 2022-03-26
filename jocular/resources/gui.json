@@ -183,7 +183,7 @@
 	},
 	"Monochrome": {
 		"gradient": {
-			"angle": [247, 257],
+			"angle": [249, 257],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 300],
@@ -194,7 +194,7 @@
 			"radial": false
 		},
 		"lift": {
-			"angle": [221, 231],
+			"angle": [211, 221],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 10],
@@ -205,7 +205,7 @@
 			"major": {"-": 0, "bg": 5, "+": 10}
 		},
 		"noise_reduction": {
-			"angle": [235, 243],
+			"angle": [225, 233],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [-5, 100],
@@ -215,8 +215,30 @@
 			"initial": 0.0,
 			"major": {"-": 0, "nr": 50, "+": 100}
 		},
+		"TNR_param": {
+			"angle": [237, 245],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [-1, 5],
+			"groove": true,
+			"radial": false,
+			"major": {"-": -1, "tnr": 2.5, "+": 5},
+			"tooltip": "A stronger form of noise reduction than the light touch version provided by the nr slider",
+			"initial": 0.3
+		},
+		"unsharp_amount": {
+			"angle": [181, 198],
+			"location": "inner_ring",
+			"control_type": "JLever",
+			"values": [-1, 1.5],
+			"groove": true,
+			"radial": false,
+			"major": {"-": -1, "sharp": 0.25, "+": 1.5},
+			"tooltip": "",
+			"initial": 0
+		},
 		"black": {
-			"angle": [217, 143],
+			"angle": [207, 140],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -228,7 +250,7 @@
 			"save": false
 		},
 		"white": {
-			"angle": [217, 143],
+			"angle": [207, 140],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -238,7 +260,7 @@
 			"text": "W"
 		},
 		"p1": {
-			"angle": [217, 143],
+			"angle": [207, 140],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -248,7 +270,7 @@
 			"initial": 0.65
 		},
 		"autoblack": {
-			"angle": 215,
+			"angle": 205,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -257,7 +279,7 @@
 			"initial": 1
 		},
 		"linear": {
-			"angle": 178,
+			"angle": 170,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "linear",
@@ -266,7 +288,7 @@
 			"initial": 0
 		},
 		"log": {
-			"angle": 171,
+			"angle": 164,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "log",
@@ -275,7 +297,7 @@
 			"initial": 0
 		},
 		"asinh": {
-			"angle": 163,
+			"angle": 158,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "asinh",
@@ -284,7 +306,7 @@
 			"initial": 1
 		},
 		"gamma": {
-			"angle": 153,
+			"angle": 150,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "gamma",
@@ -293,7 +315,7 @@
 			"initial": 0
 		},
 		"hyper": {
-			"angle": 144,
+			"angle": 142,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "hyper",

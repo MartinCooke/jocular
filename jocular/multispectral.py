@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import trimboth
 from skimage.color import rgb2lab, lab2rgb
 from skimage.transform import resize, rescale
+from loguru import logger
 
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from jocular.gradient import estimate_gradient, estimate_background
@@ -57,6 +58,7 @@ class MultiSpectral(Component, Settings):
 
     bin_colour = BooleanProperty(True)
     compensation = StringProperty('subtract gradients')
+    colour_percentile = NumericProperty(99.99)
     #subtract_gradients = BooleanProperty(True)
     #subtract_background = BooleanProperty(False)
 
@@ -69,7 +71,12 @@ class MultiSpectral(Component, Settings):
         ('compensation', {
             'name': 'compensation', 
             'options': ['none', 'subtract background', 'subtract gradients'],
-            'help': 'done prior to colour scaling (subtract gradents recommended)'})
+            'help': 'done prior to colour scaling (subtract gradents recommended)'}),
+        ('colour_percentile', {
+            'name': 'percentile',
+            'float': (99.9, 100.0, .001),
+            'help': 'values to include when computing max feature value in colour channel (factory: 99.99)'
+            })
         ]
 
     saturation = NumericProperty(0)
@@ -208,11 +215,21 @@ class MultiSpectral(Component, Settings):
         elif self.compensation == 'subtract background':
             ims = [im - estimate_background(im)[0] for im in ims]
 
+        # this is the place to do any colour normalisation I think
+        # to do
+
         ''' the percentile is absolutely critical: setting too low
             leads to saturated stars; too high leads to a washed-out
             colour space
         '''
-        max_pixel_vals = [np.percentile(im.ravel(), 99.99) for im in ims]
+        # max_pixel_vals = [np.percentile(im.ravel(), 99.99) for im in ims]
+        logger.trace('find max')
+        if self.colour_percentile > 99.999:
+            max_pixel_vals = [np.max(im) for im in ims]
+            logger.trace('max pixel vals via max {:}'.format(max_pixel_vals))
+        else:
+            max_pixel_vals = [np.percentile(im.ravel(), self.colour_percentile) for im in ims]
+            logger.trace('max pixel vals via percentile {:}'.format(max_pixel_vals))
 
         ''' divide all images by the largest of these; this expands the
             colour dynamic range without affected colour ratios; the expanded

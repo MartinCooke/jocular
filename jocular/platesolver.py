@@ -112,7 +112,7 @@ class PlateSolver(Component, Settings):
     n_stars_in_image = NumericProperty(30)
     min_sigma = NumericProperty(3)
     max_sigma = NumericProperty(5)
-    #star_thresh = NumericProperty(.001)
+    star_thresh = NumericProperty(.001)
     min_matches = NumericProperty(10)
     mag_range = NumericProperty(5)    # don't allow user to set this
     first_match = BooleanProperty(False)
@@ -168,11 +168,11 @@ class PlateSolver(Component, Settings):
         #     'fmt': '{:.0f}',
         #     'help': 'used in star extraction (factory: 5)'
         #     })
-        # ('star_thresh', {
-        #     'name': 'star threshold', 'float': (.0001, .005, .0001),
-        #     'fmt': '{:.4f}',
-        #     'help': 'used in star extraction (factory: .001)'
-        #     })
+        ('star_thresh', {
+            'name': 'star threshold', 'float': (0, .005, .0001),
+            'fmt': '{:.4f}',
+            'help': 'used in star extraction (factory: .001); set to 0 to find this adaptively'
+            })
 
         # ('star_source', {
         #     'name': 'get stars from', 
@@ -231,7 +231,11 @@ class PlateSolver(Component, Settings):
         ''' Attempts to solve 'im'; returns True if successful
         '''
 
-        thresh = Component.get('Aligner').get_intensity_threshold()
+        if self.star_thresh < 1e-6:
+            thresh = Component.get('Aligner').get_intensity_threshold()
+        else:
+            thresh = self.star_thresh
+
         logger.trace('using intensity threshold {:.5f}'.format(
             0 if thresh is None else thresh))
 

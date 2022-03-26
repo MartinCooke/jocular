@@ -488,6 +488,7 @@ class Annotator(Component):
                         by=py + pixel_rad)
                 ]
 
+
         # create annotation labels
         mapping = Component.get('View').scatter.to_parent
         xc, yc = Metrics.get('origin')
@@ -499,6 +500,13 @@ class Annotator(Component):
             # sort out situations where several have same target name
             if lab.info['Name'] == target:
                 lab.pin()
+            ''' check if its a G2V and if so get image pixel values in RGB and report (for now)
+            '''
+            # if lab.ot == 'G2':
+            #     px, py = lab.px, lab.py
+            #     Component.get('Stacker').get_RGB_at_pixel(lab.px, lab.py)
+                # print('found G2V im px {:} {:}'.format(lab.px, lab.py), props)
+
         self.on_mag_limit()
 
     def update(self):

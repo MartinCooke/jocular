@@ -248,7 +248,7 @@ class WatchedCamera(GenericCamera):
 		# survives even after jocular has done its
 		# processes
 		capture_props = { p: getattr(sub, p) if hasattr(sub, p) else None 
-			for p in ['gain', 'offset', 'camera', 'pixel_height', 'pixel_width']}
+			for p in ['gain', 'offset', 'camera', 'pixel_height', 'pixel_width', 'binning']}
 
 		# if jocular has binned, changed pixel dims
 		b = self.binning

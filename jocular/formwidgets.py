@@ -165,6 +165,8 @@ def __filechooser_pressed(name, spec, changed, initpath, *args):
 			initpath = None
 	if initpath is None:
 		initpath = str(Path.home())
+	# use show disks allows showing devices 
+	# fm.show_disks()
 	fm.show(initpath)
 
 def exit_filemanager(widget, *args):

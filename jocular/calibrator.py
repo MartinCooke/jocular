@@ -34,6 +34,14 @@ def subregion(m, s):
     if m is None:
         return None
 
+    ''' if camera is unknown or different for master and sub,
+        only allow subregion processing if the shape is identical
+    '''
+
+    if (m.camera is None) or (s.camera is None) or (m.camera != s.camera):
+        if (m.shape[0] != s.shape[0]) or (m.shape[1] != s.shape[1]):
+            return None
+
     # extract region covered by m and s
     mx = 0 if m.ROI_x is None else m.ROI_x
     my = 0 if m.ROI_y is None else m.ROI_y
@@ -307,12 +315,6 @@ class Calibrator(Component, Settings):
         else:
             self.info('none suitable')
 
-    ''' TO DO: enable ROI of masters
-        need a 'compatible' function that checks offsets
-        and also a function that returns offsets that can be used
-        during the calibration process itself 
-    '''
-
 
     def get_dark(self, sub, exposure_tol=None):
         ''' find darks with same camera, gain, offset, binning, shape, and
@@ -329,7 +331,7 @@ class Calibrator(Component, Settings):
         darks = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'dark' and
                         v.binning == sub.binning and
-                        subregion(v, sub) != None and
+                        subregion(v, sub) is not None and
                         v.gain == (sub.gain if v.gain is not None else v.gain) and
                         v.offset == (sub.offset if v.offset is not None else v.offset) and
                         v.camera == (sub.camera if v.camera is not None else v.camera) and
@@ -373,7 +375,7 @@ class Calibrator(Component, Settings):
         bias = {k: v.age for k, v in self.masters.items()
                     if v.sub_type == 'bias' and
                         v.binning == sub.binning and 
-                        subregion(v, sub) != None and
+                        subregion(v, sub) is not None and
                         v.gain == (sub.gain if v.gain is not None else v.gain) and
                         v.offset == (sub.offset if v.offset is not None else v.offset) and
                         v.camera == (sub.camera if v.camera is not None else v.camera)
@@ -390,7 +392,7 @@ class Calibrator(Component, Settings):
         flats = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'flat' and
                         v.binning == sub.binning and 
-                        subregion(v, sub) != None and
+                        subregion(v, sub) is not None and
                         v.camera == (sub.camera if v.camera is not None else v.camera)
                 }
 
