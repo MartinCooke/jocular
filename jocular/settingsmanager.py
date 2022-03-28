@@ -11,11 +11,21 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.spinner import Spinner
 from kivy.metrics import dp
 from kivy.properties import StringProperty, DictProperty
+from kivy.factory import Factory
+from kivy.lang import Builder
 
 from jocular.component import Component
 from jocular.formwidgets import configurable_to_widget
 from jocular.widgets import Panel
 
+Builder.load_string(
+    '''
+
+<MySpinnerOption@SpinnerOption>:
+    size_hint_y: None
+    height: "36dp"
+
+''')
 
 class SettingsManager(Component, Panel):
 
@@ -47,12 +57,14 @@ class SettingsManager(Component, Panel):
 		self.contents.width = dp(600)
 
 		# top spinner
-		hb = BoxLayout(size_hint=(1, None), height=dp(32))
+		hb = BoxLayout(size_hint=(1, None), height=dp(28))
 		hb.add_widget(Label(size_hint=(1, 1)))
 		self.spinner = Spinner(
 			text=self.current_panel,
 			values=sorted(self.instances.keys()),
-			size_hint=(None, 1), width=dp(140), font_size='20sp')
+			option_cls=Factory.get("MySpinnerOption"),
+			size_hint=(None, 1), width=dp(140), 
+			font_size='16sp')
 		self.spinner.bind(text=self.setting_panel_changed)
 		hb.add_widget(self.spinner)
 		hb.add_widget(Label(size_hint=(1, 1)))
