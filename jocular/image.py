@@ -193,7 +193,8 @@ class Image:
             raise Exception('not a fits file {:}'.format(path))
 
         try:
-            with fits.open(path) as hdu1:
+            # added in v0.5.6 ignore missing end
+            with fits.open(path, ignore_missing_end=True) as hdu1:
                 hdu1.verify('silentfix')
                 hdr = hdu1[0].header
                 # we check that the image is readable if necessary
