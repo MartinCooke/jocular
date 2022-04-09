@@ -70,7 +70,9 @@ default_props = {
 # map from possible found filter names to the Jocular scheme
 filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
     'blue': 'B', 'dark': 'dark',  
-    'ha': 'Ha', 'halpha': 'Ha', 'sii': 'SII', 'oiii': 'OIII',
+    'ha': 'Ha', 'halpha': 'Ha', 'h': 'Ha',
+    'sii': 'SII', 
+    'oiii': 'OIII',
     'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
 
 def convert_fits_props(hdr):
