@@ -4,11 +4,13 @@
 import warnings
 import numpy as np
 
+from skimage.transform import downscale_local_mean
+
 from skimage.measure import ransac
 from skimage.transform import EuclideanTransform, matrix_transform, warp
-from skimage.feature import blob_dog
+from skimage.feature import blob_dog, blob_log, blob_doh
 
-from kivy.properties import BooleanProperty, NumericProperty
+from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from loguru import logger
 
 from jocular.component import Component
@@ -57,6 +59,7 @@ class Aligner(Component, Settings):
     ideal_star_count = NumericProperty(30)
     min_sigma = NumericProperty(3)
     max_sigma = NumericProperty(5)
+    star_regions = StringProperty('binned 1x1')
 
     configurables = [
         ('do_align', {'name': 'align?', 'switch': '',
@@ -64,14 +67,10 @@ class Aligner(Component, Settings):
         ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
             'help': 'Find an appropriate threshold to detect this many stars on the first sub',
             'fmt': '{:.0f} stars'}),
-        # ('min_sigma', {
-        #     'name': 'min sigma', 'float': (1, 10, 1),
-        #     'fmt': '{:.0f}',
-        #     'help': 'Used in DoG blob extraction stage (factory: 3)'}),
-        # ('max_sigma', {
-        #     'name': 'max sigma', 'float': (1, 10, 1),
-        #     'fmt': '{:.0f}',
-        #     'help': 'Used in DoG blob extraction stage (factory: 5)'})
+        ('star_regions', {
+            'name': 'extract stars using image', 
+            'options': ['binned 1x1', 'binned 2x2', 'binned 3x3', 'binned 4x4'],
+            'help': 'for large images will be faster to extract using binning'}),
         ]
 
     def __init__(self):
@@ -95,6 +94,8 @@ class Aligner(Component, Settings):
     def align(self, sub, centroids):
         # Align sub to current keystars, updating its status.
         
+        logger.trace('start alignment')
+
         min_inliers = 4
 
         # choose warp model to project existing keystars so they lie closer to centroids (in theory)
@@ -138,6 +139,9 @@ class Aligner(Component, Settings):
             else:
                 sub.status = 'nalign'
 
+
+            logger.trace('done alignment')
+
             # return inverse transform of centroids (for platesolver)
             if self.warp_model:
                 return self.warp_model.inverse(centroids)
@@ -152,21 +156,53 @@ class Aligner(Component, Settings):
         # if this is the first sub in the stack (perhaps after shuffle), 
         # find best intensity threshold
         if self.keystars is None:
-            self.star_intensity = self.find_intensity_threshold(im)
+            self.star_intensity, stars = self.find_intensity_threshold(im)
+        else:
 
-        # extract using this threshold
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            stars = blob_dog(im, 
-                min_sigma=self.min_sigma, 
-                max_sigma=self.max_sigma, 
-                threshold=self.star_intensity, 
-                overlap=0)[:, [1, 0]]
+            # extract using this threshold
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                logger.trace('starting extraction')
+                stars = self._extract_stars(im, threshold=self.star_intensity)
+                # stars = blob_log(im, 
+                #     min_sigma=self.min_sigma, 
+                #     max_sigma=self.max_sigma, 
+                #     threshold=self.star_intensity, 
+                #     overlap=0)[:, [1, 0]]
+                logger.trace('done extraction')
 
         # new for v2: order stars by decreasing intensity
         # better to do this using mags after computing centroids (to do)
         intens = [im[int(y), int(x)] for x, y in stars]
         return np.array(stars)[[i for (v, i) in sorted((v, i) for (i, v) in enumerate(intens))][::-1]]
+
+
+    def _extract_stars(self, im, threshold=None):
+        ''' Extract stars from all or part of an image (the latter for
+            speedup of large images)
+            scikit-image provides 3 blob detectors; blob_dog is adequate
+            here (fast and works well)l; blob_log and blob_doh are slower
+
+        '''
+
+        try:
+            binfac = int(self.star_regions[-1])
+        except:
+            binfac = 1
+
+        if binfac > 1:
+            logger.trace('starting downscale')
+            im = downscale_local_mean(im, (binfac, binfac))
+            logger.trace('ending downscale')
+            #im = rescale(im, 1 / binfac, anti_aliasing=False, mode='constant', multichannel=False)
+        stars = blob_dog(im, 
+                    min_sigma=self.min_sigma, 
+                    max_sigma=self.max_sigma, 
+                    threshold=threshold, 
+                    overlap=0)[:, [1, 0]]
+        if binfac > 1:
+            stars = [[binfac*x, binfac*y] for x, y in stars]
+        return stars
 
 
     def get_intensity_threshold(self):
@@ -196,11 +232,13 @@ class Aligner(Component, Settings):
             maxits = 8
             while True and (its < maxits):
                 its += 1
-                nstars = len(blob_dog(im, 
-                    min_sigma=self.min_sigma, 
-                    max_sigma=self.max_sigma, 
-                    threshold=est, 
-                    overlap=0)[:, [1, 0]])
+                # nstars = len(blob_dog(im, 
+                #     min_sigma=self.min_sigma, 
+                #     max_sigma=self.max_sigma, 
+                #     threshold=est, 
+                #     overlap=0)[:, [1, 0]])
+                stars = self._extract_stars(im, threshold=est)
+                nstars = len(stars)
 
                 # stop when within crit percent of required
                 if abs(nstars - self.ideal_star_count) / self.ideal_star_count < crit:
@@ -212,7 +250,7 @@ class Aligner(Component, Settings):
                 est = (hi + lo) / 2
 
         logger.info('bkgd {:6.4f} threshold {:6.4f} after {:} iterations'.format(t0, est, its))
-        return est
+        return est, stars
 
     def process(self, sub):
 
@@ -220,11 +258,11 @@ class Aligner(Component, Settings):
             return
 
         # extract stars & compute centroids before aligning, if possible
-        #logger.trace('. get image')
+        logger.trace('. get image')
         im = sub.get_image()
-        #logger.trace('. extract stars')
+        logger.trace('. extract stars')
         raw_stars = self.extract_stars(im)
-        #logger.trace('. centroids')
+        logger.trace('. centroids')
         centroids = star_centroids(im, raw_stars)
 
         # store centroids for later platesolving
@@ -239,12 +277,12 @@ class Aligner(Component, Settings):
             self.mags = centroids[:, 2]
             self.align_count = 1
         else:
-            #logger.trace('. align')
+            logger.trace('. align')
             warped = self.align(sub, centroids[:, :2])
             if warped is not None:
                 sub.centroids[:, :2] = warped
             # self.align(sub, centroids[:, :2])
-            #logger.trace('. aligned finish')
+            logger.trace('. aligned finish')
 
         sc = np.array(self.starcounts)
         self.info('{:}/{:} frames | {:}-{:} stars'.format(
