@@ -24,18 +24,18 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 	'''
 
 	if textwidth is None:
-		textwidth = dp(280)
+		textwidth = dp(330) # was 280
 	if widgetwidth is None:
-		widgetwidth = dp(150)
+		widgetwidth = dp(140) # was 150
 
-	font_size = '16sp'
+	font_size = '15sp'
 	help_font_size = '13sp'
 	color = App.get_running_app().theme_cls.accent_color
 
 	bv = BoxLayout(padding=(dp(5), dp(5)), size_hint=(1, None), height=dp(55), 
 		orientation='vertical')
 	bh = BoxLayout(size_hint=(1, .55))
-	bh.add_widget(Label(size_hint=(1, 1)))
+	# bh.add_widget(Label(size_hint=(1, 1)))
 	bh.add_widget(LabelR(text=text, size_hint=(None, 1), width=textwidth, font_size=font_size))
 
 	if 'options' in spec:
@@ -66,13 +66,13 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 
 	elif 'float' in spec:
 		fmt = spec.get('fmt', '{:.2f}')
-		slabel = LabelL(text=fmt.format(initval), size_hint=(None, 1), width=.7*widgetwidth, 
+		slabel = LabelL(text=fmt.format(initval), size_hint=(None, 1), width=widgetwidth, 
 			font_size=font_size, color=color)
 		bh.add_widget(slabel)
 		smin, smax, step = spec['float']
-		widget = MDSlider(size_hint=(None, 1), width=1.3*widgetwidth, 
+		widget = MDSlider(size_hint=(None, 1), width=1.5*widgetwidth, 
 			step=step, min=smin, max=smax, value=float(initval))
-		widget.hint_bg_color=(.6,.6,.6,1)
+		widget.hint_bg_color=(.6, .6, .6, 1)
 		widget._set_colors()
 		widget.bind(value=partial(__sfloat_changed, name, spec, slabel, fmt, changed))
 		bh.add_widget(widget)
@@ -80,15 +80,15 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 	elif 'double_slider_float' in spec:
 		fmt = spec.get('fmt', '{:.2f}')
 		slabel = LabelL(text=fmt.format(initval), size_hint=(None, 1), 
-			width=.7*widgetwidth, font_size=font_size, color=color)
+			width=widgetwidth, font_size=font_size, color=color)
 		bh.add_widget(slabel)
 		smin, smax = spec['double_slider_float']
 		val1 = int(initval)
 		val2 = abs(initval - val1)
-		bh2 = BoxLayout(orientation='vertical', size_hint=(None, 1), width=1.3*widgetwidth)
-		slider1 = MDSlider(size_hint=(1, .5), width=widgetwidth, 
+		bh2 = BoxLayout(orientation='vertical', size_hint=(None, 1), width=1.5*widgetwidth)
+		slider1 = MDSlider(size_hint=(1, .5), width=1.5*widgetwidth, 
 			step=1, min=smin, max=smax, value=val1)
-		slider2 = MDSlider(size_hint=(1, .5), width=widgetwidth, 
+		slider2 = MDSlider(size_hint=(1, .5), width=1.5*widgetwidth, 
 			step=.01, min=0, max=1, value=val2)
 		bh2.add_widget(slider1)
 		bh2.add_widget(slider2)
@@ -112,7 +112,7 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 		bh.add_widget(widget)
 		bh.add_widget(Label(size_hint=(None, 1), width=widgetwidth))
 
-	bh.add_widget(Label(size_hint=(1, 1)))
+	# bh.add_widget(Label(size_hint=(1, 1)))
 
 	# lower row contains only help text
 	blow = BoxLayout(size_hint=(1, .45))
