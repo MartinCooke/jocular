@@ -17,11 +17,13 @@ from jocular.component import Component
 from jocular.settingsmanager import Settings
 from jocular.gradient import estimate_background
 
+
 def star_centroids(im, stars, r=8):
     ''' Compute accurate locations for stars based on star pixel coords
         given in stars. Takes c 2-10 ms for a Lodestar image depending on star count
     '''
 
+    logger.trace('starting star centroids')
     grid_x, grid_y = np.meshgrid(np.arange(2 * r + 1), np.arange(2 * r + 1))
     mask = np.sqrt((r - grid_x)**2 + (r - grid_y)**2) <= r
 
@@ -48,6 +50,8 @@ def star_centroids(im, stars, r=8):
                 cy = np.sum(grid_y * imfrag_sub) / wim
                 star_data[ptr, :] = [cx + x - r, cy + y - r, np.mean(imfrag_sub)]
                 ptr += 1                    
+
+    logger.trace('-- done')
     
     return star_data[:ptr, :]
 
