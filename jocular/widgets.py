@@ -28,7 +28,7 @@ from kivy.uix.behaviors import ToggleButtonBehavior
 from kivymd.uix.button import MDFlatButton
 
 from jocular.utils import angle360
-#from jocular.component import Component
+from jocular.component import Component
 from jocular.tooltip import TooltipBehavior
 
 Builder.load_string(
@@ -308,12 +308,8 @@ class Rotatable(Widget, Polar):
         self.radius = radius
         # self.pos = self.to_pos() # is this causing issues on Windows?
         ang = self.angle * math.pi / 180
-        self.x = self.origin[0] + self.radius * math.cos(
-            ang
-        )  #  is this causing issues on Windows?
-        self.y = self.origin[1] + self.radius * math.sin(
-            ang
-        )  #  is this causing issues on Windows?
+        self.x = self.origin[0] + self.radius * math.cos(ang) 
+        self.y = self.origin[1] + self.radius * math.sin(ang)
         self.generate_inverse()
 
     def generate_inverse(self, *args):
@@ -399,7 +395,8 @@ class JLever(JRotWidget, Label):
     value = NumericProperty(0.0)
     disabled = BooleanProperty(False)
 
-    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, **kwargs):
+    def __init__(self, value=0, values=[0, 1], angles=[0, 1], radial=True, 
+        continuous_update=None, **kwargs):
 
         super().__init__(radial=radial, **kwargs)
         self.min_angle, self.max_angle = angles[0], angles[1]
@@ -407,6 +404,10 @@ class JLever(JRotWidget, Label):
         self.font_size = '18sp'
         self.value = value
         self.selected = False
+        if continuous_update is None:
+            self.update_on_move = Component.get('View').continuous_update # True
+        else:
+            self.update_on_move = continuous_update
         self._k = (self.max_angle - self.min_angle) / (self.max_value - self.min_value)
         self.rotangle = self.value_to_angle(self.value)
         self.update(self.rotangle)
@@ -421,47 +422,52 @@ class JLever(JRotWidget, Label):
 
     def on_touch_down(self, touch):
         if not self.disabled and self.collide_point(*touch.pos):
+            if touch.is_double_tap:
+                self.update_on_move = not self.update_on_move
             self.selected = True
             return True
         return False
 
-        # WAS THIS
-        # if self.disabled:
-        #     return super().on_touch_down(touch)
-
-        # if self.collide_point(*touch.pos):
-        #     self.selected = True
-        #     return True
-        # return super().on_touch_down(touch)
-
     def on_touch_move(self, touch):
+        ''' If this lever is selected, update position, and update value if
+            update_on_move is True
+        '''
         if self.selected:
-            self.update(angle_diff(self.origin, touch.pos))
+            self.update(angle_diff(self.origin, touch.pos), update_value=self.update_on_move)
 
     def ang2value(self, angle):
         # x = float(((angle - self.min_angle) / self._k) + self.min_value)
         x = ((angle - self.min_angle) / self._k) + self.min_value
         return min(self.max_value, max(x, self.min_value))
 
+
     def on_touch_up(self, touch):
+        ''' Unselect lever and update value if update_on_move is False
+        '''
         if self.selected:
             self.selected = False
+            if not self.update_on_move:
+                _ang = angle_diff(self.origin, touch.pos)
+                self.value = self.ang2value(_ang)
+                # fake a transparency change to ensure interface is updated
+                _t = self.color[-1]
+                self.color[-1] = 0
+                self.color[-1] = _t
 
     def update(self, angle, update_value=True):
-        if update_value:
-            mina, maxa = self.min_angle, self.max_angle
+        ''' If angle within range, update angle of level, and
+            update corresponding value if update_value is True
+        '''
 
-            # return if angle outside range
-            if (angle < min(mina, maxa)) or (angle > max(mina, maxa)):
-                return
-
-            self.value = self.ang2value(angle)
-
-            # convert value to angle in case it hasn't changed
-            angle = self.value_to_angle(self.value)
-
-        self.angle = angle
-        self.on_angle()
+        # return if angle outside range
+        if (angle >= min(self.min_angle, self.max_angle)) and \
+            (angle <= max(self.min_angle, self.max_angle)):
+            if update_value:
+                self.value = self.ang2value(angle)
+                # convert value to angle in case it hasn't changed
+                angle = self.value_to_angle(self.value)
+            self.angle = angle
+            self.on_angle()
 
 
 joc_icons = {
