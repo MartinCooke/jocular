@@ -4,7 +4,7 @@
 import math
 import numpy as np
 
-from skimage.transform import resize, rescale
+from skimage.transform import resize, rescale, downscale_local_mean
 from skimage import filters
 from skimage.morphology import disk
 
@@ -29,7 +29,7 @@ Builder.load_string(
     adustr: _adu
     perstr: _per
     size_hint: None, None 
-    size: dp(400), dp(100) 
+    size: dp(400), dp(150) 
     orientation: 'vertical'
     MDLabel:
         id: _adu
@@ -50,24 +50,32 @@ Builder.load_string(
 
 ''')
 
-def TNR(im, ksize=20, method='gaussian', param=1):
+def TNR(im, ksize=20, method='gaussian', param=1, binfac=1):
     ''' Tony's Noise Reduction
     '''
     # compute background estimate
     # print('TNR method {:} ksize {:} param {:}'.format(method, ksize, param))
     ksize = int(ksize)
+    if binfac > 1:
+        im2 = downscale_local_mean(im, (binfac, binfac))
+    else:
+        im2 = im.copy()
     if method == 'gaussian':
-        bkg = filters.gaussian(im, ksize)
+        bkg = filters.gaussian(im2, ksize / binfac)
     elif method == 'median':
-        # print(np.min(im), np.max(im))
-        neighbourhood = disk(radius=ksize)
-        bkg = filters.rank.median(im, neighbourhood) / 255.
-        # print(np.min(bkg), np.max(bkg))
-    # elif method == 'percentile':
-    #     neighbourhood = disk(radius=ksize)
-    #     bkg = filters.rank.mean_percentile(im, neighbourhood, p0=.1, p1=.9) / 255.
+        neighbourhood = disk(radius=ksize / binfac)
+        bkg = filters.rank.median(im2, neighbourhood) / 255.
+    if binfac > 1:
+        h, w = im.shape
+        bh, bw = bkg.shape
+        # use fast upsizing if result is a multiple
+        if bh * binfac == h and bw * binfac == w:
+            bkg = rescale(bkg, (binfac, binfac))
+        else:
+            bkg = resize(bkg, im.shape)
 
     return ((im - bkg) / (1 + np.exp(param) * np.exp(-27 * im))) + bkg
+
 
 def unsharp_masking(im, radius=5, amount=1):
     return filters.unsharp_mask(im, radius=radius, amount=amount)
@@ -105,6 +113,7 @@ class Monochrome(Component, Settings):
     noise_reduction = NumericProperty(0)
     fine = NumericProperty(0)
     autoblack = BooleanProperty(True)
+    autowhite = BooleanProperty(False)
     fracbin = NumericProperty(1)
     TNR_param = NumericProperty(0)
     TNR_kernel_size = NumericProperty(20)
@@ -112,6 +121,7 @@ class Monochrome(Component, Settings):
     unsharp_amount = NumericProperty(-1)
     unsharp_radius = NumericProperty(5)
     show_image_stats = BooleanProperty(False)
+    TNR_binning = StringProperty('1')
 
     configurables = [
         ('TNR_method', {
@@ -121,6 +131,10 @@ class Monochrome(Component, Settings):
         ('TNR_kernel_size', {
             'name': 'TNR kernel size in pixels', 'float': (3, 30, 1),
             'help': ''}),
+        ('TNR_binning', {
+            'name': 'bin image', 
+            'options': ['1x1', '2x2', '3x3', '4x4', '5x5'],
+            'help': 'bin image by this factor prior to background computation'}),
         ('unsharp_radius', {
             'name': 'unsharp radius in pixels', 'float': (1, 10, 1),
             'help': ''})
@@ -128,7 +142,7 @@ class Monochrome(Component, Settings):
 
     save_settings = [
         'gradient', 'white', 'black', 'p1', 'lift', 'fracbin', 'TNR_param', 'unsharp_amount',
-        'noise_reduction', 'autoblack', 'show_image_stats', 'stretch'
+        'noise_reduction', 'autoblack', 'autowhite', 'show_image_stats', 'stretch'
         ]
 
     def __init__(self, **kwargs):
@@ -144,17 +158,18 @@ class Monochrome(Component, Settings):
         self._gradient = None  # pixel-by-pixel zero-mean gradient estimate to subtract
         self._std_background = None  # std dev of background estimated from gradient
         self._blackpoint = None  # automatic estimate of blackpoint
+        self._whitepoint = None  # automatic estimate of whitepoint
         self._background = None  # pixel-by-pixel background estimate used in TNR
         self._n = 0
         self.gui.set('TNR_param', -1, update_property=True)
         self.gui.set('unsharp_amount', -1, update_property=True)
-        # self.TNR_param = 
 
     def on_p1(self, *args):
         self.adjust_lum()
 
     def on_white(self, *args):
-        self.adjust_lum()
+        if not self.autowhite:
+            self.adjust_lum()
 
     def on_black(self, *args):
         if not self.autoblack:
@@ -193,9 +208,19 @@ class Monochrome(Component, Settings):
                 self.update_blackpoint(self.mono)
                 self.adjust_lum()
 
+    def on_autowhite(self, *args):
+        if self.autowhite:
+            if hasattr(self, "mono") and self.mono is not None:
+                self.update_whitepoint(self.mono)
+                self.adjust_lum()
+
     def update_blackpoint(self, im):
         self._blackpoint, self._std_background = estimate_background(im)
         self.gui.set("black", float(self._blackpoint))
+
+    def update_whitepoint(self, im):
+        self._whitepoint = np.percentile(im.ravel(), 99.99)
+        self.gui.set("white", float(self._whitepoint))
 
     def update_gradient(self, im):
         # Estimate gradient and normalise to zero mean
@@ -208,8 +233,6 @@ class Monochrome(Component, Settings):
         elif self.TNR_method == 'median':
             neighbourhood = disk(radius=self.TNR_kernel_size)
             self._background = filters.rank.median(im, neighbourhood) / 255.
-        # print('background updated min {:.4f} max {:.4f} mean {:.4f}'.format(
-        #     np.min(self._background), np.max(self._background), np.mean(self._background)))
 
 
     def display_sub(self, im, do_gradient=False):
@@ -232,6 +255,8 @@ class Monochrome(Component, Settings):
             self.update_gradient(im) 
         if self.autoblack:
             self.update_blackpoint(im)
+        if self.autowhite:
+            self.update_whitepoint(im)
         self.view.display_image(self.luminance())
 
     def adjust_lum(self, *args):
@@ -260,6 +285,7 @@ class Monochrome(Component, Settings):
         self.mono = im
         self.update_gradient(im)
         self.update_blackpoint(im)
+        # self.update_whitepoint(im)
         # self.update_background(im)
         return self.luminance()
 
@@ -299,7 +325,12 @@ class Monochrome(Component, Settings):
         else:
             black = self.black
 
-        im = (im - black) / (self.white - black)
+        if self.autowhite:
+            white = self._whitepoint
+        else:
+            white = self.white
+
+        im = (im - black) / (white - black)
 
         im[im > 1] = 1
         im[im < 0] = 0
@@ -318,7 +349,12 @@ class Monochrome(Component, Settings):
         # # this is where we'll do the NR
 
         if self.TNR_param > 0:
-            im = TNR(im, ksize=self.TNR_kernel_size, method=self.TNR_method, param=self.TNR_param)
+            im = TNR(
+                im, 
+                ksize=self.TNR_kernel_size, 
+                method=self.TNR_method, 
+                param=self.TNR_param,
+                binfac=int(self.TNR_binning[0]))
 
         if self.unsharp_amount > 0:
             im = unsharp_masking(im, radius=self.unsharp_radius, amount=self.unsharp_amount)
