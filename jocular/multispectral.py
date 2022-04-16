@@ -56,17 +56,20 @@ class MultiSpectral(Component, Settings):
     
     save_settings = ['saturation', 'colour_stretch', 'redgreen', 'yellowblue']
 
-    bin_colour = BooleanProperty(True)
+    bin_colour = StringProperty('2x2')
     compensation = StringProperty('subtract gradients')
     colour_percentile = NumericProperty(99.99)
-    #subtract_gradients = BooleanProperty(True)
-    #subtract_background = BooleanProperty(False)
+    # map_L = StringProperty('L')
+    # map_R = StringProperty('R')
+    # map_G = StringProperty('G')
+    # map_B = StringProperty('B')
 
-    tab_name = 'LAB Colour'
+    tab_name = 'Colour'
+    
     configurables = [
         ('bin_colour', {
-            'name': 'bin colour?', 
-            'switch': '',
+            'name': 'colour binning', 
+            'options': ['1x1', '2x2', '3x3', '4x4'],
             'help': 'Binning the colour channels helps reduce colour noise'}),
         ('compensation', {
             'name': 'compensation', 
@@ -76,7 +79,23 @@ class MultiSpectral(Component, Settings):
             'name': 'percentile',
             'float': (99.9, 100.0, .001),
             'help': 'values to include when computing max feature value in colour channel (factory: 99.99)'
-            })
+            }),
+        # ('map_L', {
+        #     'name': 'luminosity from', 
+        #     'options': ['L', 'R', 'G', 'B', 'Ha', 'R-B', 'R-G', 'G-B', 'B-R', 'G-R'],
+        #     'help': 'map specified channel to luminosity'}),
+        # ('map_R', {
+        #     'name': 'red from', 
+        #     'options': ['L', 'R', 'G', 'B', 'Ha'],
+        #     'help': 'map specified channel to red'}),
+        # ('map_G', {
+        #     'name': 'green from', 
+        #     'options': ['L', 'R', 'G', 'B', 'Ha'],
+        #     'help': 'map specified channel to green'}),
+        # ('map_B', {
+        #     'name': 'blue from', 
+        #     'options': ['L', 'R', 'G', 'B', 'Ha'],
+        #     'help': 'map specified channel to blue'})
         ]
 
     saturation = NumericProperty(0)
@@ -127,11 +146,27 @@ class MultiSpectral(Component, Settings):
             if L is None:
                 L = .2125*R  + .7154*G + .0721*B
                 L = L / np.percentile(L.ravel(), 99.99)
-                 
+            
+            ''' new in 0.5.6
+                allow arbitrary filter mappings
+                TO DO
+            ''' 
+            # chanmap = {'L': L, 'B': B, 'R': R, 'G': G, 'R-B': R-B, 'R-G': R-G, 'B-G': B-G, 'B-R': B-R, 'G-R': G-R}
+            # mappedL = chanmap.get(self.map_L, L).copy()
+            # mappedR = chanmap.get(self.map_R, R).copy()
+            # mappedG = chanmap.get(self.map_G, G).copy()
+            # mappedB = chanmap.get(self.map_B, B).copy()
+            # self.lum = Component.get('Monochrome').update_lum(mappedL)
+            # self.R = mappedR
+            # self.G = mappedG
+            # self.B = mappedB
+
+            # originally
             self.lum = Component.get('Monochrome').update_lum(L)
             self.R = R
             self.G = G
             self.B = B
+
             self.create_LAB()
 
     def L_plus_changed(self, L=None, layer=None):
@@ -206,8 +241,9 @@ class MultiSpectral(Component, Settings):
         ims = [self.R, self.G, self.B]
 
         # binning ~ 70 ms
-        if self.bin_colour:
-            ims = [bin_image(im) for im in ims]
+        binfac = int(self.bin_colour[0])
+        if binfac > 1:
+            ims = [bin_image(im, binfac=binfac) for im in ims]
 
         # compensation prior to scaling
         if self.compensation == 'subtract gradients':
