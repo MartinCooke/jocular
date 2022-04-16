@@ -9,12 +9,13 @@
 			"text": "M",
 			"tooltip": "control depth of annotation",
 			"font_size": "15sp",
-			"initial": -10
+			"initial": -10,
+			"continuous": true
 		}
 	},
 	"ObjectIO": {
 		"new_DSO": {
-			"angle": 62,
+			"angle": 63,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "new",
@@ -23,7 +24,7 @@
 			"action": "confirm_new_object"
 		},
 		"save_DSO": {
-			"angle": 56.9,
+			"angle": 58.1,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "new",
@@ -32,7 +33,7 @@
 			"action": "check_save"
 		},
 		"load_previous": {
-			"angle": 51.8,
+			"angle": 53.2,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "prev",
@@ -41,7 +42,7 @@
 			"action": "confirm_previous_object"
 		},
 		"quit": {
-			"angle": 16,
+			"angle": 14,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "quit",
@@ -50,9 +51,20 @@
 			"action": "confirm_quit"
 		}
 	},
+	"Info": {
+		"show_info": {
+			"angle": 23.8,
+			"location": "mid_ring",
+			"control_type": "JIconButton",
+			"icon": "info",
+			"tooltip": "toggle information panels",
+			"text": "info",
+			"action": "show"
+		}
+	},
 	"ObservingList": {
 		"show_list": {
-			"angle": 46.7,
+			"angle": 48.3,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"tooltip": "display DSO table with support for observation planning and lists",
@@ -63,7 +75,7 @@
 	},
 	"PlateSolver": {
 		"solve": {
-			"angle": 41.2,
+			"angle": 43.4,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "solve",
@@ -84,10 +96,11 @@
 			"text": "Z",
 			"tooltip": "zoom in or out (see View in Configuration)",
 			"save": false,
-			"initial": 0
+			"initial": 0,
+			"continuous": true
 		},
 		"show_reticle": {
-			"angle": 26.2,
+			"angle": 28.7,
 			"location": "mid_ring",
 			"control_type": "JToggleButton",
 			"icon": "reticle",
@@ -97,7 +110,7 @@
 			"initial": false
 		},
 		"apply_ROI": {
-			"angle": 31.3,
+			"angle": 33.6,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "ROI",
@@ -108,7 +121,7 @@
 			"action": "apply_ROI"
 		},
 		"fit": {
-			"angle": 36.4,
+			"angle": 38.5,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "fit",
@@ -119,7 +132,7 @@
 	},
 	"SettingsManager": {
 		"settings": {
-			"angle": 21.1,
+			"angle": 18.9,
 			"location": "mid_ring",
 			"control_type": "JIconButton",
 			"icon": "settings",
@@ -183,30 +196,30 @@
 	},
 	"Monochrome": {
 		"gradient": {
-			"angle": [249, 257],
-			"location": "outer_ring",
+			"angle": [222, 235],
+			"location": "inner_ring",
 			"control_type": "JLever",
-			"values": [0, 300],
-			"major": {"grad": 100},
+			"values": [0, 200],
+			"major": {"-": 0, "gradient": 100, "+": 200},
 			"groove": true,
 			"tooltip": "subtract linear gradient estimate (mid-position is usually optimal)",
 			"initial": 100,
 			"radial": false
 		},
 		"lift": {
-			"angle": [211, 221],
+			"angle": [222, 235],
 			"location": "outer_ring",
 			"control_type": "JLever",
-			"values": [0, 10],
+			"values": [-1, 10],
 			"radial": false,
 			"groove": true,
 			"tooltip": "bring in more of the background",
 			"initial": 0.0,
-			"major": {"-": 0, "bg": 5, "+": 10}
+			"major": {"-": -1, "backgnd": 4.5, "+": 10}
 		},
 		"noise_reduction": {
-			"angle": [225, 233],
-			"location": "outer_ring",
+			"angle": [200, 213],
+			"location": "inner_ring",
 			"control_type": "JLever",
 			"values": [-5, 100],
 			"radial": false,
@@ -216,29 +229,29 @@
 			"major": {"-": 0, "nr": 50, "+": 100}
 		},
 		"TNR_param": {
-			"angle": [237, 245],
+			"angle": [240, 253],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [-1, 5],
 			"groove": true,
 			"radial": false,
-			"major": {"-": -1, "tnr": 2.5, "+": 5},
+			"major": {"-": -1, "denoise": 2.5, "+": 5},
 			"tooltip": "A stronger form of noise reduction than the light touch version provided by the nr slider",
 			"initial": 0.3
 		},
 		"unsharp_amount": {
-			"angle": [181, 198],
+			"angle": [240, 253],
 			"location": "inner_ring",
 			"control_type": "JLever",
-			"values": [-1, 1.5],
+			"values": [-0.5, 1.2],
 			"groove": true,
 			"radial": false,
-			"major": {"-": -1, "sharp": 0.25, "+": 1.5},
+			"major": {"-": -0.5, "sharpen": 0.35, "+": 1.2},
 			"tooltip": "",
 			"initial": 0
 		},
 		"black": {
-			"angle": [207, 140],
+			"angle": [213, 147],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -250,7 +263,7 @@
 			"save": false
 		},
 		"white": {
-			"angle": [207, 140],
+			"angle": [213, 147],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -260,7 +273,7 @@
 			"text": "W"
 		},
 		"p1": {
-			"angle": [207, 140],
+			"angle": [213, 147],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -270,16 +283,25 @@
 			"initial": 0.65
 		},
 		"autoblack": {
-			"angle": 205,
-			"location": "inner_ring",
+			"angle": 216,
+			"location": "outer_ring",
 			"control_type": "JToggleButton",
-			"radial": false,
+			"radial": true,
 			"tooltip": "estimate black point (recommended alongside use of bg)",
-			"text": "auto",
+			"text": "est",
 			"initial": 1
 		},
+		"autowhite": {
+			"angle": 144,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"radial": true,
+			"tooltip": "estimate white point automatically",
+			"text": "est",
+			"initial": 0
+		},
 		"linear": {
-			"angle": 170,
+			"angle": 179,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "linear",
@@ -288,7 +310,7 @@
 			"initial": 0
 		},
 		"log": {
-			"angle": 164,
+			"angle": 173,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "log",
@@ -297,7 +319,7 @@
 			"initial": 0
 		},
 		"asinh": {
-			"angle": 158,
+			"angle": 167,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "asinh",
@@ -306,7 +328,7 @@
 			"initial": 1
 		},
 		"gamma": {
-			"angle": 150,
+			"angle": 159,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "gamma",
@@ -315,62 +337,13 @@
 			"initial": 0
 		},
 		"hyper": {
-			"angle": 142,
+			"angle": 151,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"text": "hyper",
 			"tooltip": "the strongest stretch (good for bringing out faint detail at the expense of noise)",
 			"group": "stretch",
 			"initial": 0
-		},
-		"show_image_stats": {
-			"angle": 257,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "imstats",
-			"tooltip": "display simple image statistics",
-			"save": false,
-			"initial": 0
-		}
-	},
-	"DSO": {
-		"show_DSO": {
-			"angle": 223,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "obj",
-			"tooltip": "show/hide DSO information",
-			"initial": true
-		}
-	},
-	"Notes": {
-		"show_notes": {
-			"angle": 230,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "show/hide observing notes",
-			"text": "notes",
-			"initial": false
-		}
-	},
-	"Session": {
-		"show_session": {
-			"angle": 240,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "show/hide session notes",
-			"text": "session",
-			"initial": false
-		}
-	},
-	"Status": {
-		"show_status": {
-			"angle": 249,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "show/hide Jocular status indicators",
-			"text": "status",
-			"initial": true
 		}
 	},
 	"Capture": {
@@ -487,7 +460,8 @@
 			"tooltip": "change speed of animation from 0.3 to 7 frames/sec",
 			"radial": false,
 			"initial": 2,
-			"save": false
+			"save": false,
+			"continuous": true
 		},
 		"mean": {
 			"angle": 130,

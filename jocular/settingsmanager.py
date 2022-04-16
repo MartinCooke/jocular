@@ -10,7 +10,7 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.spinner import Spinner
 from kivy.metrics import dp
-from kivy.properties import StringProperty, DictProperty
+from kivy.properties import StringProperty, DictProperty, ListProperty
 from kivy.factory import Factory
 from kivy.lang import Builder
 
@@ -36,25 +36,23 @@ class SettingsManager(Component, Panel):
 		self.current_panel = 'Appearance'
 		self.app.gui.add_widget(self)
 
-
 	def register(self, settings, name=None):
 		''' keep a record of all setting instances
 		'''
 		self.instances[name] = settings
 		logger.debug('registered settings for {:}'.format(name))
 
-
 	def on_hide(self, *args):
 		for cls in self.instances.values():
 			cls.apply_and_save_settings()
 
-	def on_show(self):
+	def on_show(self, panel=None):
 		''' Rebuild and display settings screen
 		'''
 
 		self.contents.clear_widgets()
 		self.header.clear_widgets()
-		self.contents.width = dp(600)
+		self.contents.width = dp(800) # was 600
 
 		# top spinner
 		hb = BoxLayout(size_hint=(1, None), height=dp(28))
@@ -73,6 +71,13 @@ class SettingsManager(Component, Panel):
 		self.panel = BoxLayout(orientation='vertical', size_hint=(1, 1))
 		self.contents.add_widget(self.panel)
 		self.show_panel()
+
+
+	def show_settings(self, panel):
+		if panel not in self.instances:
+			return
+		self.show()
+		self.spinner.text = panel
 
 
 	def setting_panel_changed(self, spinner, *args):
@@ -110,7 +115,8 @@ class SettingsManager(Component, Panel):
 
 class SettingsBase():
 
-	configurables = DictProperty({})
+	# configurables = DictProperty({})
+	configurables = ListProperty([])
 	changed_settings = DictProperty({})
 
 	def __init__(self, **kwargs):

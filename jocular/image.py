@@ -68,12 +68,21 @@ default_props = {
     'nsubs': None}
 
 # map from possible found filter names to the Jocular scheme
+# filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
+#     'blue': 'B', 'dark': 'dark',  
+#     'ha': 'Ha', 'halpha': 'Ha', 'h': 'Ha',
+#     'sii': 'SII', 's': 'SII',
+#     'oiii': 'OIII', 'o': 'OIII',
+#     'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
+
 filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G', 
     'blue': 'B', 'dark': 'dark',  
-    'ha': 'Ha', 'halpha': 'Ha', 'h': 'Ha',
-    'sii': 'SII', 
-    'oiii': 'OIII',
+    'ha': 'H', 'halpha': 'H', 'h': 'H',
+    's': 'S', 'sii': 'S', 's': 'S',
+    'oiii': 'O', 'o': 'O',
     'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
+
+
 
 def convert_fits_props(hdr):
     ''' form dict from Image prop to value but don't include unknown FITs props

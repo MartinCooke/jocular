@@ -182,7 +182,10 @@ class Stacker(Component, Settings):
         expos = [s.exposure if s.exposure else 0 for s in subs]
         filts = [s.filter for s in subs]
         fstr = ''
-        for f in ['L', 'R', 'G',  'B', 'Ha', 'OIII', 'SII']:
+
+        ftypes = Component.get('FilterChooser').get_filter_types()
+
+        for f in ftypes:
             if filts.count(f) > 0:
                 fstr += '{:}{:} '.format(filts.count(f), f)
 
@@ -399,7 +402,7 @@ class Stacker(Component, Settings):
             if (i >= 0) and (i < len(self.subs)):
                 l.text = str(i + 1)
                 l.color = self.sub_colors[self.subs[i].status]
-                l.background_color = fw.filter_properties[self.subs[i].filter]['bg_color']
+                l.background_color = fw.filter_properties.get(self.subs[i].filter,'?')['bg_color']
 
     def increment_sub(self, dt):
         if self.selected_sub == len(self.subs) - 1:
@@ -502,40 +505,6 @@ class Stacker(Component, Settings):
         return Component.get('View').do_flips(im)
 
                
-
-        # if not Component.get('ObjectIO').existing_object and Component.get('CaptureScript').faffing():
-        #     # currently using focus/align/frame
-        #     logger.info('getting last faf image')
-        #     im = Component.get('Capture').last_faf
-        # elif self.is_empty():
-        #     # try to get FAF if current stack is empty
-        #     try:
-        #         im = Component.get('Capture').last_faf
-        #     except:
-        #         print('here')
-        #         return None
-        # elif first_sub:
-        #     if not self.is_empty():
-        #         im = self.subs[0].get_image()
-        #     else:
-        #         return None
-        # elif self.sub_or_stack == 'sub':
-        #     logger.info('getting current sub')
-        #     im = self.subs[self.selected_sub].get_image()
-        # else:
-        #     logger.info('getting current stack')
-        #     im = self.get_stack()
-        # if im is None:
-        #     return None
-
-        # # if we get to here then we have a sub on the stack
-        # # rather than a FAF image, so get pixel height
-        # if not self.is_empty():
-        #     ph = self.subs[0].pixel_height
-        #     self.pixel_height = None if ph is None else ph * self.subs[0].binning
-
-        # return Component.get('View').do_flips(im)
-
     def get_pixel_height(self):
         if hasattr(self, 'pixel_height'):
             return self.pixel_height
@@ -651,9 +620,13 @@ class Stacker(Component, Settings):
                 logger.error(msg)
                 return
 
+        logger.trace('start process')
         self.process(sub)
+        logger.trace('start append')
         self.subs.append(sub)
+        logger.trace('start sub_added')
         self.sub_added()
+        logger.trace('end sub_added')
         if sub.temperature is not None:
             Component.get('Session').temperature = sub.temperature
 
@@ -664,12 +637,13 @@ class Stacker(Component, Settings):
         # initial load, recompute or realign
         Component.get('Aligner').reset()
         self.stack_cache = {}
+        initial_filters = {'B', 'H', 'S', 'O'}
         # shuffle-based realign
         if realign:
             np.random.shuffle(self.subs)
             # if we have a B or Ha, keep shuffling until we start with that
-            if len([s for s in self.subs if s.filter in {'B', 'Ha'}]) > 0:
-                while self.subs[0].filter not in {'B', 'Ha'}:
+            if len([s for s in self.subs if s.filter in initial_filters]) > 0:
+                while self.subs[0].filter not in initial_filters:
                     np.random.shuffle(self.subs)
         self.selected_sub = -1
         self.reprocess_event = Clock.schedule_once(self._reprocess_sub, 0)
@@ -691,12 +665,13 @@ class Stacker(Component, Settings):
         # Process sub on recompute/realign
 
         sub.image = None  # force reload
+        logger.trace('start hotpix removal')
         sub.image = Component.get('BadPixelMap').remove_hotpix(sub.get_image())
         if sub.sub_type == 'light':
-            #logger.trace('start calib')
+            logger.trace('start calib')
             Component.get('Calibrator').calibrate(sub)
-            #logger.trace('start aligner')
+            logger.trace('start aligner')
             Component.get('Aligner').process(sub)
-            #logger.trace('end aligner')
+            logger.trace('end aligner')
         elif sub.sub_type == 'flat':
             Component.get('Calibrator').calibrate_flat(sub)

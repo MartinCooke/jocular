@@ -42,7 +42,7 @@ Builder.load_string(
         markup: True
         halign: 'left'
         text_size: self.size
-        color: app.lowlight_color
+        color: [.5, .5, .5, .7] # app.lowlight_color
         # font_size: app.info_font_size
         font_size: app.form_font_size
         background_color: .6, 0, .6, 0
@@ -54,9 +54,11 @@ Builder.load_string(
         markup: True
         halign: 'left'
         text_size: self.size
-        color: app.lowlight_color
+        # color: app.lowlight_color
+        color: [.5, .5, .5, .7] # app.lowlight_color
         # font_size: app.info_font_size
         font_size: app.form_font_size
+        #font_size: '16sp'
         background_color: .6, 0, .6, 0
         width: dp(250)
         text: '{:}'.format(root.value)
@@ -129,7 +131,7 @@ Builder.load_string(
             a: 1 if self.visible else 0
         Line:
             points: [self.sx - self.length/2, self.sy, self.sx + self.length/2, self.sy]
-            width: 3
+            width: 1
     color: 1, .4, .4, 1
 
 '''

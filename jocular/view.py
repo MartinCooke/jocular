@@ -119,7 +119,8 @@ class View(Component, Settings):  # must be in this order
     min_zoom = NumericProperty(.5)
     max_zoom = NumericProperty(30)
     zoom_power = NumericProperty(1)
- 
+    continuous_update = BooleanProperty(True)
+
     configurables = [
         ('flip_UD', {
             'name': 'flip up-down?', 
@@ -129,6 +130,10 @@ class View(Component, Settings):  # must be in this order
             'name': 'flip left-right?', 
             'switch': '',
             'help': 'Flip image in the horizontal plane'}),
+        ('continuous_update', {
+            'name': 'update continuously?', 
+            'switch': '',
+            'help': 'Controls update display continuously by default (takes effect on restart)'}),
         ('min_zoom', {
             'name': 'minimum zoom', 'float': (.2, 1, .1),
             'fmt': '{:.1f} times',

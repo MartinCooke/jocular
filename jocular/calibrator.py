@@ -265,7 +265,7 @@ class Calibrator(Component, Settings):
         flat = self.get_flat(sub)
         bias = self.get_bias(sub)
         
-        logger.debug('D {:} F {:} B {:}'.format(dark, flat, bias))
+        logger.trace('D {:} F {:} B {:}'.format(dark, flat, bias))
 
         D = self.get_master(dark)
         F = self.get_master(flat)
@@ -309,6 +309,9 @@ class Calibrator(Component, Settings):
         im[im > 1] = 1
 
         sub.image = im
+
+        logger.trace('calibration complete')
+
         applied = ' '.join(list(sub.calibrations))
         if applied:
             self.info(applied)

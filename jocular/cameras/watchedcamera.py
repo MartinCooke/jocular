@@ -166,8 +166,8 @@ class WatchedCamera(GenericCamera):
 					s = Image(path, check_image_data=True)
 				except ImageNotReadyException as e:
 					# give it another chance on next event cycle
-					# logger.debug('image not ready {:} ({:})'.format(path, e))
-					pass
+					logger.debug('image not ready {:} ({:})'.format(path, e))
+					# pass
 				except Exception as e:
 					logger.exception('other issue {:} ({:})'.format(path, e))
 					toast('Invalid fits file')

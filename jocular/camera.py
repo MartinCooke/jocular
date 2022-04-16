@@ -55,7 +55,6 @@ class Camera(Component, EventDispatcher, DeviceFamily):
 		if self.connected():
 			return self.device.get_sensor_temperature()
 
-
 	def set_ROI(self, ROI):
 		if self.connected():
 			self.device.set_ROI(ROI)

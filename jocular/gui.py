@@ -165,6 +165,7 @@ class GUI(FloatLayout):
 		except:
 			self.config = {}
 
+
 	def draw(self, dt=None):
 
 		# construct interface for the first time; we redraw in the order originally drawn
@@ -251,9 +252,9 @@ class GUI(FloatLayout):
 			'Capture', 'CaptureScript', 'Observations', 'ObservingList', 
 			'Monochrome', 'MultiSpectral', 'ObjectIO', 'Aligner',
 			'DeviceManager', 'Camera', 'FilterWheel', 
-			'ExposureChooser', 'FilterChooser', 'SettingsManager',
+			'ExposureChooser',  'FilterChooser', 'SettingsManager',
 			'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 'Annotator',
-			'Tooltip']:
+			'Tooltip', 'Info']:
 			Component.get(c)
 
 		# bind status to components
@@ -359,7 +360,6 @@ class GUI(FloatLayout):
 				w = Ring(pos=orig, radius=rad, thickness=Metrics.get('outer_width')/2,
 					grey=.13, start_angle=angle360(min(min_a, max_a)), 
 					end_angle=angle360(max(min_a, max_a)))
-				#self.gui[_name()] = {
 				self.gui['_new{:}'.format(self.new_element_count)] = {
 					'control_type': 'Ring', 
 					'widget': w,
@@ -369,7 +369,8 @@ class GUI(FloatLayout):
 				self.add_widget(w)
 
 			w = JLever(angles=angle, origin=orig, radius=rad, value=initial_value, 
-					values=spec['values'], 
+					values=spec['values'],
+					continuous_update=spec.get('continuous', None),
 					text=spec.get('text', jicon('lever', font_size=19)),
 					radial=spec.get('radial', True))
 
@@ -381,7 +382,6 @@ class GUI(FloatLayout):
 						radial=spec.get('radial', True), text=vstr, 
 						angle=w.value_to_angle(v), origin=orig, radius=rad)
 					self.add_widget(lab) 
-					#self.gui[_name()] = {
 					self.gui['_new{:}'.format(self.new_element_count)] = {
 						'control_type': 'JLabel', 
 						'widget': lab,

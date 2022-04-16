@@ -52,7 +52,7 @@ class DeviceManager(Component, Panel):
 
 		self.contents.clear_widgets()
 		self.header.clear_widgets()
-		self.contents.width = dp(600)
+		self.contents.width = dp(800) # was 600
 
 		# top spinner
 		hb = BoxLayout(size_hint=(1, None), height=dp(32))

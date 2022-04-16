@@ -201,6 +201,7 @@ class DSO_panel(MDBoxLayout):
         self.dso = dso
         super().__init__(**kwargs)
 
+
 class DSO(Component):
 
     save_settings = ['show_DSO']
@@ -220,6 +221,7 @@ class DSO(Component):
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
     show_DSO = BooleanProperty(False)
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

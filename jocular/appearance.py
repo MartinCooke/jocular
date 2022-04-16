@@ -21,6 +21,7 @@ class Appearance(Component, Settings):
     transparency = NumericProperty(0)
     colour_saturation = NumericProperty(60)
     tooltip_delay = NumericProperty(2)
+    # brightness = NumericProperty(100)
 
     configurables = [
         ('highlight_color', {
@@ -106,3 +107,8 @@ class Appearance(Component, Settings):
 
     def on_tooltip_delay(self, *args):
         self.app.tooltip_delay = self.tooltip_delay
+
+    # def on_brightness(self, *args):
+    #     self.lowlight_color = self.brightness
+        # self.hint_color = self.brightness
+

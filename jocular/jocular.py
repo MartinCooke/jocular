@@ -77,7 +77,7 @@ class Jocular(MDApp):
         elif name == 'example_captures':
             return os.path.join(self.directory, 'example_captures')
 
-        elif name in {'configurables.json', 'gui.json', 'object_types.json'}:
+        elif name in {'configurables.json', 'gui.json', 'object_types.json', 'filter_properties.json'}:
             return os.path.join(self.directory, 'resources', name)
 
         # jocular settings
@@ -176,6 +176,8 @@ class Jocular(MDApp):
     # reset showing to main when any table is hidden
     def table_hiding(self, *args):
         self.showing = 'main'
+
+
 
 
 def startjocular():
