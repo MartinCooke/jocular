@@ -3,6 +3,7 @@
 
 import math
 import numpy as np
+import json
 from functools import partial
 from loguru import logger
 
@@ -30,16 +31,16 @@ Builder.load_string('''
             size: self.width, self.height
         Color:
             rgb: self.filter_color if self.state == 'down' else (.8, .8, .8)
-            a: .7 if self.state == 'down' else 0
+            a: .7 if self.state == 'down' else .2
         Ellipse:
             pos: self.x + 2, self.y + 2
             size: self.width - 5, self.height - 5
     markup: True
-    color: (0, 0, 0, 1) if self.state == 'down' else (.6, .6, .6, 1)
+    color: (.2, .2, .2, 1) if self.state == 'down' else (.6, .6, .6, 1)
     disabled: self.text == '-'
     background_color: 0, 0, 0, 0
     size: dp(70), dp(70)
-    font_size: '24sp' if self.state == 'down' else '18sp'
+    font_size: '20sp' if self.state == 'down' else '16sp'
     size_hint: None, None
 ''')
 
@@ -50,22 +51,15 @@ class FilterToggle(ToggleButton):
 
 class FilterChooser(Panel, Component):
 
-    filter_properties = {
-        "L": {"color": (.8, .8, .8), "bg_color": (0.1, 0.1, 0.1, 0.3)},
-        "R": {"color": (1, .2, .2), "bg_color": (1, 0, 0, 0.6)},
-        "G": {"color": (.2, 1, .2), "bg_color": (0, 1, 0, 0.5)},
-        "B": {"color": (.3, .3, 1), "bg_color": (0, 0, 1, 0.5)},
-        "dark": {"color": (0.2, 0.2, 0.2), "bg_color": (0, 0, 0, 0)},
-        "Ha": {"color": (0.8, 0.3, 0.3), "bg_color": (1, 0.6, 0.6, 0.5)},
-        "OIII": {"color": (0.2, 0.6, 0.8), "bg_color": (0, 0, 0, 0)},
-        "SII": {"color": (0.1, 0.8, 0.4), "bg_color": (0, 0, 0, 0)},
-        "spec": {"color": (0.7, 0.6, 0.2), "bg_color": (0, 0, 0, 0)},
-        "-": {"color": (0.15, 0.15, 0.15), "bg_color": (0, 0, 0, 0)},
-    }
-
     def __init__(self, **args):
         super().__init__(**args)
         self.app = App.get_running_app()
+        try:
+            with open(self.app.get_path('filter_properties.json'), 'r') as f:
+                self.filter_properties = json.load(f)
+        except Exception as e:
+            logger.error(e)
+            self.filter_properties = {}
         self.nsubs = 4
         self.build()
 
@@ -188,8 +182,13 @@ class FilterChooser(Panel, Component):
     def order_by_transmission(self, filts):
         if type(filts) != list:
             filts = [filts]
-        t_order = ['SII', 'OIII', 'Ha', 'B', 'G', 'R', 'L']
-        return [f for f in t_order if f in filts]
+        trans = {f: self.filter_properties[f]['trans'] for f in filts}
+        return sorted(trans, key=trans.get)
+        #t_order = ['SII', 'OIII', 'Ha', 'B', 'G', 'R', 'L']
+        #return [f for f in t_order if f in filts]
+
+    def get_filter_types(self):
+        return list(self.filter_properties.keys())
 
     def on_touch_down(self, touch):
         handled = super().on_touch_down(touch)
