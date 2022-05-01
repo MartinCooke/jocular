@@ -1,80 +1,57 @@
-''' Star extraction, centroid estimation and alignment.
+''' Alignment. 
+    (Star extraction and property estimation now done in stars.py)
 '''
 
 import warnings
 import numpy as np
 
-from skimage.transform import downscale_local_mean
-
 from skimage.measure import ransac
 from skimage.transform import EuclideanTransform, matrix_transform, warp
-from skimage.feature import blob_dog, blob_log, blob_doh
 
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from loguru import logger
 
 from jocular.component import Component
 from jocular.settingsmanager import Settings
-from jocular.gradient import estimate_background
+from jocular.stars import star_extraction, best_threshold
 
-
-def star_centroids(im, stars, r=8):
-    ''' Compute accurate locations for stars based on star pixel coords
-        given in stars. Takes c 2-10 ms for a Lodestar image depending on star count
-    '''
-
-    logger.trace('starting star centroids')
-    grid_x, grid_y = np.meshgrid(np.arange(2 * r + 1), np.arange(2 * r + 1))
-    mask = np.sqrt((r - grid_x)**2 + (r - grid_y)**2) <= r
-
-    rows, cols = im.shape
-    star_data = np.zeros((len(stars), 3))
-    ptr = 0
-    for x, y in stars:
-        x, y = int(x), int(y)
-        if (x >= r) and (y >= r) and (x < (cols - r)) and (y < (rows - r)):
-            imfrag = im[(y - r):(y + r + 1), (x - r):(x + r + 1)].copy()
-            
-            # mean intensity within masked circle
-            mean_intensity = np.mean(imfrag[mask])
-    
-            # star pixels are in mask and above mean intensity
-            candidates = mask & (imfrag > mean_intensity)
-    
-            if candidates.any():
-                # estimate background and subtract from image
-                mean_background = np.mean(imfrag[np.logical_not(candidates)])
-                imfrag_sub = candidates * (imfrag - mean_background)       
-                wim = np.sum(imfrag_sub)
-                cx = np.sum(grid_x * imfrag_sub) / wim
-                cy = np.sum(grid_y * imfrag_sub) / wim
-                star_data[ptr, :] = [cx + x - r, cy + y - r, np.mean(imfrag_sub)]
-                ptr += 1                    
-
-    logger.trace('-- done')
-    
-    return star_data[:ptr, :]
+from photutils.detection import DAOStarFinder
+from astropy.stats import mad_std
+from photutils.aperture import aperture_photometry, CircularAperture, ApertureStats
 
 
 class Aligner(Component, Settings):
 
     do_align = BooleanProperty(True)
-    smooth_edges = BooleanProperty(False)
+    use_photutils = BooleanProperty(True)
+    fwhm_method = StringProperty('Moffat')
     ideal_star_count = NumericProperty(30)
-    min_sigma = NumericProperty(3)
-    max_sigma = NumericProperty(5)
-    star_regions = StringProperty('binned 1x1')
+    star_sigmas = NumericProperty(3)
+    photutils_fwhm = NumericProperty(4)
+    downsample = StringProperty('no')
 
     configurables = [
         ('do_align', {'name': 'align?', 'switch': '',
             'help': 'Switching align off can help diagnose tracking issues'}),
+        ('use_photutils', {'name': 'use photutils?', 'switch': '',
+            'help': 'use photutils for centroiding instead of home-grown method'}),
+        ('star_sigmas', {'name': 'sigmas above background', 'float': (2, 10, 1),
+            'help': '3 is good, 5 is faster (used for photutils only)',
+            'fmt': '{:.0f} sigmas'}),
+        ('photutils_fwhm', {'name': 'fwhm (in pixels) to use in star extraction', 'float': (2, 10, 1),
+            'help': '4 is good for Lodestar',
+            'fmt': '{:.0f} pixels'}),
+        ('fwhm_method', {
+            'name': 'FWHM method', 
+            'options': ['count', 'Moffat', 'Gaussian'],
+            'help': 'count is fastest and most robust, Moffat and Gaussian are traditional/slower'}),
         ('ideal_star_count', {'name': 'ideal number of stars', 'float': (5, 50, 1),
             'help': 'Find an appropriate threshold to detect this many stars on the first sub',
             'fmt': '{:.0f} stars'}),
-        ('star_regions', {
+        ('downsample', {
             'name': 'extract stars using image', 
             'options': ['binned 1x1', 'binned 2x2', 'binned 3x3', 'binned 4x4'],
-            'help': 'for large images will be faster to extract using binning'}),
+            'help': 'for large images, much faster to extract using binning'})
         ]
 
     def __init__(self):
@@ -95,10 +72,10 @@ class Aligner(Component, Settings):
         self.info('reset')
     
     @logger.catch()
-    def align(self, sub, centroids):
-        # Align sub to current keystars, updating its status.
+    def do_alignment(self, sub, centroids):
+        # align sub to current keystars, updating its status.
         
-        logger.trace('start alignment')
+        logger.trace('. align')
 
         min_inliers = 4
 
@@ -143,8 +120,7 @@ class Aligner(Component, Settings):
             else:
                 sub.status = 'nalign'
 
-
-            logger.trace('done alignment')
+            logger.trace('... done alignment')
 
             # return inverse transform of centroids (for platesolver)
             if self.warp_model:
@@ -153,140 +129,148 @@ class Aligner(Component, Settings):
 
 
 
+    def extract_stars_photutils(self, im):
+        ''' extract stars and magnitudes via photutils
+            80ms for Lodestar-sized image, including read for threshold 3 * sigma
+            64ms for 5 * sigma, 47ms for thresh 10 * sigma
+            50ms if we only keep a few
+        '''
+
+        logger.trace('starting extract stars photutils')
+
+        # subtract rough estimate of background
+        imc = im.copy()
+        imc = imc - np.median(imc)
+        # im -= np.median(im)
+        # find median absolute deviation
+        bkg_sigma = mad_std(imc)
+        # detect stars using DAOFIND, keeping 'keep' brightest
+        daofind = DAOStarFinder(
+            fwhm=self.photutils_fwhm, 
+            threshold=self.star_sigmas * bkg_sigma, 
+            brightest=self.ideal_star_count)
+        sources = daofind(imc)
+        positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
+        logger.trace('   done centroids')
+
+        # this is a temporary approach: r = aperture radius should really be
+        # estimated based on FWHM, which in turn is based on building a 
+        # PSF model from brighter stars... we are just doing this to
+        # provide a quick FWHM estimate, but it is rather circular...
+
+        apertures = CircularAperture(positions, r=3.)
+        aperstats = ApertureStats(imc, apertures)
+        logger.trace('   done aperture stats')
+
+        # when we do aperture phot, use this
+        # phot_table = aperture_photometry(imc, apertures)
+        return np.transpose((sources['xcentroid'], sources['ycentroid'], sources['flux'], aperstats.fwhm ))
+
+
     def extract_stars(self, im):
-        ''' Extracts star coordinates. Return array of x, y coordinates.
+        ''' Extracts star coordinates, flux and FWHM estimates.
         '''
 
-        # if this is the first sub in the stack (perhaps after shuffle), 
-        # find best intensity threshold
+        logger.trace('. extract stars')
+        dfac = int(self.downsample[-1])
         if self.keystars is None:
-            self.star_intensity, stars = self.find_intensity_threshold(im)
-        else:
+            # find best intensity threshold
+            self.star_intensity, nstars, nits, converged = best_threshold(
+                im, 
+                target_stars=self.ideal_star_count, 
+                downsample=dfac)
+            logger.info('threshold {:6.4f} produces {:} stars after {:} iterations (converged: {:})'.format(
+                self.star_intensity, nstars, nits, converged))
 
-            # extract using this threshold
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore')
-                logger.trace('starting extraction')
-                stars = self._extract_stars(im, threshold=self.star_intensity)
-                # stars = blob_log(im, 
-                #     min_sigma=self.min_sigma, 
-                #     max_sigma=self.max_sigma, 
-                #     threshold=self.star_intensity, 
-                #     overlap=0)[:, [1, 0]]
-                logger.trace('done extraction')
-
-        # new for v2: order stars by decreasing intensity
-        # better to do this using mags after computing centroids (to do)
-        intens = [im[int(y), int(x)] for x, y in stars]
-        return np.array(stars)[[i for (v, i) in sorted((v, i) for (i, v) in enumerate(intens))][::-1]]
+        stardata = star_extraction(
+            im, 
+            threshold=self.star_intensity, 
+            downsample=dfac,
+            fwhm_method=self.fwhm_method)
+        nstars, _ = stardata.shape
+        logger.info('... extracted {:} stars'.format(nstars))
+        return stardata
 
 
-    def _extract_stars(self, im, threshold=None):
-        ''' Extract stars from all or part of an image (the latter for
-            speedup of large images)
-            scikit-image provides 3 blob detectors; blob_dog is adequate
-            here (fast and works well)l; blob_log and blob_doh are slower
+    def extract_stars_for_platesolver(self, im):
+        ''' Potentially extract stars using different criteria from those required
+            for alignment; for now we'll use same criteria
+            Scope for optimisation e.g. if im is a sub that we have already processed,
+            pick up centroids already done
+
+        BUG: if we use photutils for star extraction we end up with no star_intensity set
+
 
         '''
-
-        try:
-            binfac = int(self.star_regions[-1])
-        except:
-            binfac = 1
-
-        if binfac > 1:
-            logger.trace('starting downscale')
-            im = downscale_local_mean(im, (binfac, binfac))
-            logger.trace('ending downscale')
-            #im = rescale(im, 1 / binfac, anti_aliasing=False, mode='constant', multichannel=False)
-        stars = blob_dog(im, 
-                    min_sigma=self.min_sigma, 
-                    max_sigma=self.max_sigma, 
-                    threshold=threshold, 
-                    overlap=0)[:, [1, 0]]
-        if binfac > 1:
-            stars = [[binfac*x, binfac*y] for x, y in stars]
-        return stars
+        dfac = int(self.downsample[-1])
+        if self.star_intensity is None:
+            # find best threshold; we'll use same ideal star count
+            self.star_intensity, nstars, nits, converged = best_threshold(
+                im, 
+                target_stars=self.ideal_star_count, 
+                downsample=dfac)
+            logger.info('threshold {:6.4f} produces {:} stars after {:} iterations (converged: {:})'.format(
+                self.star_intensity, nstars, nits, converged))
+        return star_extraction(
+            im, 
+            threshold=self.star_intensity, 
+            downsample=dfac)
 
 
-    def get_intensity_threshold(self):
-        ''' used by platesolver to find current star intensity threshold
+    def align(self, sub):
+        ''' called by Stacker to extract stars and align sub; hot pixel removal will
+            already have been applied before this method is called
         '''
-        if self.star_intensity is not None:
-            return self.star_intensity
-        return .001
-
-    def find_intensity_threshold(self, im):
-        ''' Binary search to find intensity threshold for star extraction 
-            producing ideal star count 
-        '''
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            t0 , _ = estimate_background(im)
-            # sometimes can fail due to background estimate being zero or too large
-            if t0 < .001:
-                t0 = .1
-            if t0 > .5:
-                t0 = .45
-            crit = 20 / 100  # stop when within 20%
-            lo, hi = 0, 1
-            est = t0
-            its = 0
-            maxits = 8
-            while True and (its < maxits):
-                its += 1
-                # nstars = len(blob_dog(im, 
-                #     min_sigma=self.min_sigma, 
-                #     max_sigma=self.max_sigma, 
-                #     threshold=est, 
-                #     overlap=0)[:, [1, 0]])
-                stars = self._extract_stars(im, threshold=est)
-                nstars = len(stars)
-
-                # stop when within crit percent of required
-                if abs(nstars - self.ideal_star_count) / self.ideal_star_count < crit:
-                    break
-                if nstars < self.ideal_star_count:
-                    hi = est
-                else:
-                    lo = est
-                est = (hi + lo) / 2
-
-        logger.info('bkgd {:6.4f} threshold {:6.4f} after {:} iterations'.format(t0, est, its))
-        return est, stars
-
-    def process(self, sub):
 
         if not self.do_align:
             return
 
-        # extract stars & compute centroids before aligning, if possible
-        logger.trace('. get image')
+        # extract stars & compute centroids before aligning
         im = sub.get_image()
-        logger.trace('. extract stars')
-        raw_stars = self.extract_stars(im)
-        logger.trace('. centroids')
-        centroids = star_centroids(im, raw_stars)
+
+        # star data is N x 4 array of cx, cy, flux and fwhm organised
+
+        if self.use_photutils:
+            stardata = self.extract_stars_photutils(im)
+        else:
+            stardata = self.extract_stars(im)
+
+        nstars, _ = stardata.shape
+        sub.centroids = stardata[:, :2]
+        sub.flux = stardata[:, 2]
+        mags = stardata[:, 2]
+        fwhm = stardata[:, 3]
+
+        # centroids = star_centroids(im, raw_stars, compute_FWHM=self.compute_FWHM, FWHM_method=self.FWHM_method)
+        # sub.fwhm = np.median(centroids[:, 3])
+
+        # I don't think I need to store centroids any more
 
         # store centroids for later platesolving
-        sub.centroids = centroids
-        self.starcounts += [len(centroids)]
+        #sub.centroids = stardata[:, :2]
 
-        if len(centroids) == 0:
+        #sub.flux = np.zeros(nstars)
+
+        # sub.flux = stardata[:, 2]
+        self.starcounts += [nstars]
+
+        if nstars == 0:
             sub.status = 'nalign'
-        elif self.keystars is None:
-            # first sub with stars so save keystars & mags (latter for platesolving)
-            self.keystars = centroids[:, :2]
-            self.mags = centroids[:, 2]
-            self.align_count = 1
+            sub.fwhm = 0
         else:
-            logger.trace('. align')
-            warped = self.align(sub, centroids[:, :2])
-            if warped is not None:
-                sub.centroids[:, :2] = warped
-            # self.align(sub, centroids[:, :2])
-            logger.trace('. aligned finish')
+            sub.fwhm = np.median(fwhm) # stardata[:, 3])
+            print(sub.fwhm)
+            if self.keystars is None:
+                # first sub with stars so save keystars & mags (latter for platesolving)
+                self.keystars = sub.centroids # stardata[:, :2]
+                self.mags = mags # stardata[:, 2]
+                self.align_count = 1
+            else:
+                warped = self.do_alignment(sub, sub.centroids) # stardata[:, :2])
+                if warped is not None:
+                    sub.centroids = warped
+                    # sub.centroids[:, :2] = warped
+                logger.trace('. aligned finish')
 
         sc = np.array(self.starcounts)
         self.info('{:}/{:} frames | {:}-{:} stars'.format(
