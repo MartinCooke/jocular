@@ -1,5 +1,7 @@
 # ignore all pdfs in doc and any subdirectory
 doc/**/*.pdf
+docs/build
+docs/guidev4.*
 
 # ignore all *.pyc
 *.pyc
