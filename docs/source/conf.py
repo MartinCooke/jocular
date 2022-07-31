@@ -22,7 +22,7 @@ copyright = '2022, Martin Meredith'
 author = 'Martin Meredith'
 
 # The full version, including alpha/beta/rc tags
-release = '0.5'
+release = '0.5.6.dev2'
 
 
 # -- General configuration ---------------------------------------------------
