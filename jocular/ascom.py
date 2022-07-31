@@ -27,7 +27,7 @@ def connect_to_ASCOM_device(device_type=None, driver=None):
 			device.Connected = True
 			return {
 				'device': device,
-				'status': 'Connected to {:}'.format(device.Name),
+				'status': f'Connected to {device.Name}',
 				'connected': True
 				}
 		except:
@@ -59,12 +59,12 @@ def connect_to_ASCOM_device(device_type=None, driver=None):
 		return {
 			'device': device, 
 			'driver': driver, 
-			'status': 'Connected to {:}'.format(device.Name),
+			'status': f'Connected to {device.Name}',
 			'connected': True
 			}
 	except Exception as e:
 		return {
-			'status': 'Unable to connect to {:}'.format(driver),
+			'status': f'Unable to connect to {driver}',
 			'exception': e,
 			'connected': False
 			}

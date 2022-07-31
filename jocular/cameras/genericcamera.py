@@ -1,6 +1,8 @@
 from jocular.device import Device
 from kivy.properties import StringProperty
+#from jocular.settingsmanager import JSettings
 
+#class GenericCamera(JSettings, Device):
 class GenericCamera(Device):
 
 	family = StringProperty('Camera')

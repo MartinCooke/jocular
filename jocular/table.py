@@ -192,12 +192,15 @@ Builder.load_string('''
             TableLabel:
                 size_hint: None, 1
                 width: dp(120)
-                text: '{:d} of {:d}'.format(root.n_matching, root.n_rows_total)
+                text: f'{root.n_matching:d} of {root.n_rows_total:d}'
 
             BoxLayout:
                 id: _footer_actions
                 height: dp(32)
                 orientation: 'horizontal'
+
+            TableLabel:
+                size_hint: 1, 1
                 
             CButton:
                 width: dp(70)
@@ -212,8 +215,46 @@ Builder.load_string('''
 
 ''')
 
+
+def defaultsplit(x, default):
+    a = x.split()
+    if len(a) == 0:
+        return '', default
+    if len(a) == 1:
+        return a[0], default
+    if a[1].isdigit():
+        return a[0], float(a[1])
+    if a[0].isdigit():
+        return float(a[0]), a[1]
+    return x, default
+
+
+def null_value(v):
+    return (isinstance(v, str) and v.strip() == '') or (isinstance(v, float) and math.isnan(v))
+
+
+def str_to_exp(s):
+    s = str(s)
+    s = s.lower().strip()
+    if len(s) == 0:
+        return 0
+    if s == 'mult':
+        return 1000
+    try:
+        if s.endswith('µs') or s.endswith('us'):
+            return float(s[:-2].strip()) / 1e6
+        if s.endswith('ms'):
+            return float(s[:-2].strip()) / 1000
+        if s.endswith('s'):
+            return float(s[:-1].strip())
+        return float(s)
+    except:
+        return 0
+
+
 class TableFormat:
     pass
+
 
 # header column button (controls sorting)
 class HeaderButton(Button, TableFormat):
@@ -233,23 +274,28 @@ class HeaderButton(Button, TableFormat):
         }
         self.table.sort_column()
 
+
 # ordinary label
 class TableLabel(Label, TableFormat):
     pass
+
 
 # control button at lower of screen
 class CButton(Button, TableFormat):
     pass
 
+
 # ordinary button
 class TableButton(Button, TableFormat):
     pass
+
 
 # ordinary button
 class TableInput(TextInput, TableFormat):
     pass
 
-# table header line i.e. click-to-sort column headers -----------------------
+
+# table header line i.e. click-to-sort column headers ---------------------
 
 class TableHeader(BoxLayout):
 
@@ -261,15 +307,17 @@ class TableHeader(BoxLayout):
         self.add_widget(HeaderButton(size_hint_x=None, width=dp(20), halign='center', 
             table=table, text=' ', column_name='Selected', column_type=str))
 
-        for i, (colname, colprops) in enumerate(table.cols.items()):
-
+        for colname, colprops in table.cols.items():
             width = colprops.get('w', 100)
+            label = colprops.get('label', colname)
             self.add_widget(HeaderButton(
-                text=colname,
+                text=label,
                 size_hint_x=width if width < 2 else None,
                 width=dp(width) if width >= 2 else width,
                 halign=colprops.get('align', 'center'),
-                column_name=colprops.get('field', colname),
+                # was this
+                # column_name=colprops.get('field', colname),
+                column_name=colname,
                 column_type=colprops.get('type', str),
                 sort_type=colprops.get('sort', 'normal'),
                 table=table
@@ -298,13 +346,19 @@ class TableRow(BoxLayout):
 
         for colname, colprops in self.table.cols.items():
 
+            # add name to column props so we can tell which column has been selected
+            # colprops['name'] = colname
+            # if 'field' not in colprops:
+            #     colprops['field'] = colname
+
             width = colprops.get('w', 100)
 
             # input field; any text gets saved to self.data[key][colname]
             if 'input' in colprops:
                 w = TableInput(size_hint_x=width if width < 2 else None,
                     width=dp(width) if width >= 2 else width)
-                w.bind(text=partial(self.input_changed, colprops.get('field', colname)))
+                # w.bind(text=partial(self.input_changed, colprops.get('field', colname)))
+                w.bind(text=partial(self.input_changed, colname))
 
             else:              
                 if 'action' in colprops:
@@ -322,27 +376,31 @@ class TableRow(BoxLayout):
                     shorten_from='right')
 
                 if 'action' in colprops:
-                    w.bind(on_press=self.row_clicked)  # add partial with column name
+                    # w.bind(on_press=partial(self.row_clicked, colprops))  # add partial with column name
+                    w.bind(on_press=partial(self.row_clicked, colname, colprops))  # add partial with column name
 
             self.add_widget(w)
             self.key = None
 
-            self.fields[colprops.get('field', colname)] = w 
+            # self.fields[colprops.get('field', colname)] = w 
+            self.fields[colname] = w 
 
         self.updating = False
 
 
-    def row_clicked(self, *args):
-        # only supports one at present <-- need to fix this using partial
-        for colname, colprops in self.table.cols.items():
-            if 'action' in colprops:
-                colprops['action'](self)
-                return
+    def row_clicked(self, colname, colprops, *args):
+        ''' if an action is registered on click, call action with
+            selected row, column name and value
+        '''
+        if 'action' in colprops:
+            # col = colprops['field']
+            value = self.fields[colname].text
+            colprops['action'](self, colname, value)
 
     # prevent click thru to beneath
     def on_touch_down(self, touch):
         if self.table.hidden:
-            return
+            return False
         handled = super().on_touch_down(touch)
         if self.collide_point(*touch.pos):
             return True
@@ -372,7 +430,8 @@ class TableRow(BoxLayout):
             self.fields['Selected'].disabled = True
 
         for colname, colprops in self.table.cols.items():
-            field = colprops.get('field', colname)
+            #field = colprops.get('field', colname)
+            field = colname
             display_fn = colprops.get('display_fn', str)
             self.fields[field].text = ''
             if not empty and (field in row):
@@ -410,7 +469,8 @@ class SearchBar(BoxLayout):
                 text='',
                 size_hint_x=dp(width) if width < 2 else None,
                 width=dp(width) if width >= 2 else 1,
-                column=colprops.get('field', colname),
+                #column=colprops.get('field', colname),
+                column=colname,
                 table=table,
                 val_fn=colprops.get('val_fn', None),
                 column_type=colprops.get('type', str)
@@ -420,14 +480,18 @@ class SearchBar(BoxLayout):
 
         self.add_widget(CButton(text='clear', width=dp(50), on_press=self.clear_search))
 
-    def clear_search(self, *args):
+
+    def clear_search(self, update_results=True, **args):
         for f in self.filters:
             f.text = ''
-        self.table.search_results = list(self.table.data.keys())
-        self.table.on_search_results()
+        if update_results:
+            self.table.search_results = list(self.table.data.keys())
+            self.table.on_search_results()
+
 
     def resize(self, *args):
         pass
+
 
     def combine_results(self):
         # these two lines ~ 10ms
@@ -435,6 +499,7 @@ class SearchBar(BoxLayout):
         self.table.search_results = list(set.intersection(*l)) # causes update
         # this takes ~ 50ms
         self.table.on_search_results()
+
 
     def reapply_filters(self):
         # called whenever the underlying table data has changed
@@ -447,6 +512,7 @@ class SearchBar(BoxLayout):
 # an individual column filter
 
 # support methods to extract args/operators for filtering operations
+
 def parg(s):
     # parse single arg
     s = s.strip()
@@ -456,11 +522,11 @@ def parg(s):
         rest = s[1:].strip()
         if rest:
             return {s[0]: rest}
-        else:
-            return {}
+        return {}
     except:
         return {}
-    
+
+
 def parse_args(s):
     # parse normal or comma-sep arg
     try:
@@ -483,10 +549,85 @@ def parse_args(s):
     except:
         return {}
 
+
 class SearchBarTextInput(TextInput):
     pass
 
+
+def match_strings(objs, patt):
+    ''' Find strings in dict objs representing a column of
+        objects that match pattern in s. Return just those
+        dict entries that match
+    '''
+
+    # reduce to lower case
+    objs = {k: v.lower() for k, v in objs.items()}
+    patt = patt.lower()
+
+    # use wildcard syntax, and = for exact match
+    if patt[0] == '*':
+        if len(patt) > 1:
+            if patt[-1] == '*':
+                return {k: v for k, v in objs.items() if patt[1:-1] in v}
+            return {k: v for k, v in objs.items() if v.endswith(patt[1:])}
+
+    if patt[0] == '=':
+        return {k: v for k, v in objs.items() if v == patt[1:]}
+
+    if patt[0] == '!':
+        return {k: v for k, v in objs.items() if v != patt[1:]}
+
+    if patt[-1] == '*':
+        patt = patt[:-1]
+    return {k: v for k, v in objs.items() if v.startswith(patt)}
+
+
+def match_numerics(objs, patt, col_type=None, val_fn=None):
+
+    # can use x,y >x, <y =x, !x (not equal)
+    ops = parse_args(patt)
+
+    # check if args can be converted to floats
+    try:
+        ops = {k: float(v) for k, v in ops.items()}
+    except:
+        return objs
+
+    # convert to correct column type (float or int)
+    objs = {k: col_type(v) for k, v in objs.items() if v}
+
+    # check if it is and or an (implicit) or
+    if ('<' in ops) and ('>' in ops) and (ops['<'] < ops['>']):
+        # it is an or
+        comp_value = ops['<']
+        if val_fn is not None:
+            comp_value = val_fn(comp_value)
+        objs1 = {k: v for k, v in objs.items() if v <= comp_value}
+        comp_value = ops['>']
+        if val_fn is not None:
+            comp_value = val_fn(comp_value)
+        objs2 = {k: v for k, v in objs.items() if v >= comp_value}
+        return {**objs1, **objs2}
+
+    # ops is a dict with keys in 
+    #   =, !, >, <
+    for op, comp_value in ops.items():
+        if val_fn is not None:
+            comp_value = val_fn(comp_value)
+        if op == '=':
+            objs = {k: v for k, v in objs.items() if v == comp_value}
+        elif op == '!':
+            objs = {k: v for k, v in objs.items() if v != comp_value}
+        elif op == '>':
+            objs = {k: v for k, v in objs.items() if v >= comp_value}
+        elif op == '<':
+            objs = {k: v for k, v in objs.items() if v <= comp_value}
+
+    return objs
+
+
 class SearchFilter(SearchBarTextInput):
+
 
     def __init__(self, table=None, column=None, column_type=None, val_fn=None, **kwargs):
 
@@ -501,124 +642,178 @@ class SearchFilter(SearchBarTextInput):
         self.filtered = set({})
 
 
-    def on_text(self, instance, value):
-        ''' Applies search filter when user types. We use a flag to indicate if 
-        the search field has ever contained text. If so, when it becomes empty 
-        is is necessary to update the results. Otherwise, we don't update on empty 
-        to avoid multiple identical updates.
+    def on_text(self, instance, patt):
+        ''' Applies search filter when user types. We use a flag 
+            to indicate if the search field has ever contained text. 
+            If so, when it becomes empty is is necessary to update 
+            the results. Otherwise, we don't update on empty to avoid 
+            multiple identical updates. Timing-wise, the search is 
+            pretty fast actually about 30ms for 40k rows; takes longer 
+            to then intersect the results and redraw; could be worth 
+            optimising for large catalogues, but not yet.
+            
+            Allow expressions of the form =x, !x or intervals using 
+            either x,y or >x, <y. If the interval is 'normal' 
+            e.g. 3 < x < 8 then choose x in range [3, 8]; if interval 
+            is exclusive e.g. <3, >10, treat as an 'or' and return
+            objects that satisfy either constraint. This is useful 
+            for situations like hours spanning midnight.
         '''
 
-        ''' Timing-wise, the search is pretty fast actually about 30ms for 40k rows; takes longer to then
-            intersect the results and redraw; could be worth optimising for large catalogues, but not yet
-        '''
+        patt = patt.strip()
 
-
-        value = value.strip()
-
-        if not value:
+        if not patt:
             self.filtered = set(self.table.data.keys())
             if self.has_had_text:
                 self.table.searchbar.combine_results()
             return
 
-        try:
+        self.has_had_text = True
+        col = self.column
 
-            objs = self.table.data
-            col = self.column
-            col_type = self.column_type
+        # create dict of column where it exists
+        objs = {k: v[col] for k, v in self.table.data.items() if col in v}
 
-            if len(value) > 0:
+        if self.column_type == str:
+            objs = match_strings(objs, patt)
 
-                self.has_had_text = True
+        elif self.column_type in [float, int]:
+            objs = match_numerics(
+                objs, 
+                patt, 
+                col_type=self.column_type, 
+                val_fn=self.val_fn)
 
-                # select column where it exists
-                objs = {k: v[col] for k, v in objs.items() if col in v}
+        self.filtered = set(objs.keys())
 
-                if self.column_type == str:
-
-                    objs = {k: v.lower() for k, v in objs.items()}
-                    value = value.lower()
-
-                    # use wildcard syntax, and = for exact match
-                    if value[0] == '*':
-                        if len(value) > 1:
-                            if value[-1] == '*':
-                                objs = {k: v for k, v in objs.items() if value[1:-1] in v}
-                            else:
-                                objs = {k: v for k, v in objs.items() if v.endswith(value[1:])}
-                    elif value[0] == '=':
-                        objs = {k: v for k, v in objs.items() if v == value[1:]}
-                    elif value[0] == '!':
-                        objs = {k: v for k, v in objs.items() if v != value[1:]}
-                    else:
-                        if value[-1] == '*':
-                            value = value[:-1]
-                        objs = {k: v for k, v in objs.items() if v.startswith(value)}
+        # update search results by intersecting with current search results from other columns
+        # also does the redraw so quite expensive
+        self.table.searchbar.combine_results()
 
 
-                elif self.column_type in [float, int]:
 
-                    objs = {k: col_type(v) for k, v in objs.items()}
-                    col = self.column
+    # def on_text_old(self, instance, value):
+    #     ''' Applies search filter when user types. We use a flag 
+    #         to indicate if the search field has ever contained text. 
+    #         If so, when it becomes empty is is necessary to update 
+    #         the results. Otherwise, we don't update on empty to avoid 
+    #         multiple identical updates. Timing-wise, the search is 
+    #         pretty fast actually about 30ms for 40k rows; takes longer 
+    #         to then intersect the results and redraw; could be worth 
+    #         optimising for large catalogues, but not yet.
+    #     '''
 
-                    ''' allow expressions of the form =x, !x or
-                        intervals using either x,y or >x, <y
-                        (or just >x for example). If the interval
-                        is 'normal' e.g. 3 < x < 8 then choose x
-                        in range [3, 8]; if interval is exclusive
-                        e.g. <3, >10, treat as an 'or' and return
-                        objects that satisfy either constraint. This
-                        is useful for situations like hours spanning
-                        midnight
-                    '''
+    #     print(value)
+    #     value = value.strip()
 
-                    # can use x,y >x, <y =x, !x (not equal)
-                    ops = parse_args(value)
-                    for k, v in ops.items():
-                        #ops[k] = self.column_type(v)
-                        ops[k] = float(v)
 
-                    # check if it is and or an (implicit) or
-                    if ('<' in ops) and ('>' in ops) and (ops['<'] < ops['>']):
-                        # it is an or
-                        comp_value = ops['<']
-                        if self.val_fn:
-                            comp_value = self.val_fn(comp_value)
-                        objs1 = {k: v for k, v in objs.items() if v <= comp_value}
-                        comp_value = ops['>']
-                        if self.val_fn:
-                            comp_value = self.val_fn(comp_value)
-                        objs2 = {k: v for k, v in objs.items() if v >= comp_value}
-                        objs = {**objs1, **objs2}
 
-                    else:
-                        # ops is a dict with keys in 
-                        #   =, !, >, <
-                        for op, comp_value in ops.items():
-                            if self.val_fn:
-                                comp_value = self.val_fn(comp_value)
-                            if op == '=':
-                                objs = {k: v for k, v in objs.items() if v == comp_value}
-                            elif op == '!':
-                                objs = {k: v for k, v in objs.items() if v != comp_value}
-                            elif op == '>':
-                                objs = {k: v for k, v in objs.items() if v >= comp_value}
-                            elif op == '<':
-                                objs = {k: v for k, v in objs.items() if v <= comp_value}
+    #     if not value:
+    #         self.filtered = set(self.table.data.keys())
+    #         if self.has_had_text:
+    #             self.table.searchbar.combine_results()
+    #         return
 
-            self.filtered = set(objs.keys())
+    #     try:
 
-            # update search results by intersecting with current search results from other columns
-            # also does the redraw so quite expensive
-            self.table.searchbar.combine_results()
+    #         objs = self.table.data
+    #         col = self.column
+    #         col_type = self.column_type
 
-        except Exception as e:
-            pass
+    #         if len(value) > 0:
+
+
+    #             self.has_had_text = True
+
+    #             # select column where it exists
+    #             objs = {k: v[col] for k, v in objs.items() if col in v}
+
+    #             if self.column_type == str:
+
+    #                 objs = {k: v.lower() for k, v in objs.items()}
+    #                 value = value.lower()
+
+    #                 # use wildcard syntax, and = for exact match
+    #                 if value[0] == '*':
+    #                     if len(value) > 1:
+    #                         if value[-1] == '*':
+    #                             objs = {k: v for k, v in objs.items() if value[1:-1] in v}
+    #                         else:
+    #                             objs = {k: v for k, v in objs.items() if v.endswith(value[1:])}
+    #                 elif value[0] == '=':
+    #                     objs = {k: v for k, v in objs.items() if v == value[1:]}
+    #                 elif value[0] == '!':
+    #                     objs = {k: v for k, v in objs.items() if v != value[1:]}
+    #                 else:
+    #                     if value[-1] == '*':
+    #                         value = value[:-1]
+    #                     objs = {k: v for k, v in objs.items() if v.startswith(value)}
+
+
+    #             elif self.column_type in [float, int]:
+
+    #                 objs = {k: col_type(v) for k, v in objs.items()}
+    #                 col = self.column
+
+    #                 ''' allow expressions of the form =x, !x or
+    #                     intervals using either x,y or >x, <y
+    #                     (or just >x for example). If the interval
+    #                     is 'normal' e.g. 3 < x < 8 then choose x
+    #                     in range [3, 8]; if interval is exclusive
+    #                     e.g. <3, >10, treat as an 'or' and return
+    #                     objects that satisfy either constraint. This
+    #                     is useful for situations like hours spanning
+    #                     midnight
+    #                 '''
+
+    #                 # can use x,y >x, <y =x, !x (not equal)
+    #                 ops = parse_args(value)
+    #                 for k, v in ops.items():
+    #                     #ops[k] = self.column_type(v)
+    #                     ops[k] = float(v)
+
+    #                 # check if it is and or an (implicit) or
+    #                 if ('<' in ops) and ('>' in ops) and (ops['<'] < ops['>']):
+    #                     # it is an or
+    #                     comp_value = ops['<']
+    #                     if self.val_fn:
+    #                         comp_value = self.val_fn(comp_value)
+    #                     objs1 = {k: v for k, v in objs.items() if v <= comp_value}
+    #                     comp_value = ops['>']
+    #                     if self.val_fn:
+    #                         comp_value = self.val_fn(comp_value)
+    #                     objs2 = {k: v for k, v in objs.items() if v >= comp_value}
+    #                     objs = {**objs1, **objs2}
+
+    #                 else:
+    #                     # ops is a dict with keys in 
+    #                     #   =, !, >, <
+    #                     for op, comp_value in ops.items():
+    #                         if self.val_fn:
+    #                             comp_value = self.val_fn(comp_value)
+    #                         if op == '=':
+    #                             objs = {k: v for k, v in objs.items() if v == comp_value}
+    #                         elif op == '!':
+    #                             objs = {k: v for k, v in objs.items() if v != comp_value}
+    #                         elif op == '>':
+    #                             objs = {k: v for k, v in objs.items() if v >= comp_value}
+    #                         elif op == '<':
+    #                             objs = {k: v for k, v in objs.items() if v <= comp_value}
+
+    #         self.filtered = set(objs.keys())
+
+    #         # update search results by intersecting with current search results from other columns
+    #         # also does the redraw so quite expensive
+    #         self.table.searchbar.combine_results()
+
+    #     except Exception as e:
+    #         logger.warning(e)
 
 #-------------------------------------------------------------------------------------------
 # Main Table class
 
 class Table(FloatLayout):
+
 
     n_rows = NumericProperty(0)      # num visible rows
     n_matching = NumericProperty(0)  # number matching search/filter criteria
@@ -628,24 +823,36 @@ class Table(FloatLayout):
     description = StringProperty('')
     hidden = BooleanProperty(True)
 
-    def __init__(self, size=None, data=None, cols=None, name='', 
-        actions=None, controls=None,
-        description='',
-        update_on_show=True, on_show_method=None, on_hide_method=None, 
-        initial_sort_column=None, initial_sort_direction=None, **kwargs):
 
-        logger.debug('Building {:}'.format(name))
+    def __init__(self, 
+        size=None, 
+        data=None, 
+        cols=None, 
+        name='', 
+        actions=None, 
+        controls=None,
+        description='',
+        update_on_show=True, 
+        on_show_method=None, 
+        on_hide_method=None, 
+        initial_sort_column=None, 
+        reverse_initial_sort=False, 
+        **kwargs):
+
+        logger.debug(f'Building {name}')
         self.initialising = True  # to prevent redraw
         super().__init__(**kwargs)
 
         self.data = data
         self.n_rows_total = len(self.data)   # need to ensure this is kept updated
         self.cols = cols
+        # added in v0.6
+        self.rows = []
+
         self.name = name
         self.description = description
 
-        # user can either provide a set of button labels and method calls
-        # via actions
+        # user either provides a set of button labels and associated actions
         self.actions = actions
 
         # or (new in v0.3) a widget that is handled externally to table
@@ -656,7 +863,8 @@ class Table(FloatLayout):
         self.on_show_method = on_show_method
         self.on_hide_method = on_hide_method
 
-        self.initial_sort_direction = initial_sort_direction
+        self.reverse_initial_sort = reverse_initial_sort
+
         if initial_sort_column is not None:
             if initial_sort_column in cols:
                 vals = cols[initial_sort_column]
@@ -673,16 +881,20 @@ class Table(FloatLayout):
         self.initialising = False  # now allow redraw
         self.size = Window.size
         self.redraw()
-        # the redraw takes the time
         logger.debug('built')
+
+
+    def reset_filters(self):
+        ''' called by client
+        '''
+        if hasattr(self, 'searchbar'):
+            self.searchbar.clear_search(update_results=False)
 
 
     def redraw(self, *args):
 
         if self.initialising:
             return
-
-        # t0 = time.time()
 
         self.redrawing = True
 
@@ -713,9 +925,12 @@ class Table(FloatLayout):
 
         # about 300 ms for DSO table
         self.footer_actions.clear_widgets()
+        self.actions_map = {}
         if self.actions:
             for k, v in self.actions.items():
-                self.footer_actions.add_widget(CButton(text=k, on_press=v))
+                but = CButton(text=k, on_press=v)
+                self.footer_actions.add_widget(but)
+                self.actions_map[k] = but
 
         elif self.controls:
             self.footer_actions.add_widget(self.controls)
@@ -725,8 +940,8 @@ class Table(FloatLayout):
         # about 100 ms for DSO table
         self.on_search_results()
 
-        if self.initial_sort_direction is not None:
-            self.sort_column(reverse=self.initial_sort_direction)
+        #if self.initial_sort_direction is not None:
+        self.sort_column(reverse=self.reverse_initial_sort)
 
 
     def on_search_results(self, *args):
@@ -739,6 +954,7 @@ class Table(FloatLayout):
         self.sort_column(reverse=False)
         self.update_display()
 
+
     def update(self, *args):
         # performs immediate update of table contents following a change
         # typically called on show and also from clients who make changes to data
@@ -747,6 +963,7 @@ class Table(FloatLayout):
         self.n_rows_total = len(self.data)
         if hasattr(self, 'searchbar'):
             self.searchbar.reapply_filters()
+
 
     def update_display(self, *args): 
         # populate screen cells with current data
@@ -759,10 +976,11 @@ class Table(FloatLayout):
             if r in self.data:
                 self.rows[i].update_row(self.data[r], key=r)
             else:
-                logger.warning('cannot find {:} in table'.format(r))
+                logger.warning(f'cannot find {r} in table')
 
         for j in range(last_row - self.current_row, self.n_rows):  # clear rest
             self.rows[j].update_row(self.empty_row, empty=True)
+
 
     def show(self, *args):
 
@@ -784,6 +1002,7 @@ class Table(FloatLayout):
 
         self.hidden = False
 
+
     def hide(self, *args):
 
         self.unbind(size=self.redraw)
@@ -793,65 +1012,55 @@ class Table(FloatLayout):
         self.size_on_hide = self.size.copy() # don't use size as it is a reference
         self.hidden = True
 
+
     def on_current_row(self, *args):
         self.update_display()
+
 
     def select_all(self, *args):
         self.selected = set(self.search_results)
         self.update_display()
 
+
     def deselect_all(self, *args):
         self.selected = set({})
         self.update_display()
+
 
     def select(self, to_select):
         self.selected = set(to_select)
         self.update_display()
 
+
     def export(self, but):
 
         cols = self.cols.keys()
         when = datetime.now().strftime('%d_%b_%y_%H_%M')
-
         path = os.path.join(App.get_running_app().get_path('exports'), 
-            '{:}_{:}.csv'.format(self.name.replace(' ','_'), when))
+            f"{self.name.replace(' ','_')}_{when}.csv")
         with open(path, 'w') as f:
             f.write(','.join(cols) + '\n')
-            cols = [v.get('field', k) for k, v in self.cols.items()]
             for s in self.search_results:
                 sd = self.data[s]
                 f.write(','.join([str(sd.get(c,'')).replace('\n', ' ') for c in cols]))
                 f.write('\n')
-        toast('Exported to {:}'.format(path), duration=3)
+        toast(f'Exported to {path}', duration=3)
+
 
     def get_selected(self):
         return self.selected
 
+
     def on_touch_down(self, touch):
         if self.hidden:
-            return
+            return False
         handled = super().on_touch_down(touch)
         if self.collide_point(*touch.pos):
             return True
         return handled
 
+
     def sort_column(self, reverse=True):
-
-        def defaultsplit(x, default):
-            a = x.split()
-            if len(a) == 0:
-                return '', default
-            elif len(a) == 1:
-                return a[0], default
-            elif a[1].isdigit():
-                return a[0], float(a[1])
-            elif a[0].isdigit():
-                return float(a[0]), a[1]
-            else:
-                return x, default
-
-        def null_value(v):
-            return (isinstance(v, str) and v.strip() == '') or (isinstance(v, float) and math.isnan(v))
 
         if self.initialising or self.redrawing:
             return
@@ -898,6 +1107,11 @@ class Table(FloatLayout):
                 fmt = sort_type['DateFormat']
                 x = {k: datetime.strptime(v, fmt) for k, v in x.items()}
                 sort_index = [i for i, j in sorted(x.items(), key=operator.itemgetter(1))]
+
+            elif 'exposure' in sort_type:
+                x = {k: str_to_exp(v) for k, v in x.items()}
+                sort_index = [i for i, j in sorted(x.items(), key=operator.itemgetter(1))]
+
 
         elif column_type in [str, float, int]:
             x = {k: column_type(v) for k, v in x.items()}

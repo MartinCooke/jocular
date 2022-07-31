@@ -15,12 +15,12 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.properties import NumericProperty
 from kivy.uix.boxlayout import BoxLayout
-from kivymd.uix.slider import MDSlider
 from kivy.uix.label import Label
 from kivy.metrics import dp
+from kivymd.uix.slider import MDSlider
 
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
 from jocular.RA_and_Dec import RA, Dec
 from jocular.table import Table, CButton, TableLabel
 from jocular.calcs import local_sidereal_time, sun_altitude
@@ -31,19 +31,19 @@ def ToHM(x):
         return ''
     h = int(x)
     m = (x - h) * 60
-    return '{:2.0f}h{:02.0f}'.format(h, m).strip()
+    return f'{h:2.0f}h{m:02.0f}'.strip()
 
 def fmt_diam(d):
     if d < 1:
         # ds = 60
-        return '{:4.1f}"'.format(d * 60)
+        return f'{d * 60:4.1f}"'
     elif d < 10:
-        return "{:4.2f}'".format(d)
+        return f"{d:4.2f}'"
     elif d < 100:
-        return "{:4.1f}'".format(d)
+        return f"{d:4.1f}'"
     else:
         dg = int(d / 60)
-        return "{:.0f}\u00b0{:2.0f}'".format(dg, (d - dg) / 60.0)
+        return f"{dg:.0f}\u00b0{(d - dg) / 60.0:2.0f}'"
 
 def quadrant(x):
     # terrestrial direction
@@ -54,7 +54,7 @@ def quadrant(x):
     return qmap[quad]
 
 
-class ObservingList(Component, Settings):
+class ObservingList(Component, JSettings):
 
     tab_name = 'Observatory'
 
@@ -89,15 +89,12 @@ class ObservingList(Component, Settings):
 
     def load(self, dt=None):
 
-        # load DSOs
-        try:
-            # return a COPY of the basic dsos to prevent unwanted side effects
-            self.objects = {k: v.copy() 
-                for k, v in Component.get('Catalogues').get_basic_dsos().items()}
-        except Exception as e:
-            logger.exception('problem loading DSOs ({:})'.format(e))
-            toast('problem loading DSOs')
-            self.objects = {}
+        # v0.6 go back to treating self.objects as a view
+        self.objects = Component.get('Catalogues').get_basic_dsos()
+
+        # return a COPY of the basic dsos to prevent unwanted side effects??
+        # self.objects = {k: v.copy() 
+        #     for k, v in Component.get('Catalogues').get_basic_dsos().items()}
 
         # load observing list (maps names to date added)
         try:
@@ -105,7 +102,7 @@ class ObservingList(Component, Settings):
                 observing_list = json.load(f)
         except:
             observing_list = {}
-        logger.info('{:} on observing list'.format(len(observing_list)))
+        logger.info(f'{len(observing_list)} on observing list')
 
         # load observing notes
         try:
@@ -113,16 +110,16 @@ class ObservingList(Component, Settings):
                 observing_notes = json.load(f)
         except:
             observing_notes = {}
-        logger.info('{:} observing notes'.format(len(observing_notes)))
+        logger.info(f'{len(observing_notes)} observing notes')
 
         # load previous observations if necc and count previous
         try:
             obs = Component.get('Observations').get_observations()
             previous = dict(Counter([v['Name'].lower() for v in obs.values() if 'Name' in v]))
         except Exception as e:
-            logger.warning('problem loading previous DSOs ({:})'.format(e))
+            logger.warning(f'problem loading previous DSOs ({e})')
             previous = {}
-        logger.info('{:} unique previous observations found'.format(len(previous)))
+        logger.info(f'{len(previous)} unique previous observations found')
 
         # augment/combine DSO info
         for v in self.objects.values():
@@ -136,7 +133,7 @@ class ObservingList(Component, Settings):
         try:
             self.compute_transits()
         except Exception as e:
-            logger.exception('problem computing transits {:}'.format(e))
+            logger.exception(f'problem computing transits {e}')
 
 
     def on_close(self):
@@ -146,8 +143,8 @@ class ObservingList(Component, Settings):
 
     def save_observing_list(self, *args):
         try:
-            ''' bug here: if self.objects is changed (with new objects) then
-                it won't have Added field. Temporary fix but needs migrationt
+            ''' bug? if self.objects is changed (with new objects) then
+                it won't have Added field. Temporary fix but needs migration
                 to Catalogues
             '''
             ol = {}
@@ -157,7 +154,7 @@ class ObservingList(Component, Settings):
             with open(self.app.get_path('observing_list.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
-            logger.exception('problem saving ({:})'.format(e))
+            logger.exception(f'problem saving ({e})')
             toast('problem saving observing list')
 
 
@@ -170,7 +167,7 @@ class ObservingList(Component, Settings):
             with open(self.app.get_path('observing_notes.json'), 'w') as f:
                 json.dump(ol, f, indent=1)
         except Exception as e:
-            logger.exception('problem saving ({:})'.format(e))
+            logger.exception(f'problem saving ({e})')
             toast('problem saving observing notes')
 
 
@@ -222,13 +219,11 @@ class ObservingList(Component, Settings):
         m0[m0 < 0] = m0[m0 < 0] + 24
 
         # 80 ms or so
-        for v, _max_alt, _transits, _m in zip(
-            self.objects.values(), max_alts, transiting, m0
-        ):
+        for v, _max_alt, _transits, _m in zip(self.objects.values(), max_alts, transiting, m0):
             v['MaxAlt'] = math.nan if math.isnan(_max_alt) else int(_max_alt)
             v['Transit'] = float(_m) if _transits else math.nan
 
-        logger.info('computed transits for {:} objects'.format(len(ras)))
+        logger.info(f'computed transits for {len(ras)} objects')
 
 
     def build(self):
@@ -240,19 +235,29 @@ class ObservingList(Component, Settings):
             'Name': {'w': 180, 'align': 'left', 'sort': {'catalog': ''}, 'action': self.new_from_list},
             'OT': {'w': 45},
             'Con': {'w': 45},
-            'RA': {'w': 80, 'align': 'right', 'type': float, 'val_fn': lambda x: x * 15, 'display_fn': lambda x: str(RA(x))},
-            'Dec': {'w': 85, 'align': 'right', 'type': float, 'display_fn': lambda x: str(Dec(x))},
-            'Loc': {'w': 40, 'align': 'center', 'field': 'Quadrant'},
+            'RA': {
+                'w': 80,
+                'align': 'right', 
+                'type': float, 
+                'val_fn': lambda x: x * 15, 
+                'display_fn': lambda x: str(RA(x))
+                },
+            'Dec': {
+                'w': 85, 
+                'align': 'right', 
+                'type': float, 
+                'display_fn': lambda x: str(Dec(x))},
+            'Quadrant': {'w': 40, 'align': 'center', 'label': 'Loc'},
             'Az': {'w': 40, 'align': 'center', 'type': float},
             'Alt': {'w': 40, 'align': 'center', 'type': float},
-            'Max': {'w': 40, 'align': 'center', 'type': float, 'field': 'MaxAlt'},
+            'MaxAlt': {'w': 40, 'align': 'center', 'type': float, 'label': 'Max'},
             'Transit': {'w': 60, 'align': 'right', 'type': float, 'display_fn': ToHM},
             'Mag': {'w': 50, 'align': 'right', 'type': float},
             'Diam': {'w': 50, 'align': 'right', 'type': float, 'display_fn': fmt_diam},
-            'Obs': {'w': 40, 'type': int, 'field': 'Obs'},
+            'Obs': {'w': 40, 'type': int},
             'List': {'w': 35},
             'Added': {'w': 65, 'sort': {'DateFormat': '%d %b'}},
-            'U': {'w': 25, 'align': 'center'},
+            'Usr': {'w': 35, 'align': 'center'},
             'Notes': {'w': 100, 'input': True},
             'Other': {'w': 1, 'align': 'left'},
         }
@@ -313,7 +318,7 @@ class ObservingList(Component, Settings):
             update_on_show=False,
             controls=ctrl,
             on_hide_method=self.app.table_hiding,
-            initial_sort_column='RA',
+            initial_sort_column='Name'
         )
 
 
@@ -325,11 +330,11 @@ class ObservingList(Component, Settings):
         self.time_field.text = t0.strftime('%d %b %H:%M')
 
         sun_alt = sun_altitude(t0, self.latitude, self.longitude)
-        self.sun_time.text = 'sun: {:3.0f}\u00b0'.format(sun_alt)
+        self.sun_time.text = f'sun: {sun_alt:3.0f}\u00b0'
         try:
             self.compute_altaz(current_hours_offset=self.slider.value)
         except Exception as e:
-            logger.exception('problem computing altaz {:}'.format(e))
+            logger.exception(f'problem computing altaz {e}')
 
         if hasattr(self, 'table'):
             # update display since this is fast, but update table (reapply filters) when slider stops
@@ -358,7 +363,7 @@ class ObservingList(Component, Settings):
         self.table.hide()
         res = Component.get('Catalogues').lookup(name)
         if res is None:
-            toast('Cannot find {:} in database'.format(name))
+            toast(f'Cannot find {name} in database')
         else:
             Component.get('DSO').new_DSO_name(res)
 
@@ -368,84 +373,88 @@ class ObservingList(Component, Settings):
         for s in self.table.selected:
             self.objects[s]['Added'] = dn
             self.objects[s]['List'] = 'Y'
-        logger.info('added {:} objects'.format(len(self.table.selected)))
+        logger.info(f'added {len(self.table.selected)} objects')
         self.update_list()
+
 
     def remove_from_observing_list(self, *args):
         for s in self.table.selected:
             self.objects[s]['Added'] = ''
             self.objects[s]['List'] = ''
-        logger.info('removed {:} objects'.format(len(self.table.selected)))
+        logger.info(f'removed {len(self.table.selected)} objects')
         self.update_list()
+
 
     def remove_from_catalogue(self, *args):
         ''' Remove current DSO from user objects list
         '''
         catas = Component.get('Catalogues')
-        for s in self.table.selected:
-            obj = self.objects[s]
+        for name in self.table.selected:
+            obj = self.objects[name]
             # only delete if a user defined object
-            if obj['U'] == 'Y':
-                name = '{:}/{:}'.format(obj['Name'], obj['OT']).upper()
+            if obj['Usr'] == 'Y':
                 catas.delete_user_object(name)
         self.update_list()
+
 
     def new_observation(self):
         OT = Component.get('Metadata').get('OT', '')
         Name = Component.get('Metadata').get('Name', None)
-        logger.info('{:}/{:}'.format(Name, OT))
+        logger.info(f'{Name}/{OT}')
         #  update observed count if DSO is known
         if Name is not None:
-            name = '{:}/{:}'.format(Name, OT)
+            name = f'{Name}/{OT}'
             if name in self.objects:
                 self.objects[name]['Obs'] = self.objects[name].get('Obs', 0) + 1
             if hasattr(self, 'table'):
                 self.table.update()
+
 
     def update_list(self):
         self.save_observing_list()
         self.table.update()
         self.table.deselect_all()
 
-    def update_DSO(self, props):
-        ''' update or add new DSO into observing list and update table
-            new: needs field testing
-        '''
 
-        # convert props into a form we can use in the DSO table
-        nums = ['RA', 'Dec', 'Mag', 'Diam']
-        for k, v in props.items():
-            if k in nums:
-                try:
-                    props[k] = float(v)
-                except:
-                    props[k] = math.nan
+    # def update_DSO(self, props):
+    #     ''' update or add new DSO into observing list and update table
+    #         new: needs field testing
+    #     '''
 
-        nm = '{:}/{:}'.format(props['Name'], props['OT']).upper()
-        if nm in self.objects:
-            orig = self.objects[nm]
-            logger.debug('updating {:} orig vals {:}'.format(nm, orig))
-            for k, v in props.items():
-                if k in orig:
-                    orig[k] = v
-        else:
-            logger.info('adding new object {:} into DSO table'.format(nm))
-            self.objects[nm] = {
-                'Name': props['Name'],
-                'OT': props['OT'],
-                'Con': props['Con'],
-                'RA': props['RA'],
-                'Dec': props['Dec'],
-                'Mag': props['Mag'],
-                'Diam': props['Diam'],
-                'Obs': 1,
-                'Added': '',
-                'List': '',
-                'Other': props['Other'],
-                'Notes': ''
-            }
+    #     # convert props into a form we can use in the DSO table
+    #     nums = ['RA', 'Dec', 'Mag', 'Diam']
+    #     for k, v in props.items():
+    #         if k in nums:
+    #             try:
+    #                 props[k] = float(v)
+    #             except:
+    #                 props[k] = math.nan
 
-        try:
-            self.compute_transits()
-        except Exception as e:
-            logger.exception('problem computing transits ({:})'.format(e))
+    #     nm = f"{props['Name']}/{props['OT']}".upper()
+    #     if nm in self.objects:
+    #         orig = self.objects[nm]
+    #         logger.debug(f'updating {nm} orig vals {orig}')
+    #         for k, v in props.items():
+    #             if k in orig:
+    #                 orig[k] = v
+    #     else:
+    #         logger.info(f'adding new object {nm} into DSO table')
+    #         self.objects[nm] = {
+    #             'Name': props['Name'],
+    #             'OT': props['OT'],
+    #             'Con': props['Con'],
+    #             'RA': props['RA'],
+    #             'Dec': props['Dec'],
+    #             'Mag': props['Mag'],
+    #             'Diam': props['Diam'],
+    #             'Obs': 1,
+    #             'Added': '',
+    #             'List': '',
+    #             'Other': props['Other'],
+    #             'Notes': ''
+    #         }
+
+    #     try:
+    #         self.compute_transits()
+    #     except Exception as e:
+    #         logger.exception(f'problem computing transits ({e})')

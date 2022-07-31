@@ -15,8 +15,10 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 
 from jocular.component import Component
-from jocular.widgets import jicon, LabelL, Panel
+from jocular.widgets.widgets import LabelL
+from jocular.widgets.icons import get_icon
 from jocular.formwidgets import configurable_to_widget
+from jocular.panel import Panel
 
 
 class DeviceManager(Component, Panel):
@@ -37,7 +39,7 @@ class DeviceManager(Component, Panel):
 		''' keep a record of all device instances
 		'''
 		self.instances[name] = device
-		logger.debug('registered device for {:}'.format(name))
+		logger.debug(f'registered device for {name}')
 
 
 	def on_leave(self, *args):
@@ -106,7 +108,7 @@ class DeviceManager(Component, Panel):
 			size_hint=(None, 1), 
 			width=dp(24), 
 			markup=True,
-			text=jicon(
+			text=get_icon(
 				'dot', 
 				font_size=12,
 				color='g' if current_device.connected else 'r'))
@@ -169,7 +171,8 @@ class DeviceManager(Component, Panel):
 
 	def connection_changed(self, device, connected):
 		if device in self.connect_dots:
-			self.connect_dots[device].text = jicon('dot', color=('g' if connected else 'r'))
+			self.connect_dots[device].text = get_icon(
+				'dot', color=('g' if connected else 'r'))
 			Component.get(device).info('not connected')
 		if device in self.connect_buttons:
 			self.connect_buttons[device].text = 'disconnect...' if connected else 'connect...'
@@ -179,7 +182,7 @@ class DeviceManager(Component, Panel):
 	def config(self, device, *args):
 		''' user wants to configure device
 		'''
-		logger.debug('Configuring {:} device'.format(device))
+		logger.debug(f'Configuring {device} device')
 		try:
 			self.current_device = Component.get(device).device
 			self.changed_settings = {}

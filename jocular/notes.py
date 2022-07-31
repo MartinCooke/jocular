@@ -2,10 +2,13 @@
 '''
 
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, ObjectProperty
 from kivy.lang import Builder
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton
+from kivy.uix.button import Button
 from jocular.component import Component
+from jocular.widgets.widgets import Pin
 
 Builder.load_string('''
 <Notes>:
@@ -24,6 +27,7 @@ Builder.load_string('''
         helper_text_mode: 'on_focus'
         on_focus: root.notes_changed() if not self.focus else None
         font_size: app.form_font_size
+
 ''')
 
 
@@ -36,7 +40,15 @@ class Notes(MDBoxLayout, Component):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        self.app.gui.add_widget(self) 
+        show_notes = self.app.gui.get_gui_setting('show_notes')
+        self.show_notes = False if show_notes is None else show_notes
+        self.app.gui.add_widget(self)
+        self.app.gui.add_widget(Pin(
+            comp=self, 
+            field='show_notes', 
+            loc='upper-right', 
+            tooltip_text='toggle note-taking panel',
+            show_text='Notes'))
 
     def on_new_object(self):
         self.notes = ''

@@ -16,18 +16,19 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.properties import OptionProperty
 from kivy.metrics import dp
-from kivy.uix.label import Label
-from kivymd.uix.label import MDLabel
-from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.gridlayout import GridLayout
 
 from jocular.component import Component
 from jocular.exposurechooser import exp_to_str
-from jocular.widgets import Panel, JMDToggleButton
+from jocular.widgets.widgets import JMDToggleButton
+from jocular.panel import Panel
 
 faf_scripts = ['align', 'focus', 'frame']
 light_scripts = ['light', 'seq']
 calibration_scripts = ['dark', 'bias', 'flat', 'autoflat']
 all_scripts = faf_scripts + light_scripts + calibration_scripts
+
 
 class CaptureScript(Panel, Component):
 
@@ -66,6 +67,7 @@ class CaptureScript(Panel, Component):
             self.save()
 
         self.build()
+        self.panel_opacity = 0
 
         # initialise via current script once dependencies have been built
         Clock.schedule_once(self.on_current_script, 0)
@@ -95,46 +97,29 @@ class CaptureScript(Panel, Component):
         return JMDToggleButton(
                 text=name, 
                 group='scripts',
-                font_size='18sp',
-                height=dp(24),
+                font_size='16sp',
+                # height=dp(30),
                 tooltip_text=self.tooltips.get(name, ''),
                 on_press=self.script_chosen)
 
+
     def build(self, *args):
-
-        #self.title = 'Select a script'
-        self.title_label = Label(text='Select a script', font_size='24sp')
-        self.header.add_widget(self.title_label)
-
-        self.contents.add_widget(Label(size_hint=(1, .1)))
-
+        content = self.contents
         self.script_buttons = {s: self._button(s) for s in all_scripts}
-
-        bl = BoxLayout(
-            size_hint=(1, .8),
-            orientation='horizontal')
-        bl.add_widget(MDLabel(size_hint=(.3, 1)))
-        bl_right = BoxLayout(
-            size_hint=(.4, 1),
-            spacing=dp(5),
-            orientation='vertical')
-        bl.add_widget(bl_right)
-        bl.add_widget(Label(size_hint=(.3, 1)))
-
-        for s in faf_scripts:
-            bl_right.add_widget(self.script_buttons[s])
-        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
-
-        for s in light_scripts:
-            bl_right.add_widget(self.script_buttons[s])
-        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
-
-        for s in calibration_scripts:
-            bl_right.add_widget(self.script_buttons[s])
-        bl_right.add_widget(MDLabel(size_hint=(1, .05)))
-
-        self.contents.add_widget(bl)
+        layout = AnchorLayout(anchor_x='center', anchor_y='bottom', size_hint=(1, 1))
+        content.add_widget(layout)
+        gl = GridLayout(size_hint=(1, None), cols=4, height=dp(180), spacing=(dp(5), dp(5)))
+        for scripts in [faf_scripts, light_scripts, calibration_scripts]:
+            for s in scripts:
+                gl.add_widget(self.script_buttons[s])
+            for i in range(4 - len(scripts)):
+                b = self._button(' ')
+                b.disabled = True
+                # b.md_bg_color = 1, .45, .45, 0
+                gl.add_widget(b)
+        layout.add_widget(gl)
         self.app.gui.add_widget(self)
+
 
 
     def on_show(self):
@@ -171,13 +156,22 @@ class CaptureScript(Panel, Component):
             with open(self.app.get_path('capture_scripts.json'), 'w') as f:
                 json.dump(self.scripts, f, indent=1)
         except Exception as e:
-            logger.exception('Unable to save capture_scripts.json ({:})'.format(e))
+            logger.exception(f'Unable to save capture_scripts.json ({e})')
 
     def on_new_object(self, *args):
         ''' default to framing at start
         '''
         self.app.gui.enable(self.capture_controls)
-        self.current_script = 'frame'
+        try:
+            camera_mode = Component.get('Camera').settings['current_mode']
+        except Exception as e:
+            # catch this exception because on first time usage we can't get to settings
+            camera_mode = 'Watched dir'
+        # don't go into framing mode unless connected to a camera
+        if camera_mode in {'Watched dir', 'Simulator'}:
+            self.current_script = 'light'
+        else:
+            self.current_script = 'frame'
         self.on_current_script()
 
     def on_previous_object(self, *args):
@@ -188,7 +182,8 @@ class CaptureScript(Panel, Component):
     def on_current_script(self, *args):
         ''' carry out any special actions when certain scripts are selected
         '''
-        logger.debug('Changed script to {:}'.format(self.current_script))
+
+        logger.debug(f'Changed script to {self.current_script}')
         self.app.gui.set('script_button', self.current_script)
         self.update()
         if self.current_script == 'align':
@@ -200,8 +195,10 @@ class CaptureScript(Panel, Component):
             Component.get('Appearance').transparency = \
                 self.prev_transp if hasattr(self, 'prev_transp') else 0
             self.app.gui.set('show_reticle', False, update_property=True)
-        self.app.gui.set('80' if self.current_script == 'flat' else 'mean' , 
-            True, update_property=True)
+        Component.get('StackCombiner').combine_method = \
+            '80' if self.current_script == 'flat' else 'mean'
+        # self.app.gui.set('80' if self.current_script == 'flat' else 'mean' , 
+        #     True, update_property=True)
 
     def filterwheel_changed(self):
         ''' when filterwheel changes we need to change the available
@@ -209,9 +206,9 @@ class CaptureScript(Panel, Component):
         '''        
         state = Component.get('FilterWheel').get_state()
         filts = list(state['filtermap'].keys())
-        logger.debug('filters available in new filterwheel {:}'.format(filts))
+        logger.debug(f'filters available in new filterwheel {filts}')
         default = ['L'] if 'L' in filts else [f for f in filts if f != '-']
-        logger.debug('Default filter is {:}'.format(default))
+        logger.debug(f'Default filter is {default}')
         if len(default) == 0:
             default = 'L'
         for k, v in self.scripts.items():
@@ -286,8 +283,8 @@ class CaptureScript(Panel, Component):
     '''
 
     def reset_generator(self):
-        logger.debug('reset {:} generator'.format(self.current_script))
-        self.generator = getattr(self, '{:}_generator'.format(self.current_script))()
+        logger.debug(f'reset {self.current_script} generator')
+        self.generator = getattr(self, f'{self.current_script}_generator')()
 
     def light_generator(self):
         script = self.scripts['light']

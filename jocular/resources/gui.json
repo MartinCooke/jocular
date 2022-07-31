@@ -1,85 +1,155 @@
 {
 	"Annotator": {
 		"mag_limit": {
-			"angle": [33, 60],
+			"angle": [46, 65],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [-10, 26],
 			"radial": true,
 			"text": "M",
-			"tooltip": "control depth of annotation",
+			"tooltip": "control depth of annotation [d]",
 			"font_size": "15sp",
 			"initial": -10,
-			"continuous": true
+			"continuous": true,
+            "shortcut": "d",
+            "sc_inc": 1.0
+		}
+	},
+	"Capture": {
+		"capturing": {
+			"angle": 270,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"icon": "camera",
+			"tooltip": "start/stop camera (or watched folder if controlled via Jocular)",
+			"font_size": 24,
+			"color": [0.5, 0, 0, 1],
+			"radial": false,
+			"save": false
+		}
+	},
+	"ExposureChooser": {
+		"exposure_button": {
+			"angle": 264,
+			"location": "outer_ring",
+			"tooltip": "exposure chooser",
+			"control_type": "JButton",
+			"text": "",
+			"action": "show",
+			"radial": false
+		}
+	},
+	"Stretcher": {
+		"stretch": {
+			"angle": 159,
+			"location": "inner_ring",
+			"tooltip": "stretch chooser",
+			"control_type": "JButton",
+			"text": "asinh",
+			"action": "show",
+			"radial": false
+		}
+	},
+	"StackCombiner": {
+		"combine_method": {
+			"angle": 118,
+			"location": "inner_ring",
+			"control_type": "JButton",
+			"text": "mean",
+			"action": "show",
+			"radial": false,
+			"tooltip": "stack combination method",
+			"group": "combine"
+		}
+	},
+	"FilterChooser": {
+		"filter_button": {
+			"angle": 275,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"tooltip": "filter(s) chooser",
+			"text": "",
+			"action": "show",
+			"radial": false
+		}
+	},
+	"CaptureScript": {
+		"script_button": {
+			"angle": 270,
+			"location": "inner_ring",
+			"control_type": "JButton",
+			"text": "frame",
+			"radial": false,
+			"tooltip": "select capture script (e.g. normal lights, calibration, etc)",
+			"group": "current_script",
+			"action": "show",
+			"initial": 1
+		}
+	},
+	"DeviceManager": {
+		"devices": {
+			"angle": 20,
+			"location": "outer_ring",
+			"control_type": "JButton",
+			"tooltip": "set up devices: camera/watched folder and filterwheel",
+			"icon": "equip",
+			"radial": true,
+			"action": "show"
+		}
+	},
+	"Snapshotter": {
+		"snapshot": {
+			"angle": 25,
+			"location": "outer_ring",
+			"control_type": "JIconButton",
+			"icon": "snapshot",
+			"tooltip": "take snapshot, saved in snapshots subdirectory of your Jocular data directory",
+			"highlight": false,
+			"action": "show"
 		}
 	},
 	"ObjectIO": {
 		"new_DSO": {
-			"angle": 63,
-			"location": "mid_ring",
+			"angle": 60,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "new",
-			"text": "new",
 			"tooltip": "start a new observation",
 			"action": "confirm_new_object"
 		},
-		"save_DSO": {
-			"angle": 58.1,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"icon": "new",
-			"text": "save",
-			"tooltip": "save observation",
-			"action": "check_save"
-		},
 		"load_previous": {
-			"angle": 53.2,
-			"location": "mid_ring",
+			"angle": 55,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "prev",
 			"tooltip": "choose an earlier observation to reload",
-			"text": "prev",
 			"action": "confirm_previous_object"
 		},
 		"quit": {
-			"angle": 14,
-			"location": "mid_ring",
+			"angle": 0,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "quit",
 			"tooltip": "close Jocular, after doing any necessary saves",
-			"text": "quit",
 			"action": "confirm_quit"
-		}
-	},
-	"Info": {
-		"show_info": {
-			"angle": 23.8,
-			"location": "mid_ring",
-			"control_type": "JIconButton",
-			"icon": "info",
-			"tooltip": "toggle information panels",
-			"text": "info",
-			"action": "show"
 		}
 	},
 	"ObservingList": {
 		"show_list": {
-			"angle": 48.3,
-			"location": "mid_ring",
+			"angle": 50,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"tooltip": "display DSO table with support for observation planning and lists",
-			"icon": "list",
-			"text": "dso",
+			"icon": "dso",
 			"action": "show"
 		}
 	},
 	"PlateSolver": {
 		"solve": {
-			"angle": 43.4,
-			"location": "mid_ring",
+			"angle": 45,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "solve",
-			"text": "solve",
 			"tooltip": "platesolve currently-displayed image then set N upwards, E to the left",
 			"highlight": false,
 			"save": false,
@@ -88,32 +158,32 @@
 	},
 	"View": {
 		"zoom": {
-			"angle": [1, 34],
+			"angle": [0, 43],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"radial": true,
 			"text": "Z",
-			"tooltip": "zoom in or out (see View in Configuration)",
+			"tooltip": "zoom in/out [z]",
 			"save": false,
 			"initial": 0,
-			"continuous": true
+			"continuous": true,
+            "shortcut": "z",
+            "sc_inc": 0.05
 		},
 		"show_reticle": {
-			"angle": 28.7,
-			"location": "mid_ring",
+			"angle": 30,
+			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"icon": "reticle",
 			"tooltip": "show/hide reticle (useful for alignment/centering)",
-			"text": "ret",
 			"save": false,
 			"initial": false
 		},
 		"apply_ROI": {
-			"angle": 33.6,
-			"location": "mid_ring",
+			"angle": 35,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
-			"icon": "ROI",
 			"tooltip": "apply/unapply ROI to visible eyepiece region",
 			"text": "ROI",
 			"save": false,
@@ -121,29 +191,27 @@
 			"action": "apply_ROI"
 		},
 		"fit": {
-			"angle": 38.5,
-			"location": "mid_ring",
+			"angle": 40,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "fit",
 			"tooltip": "reorient image and scale to fit to window",
-			"text": "fit",
 			"action": "fit_to_window"
 		}
 	},
 	"SettingsManager": {
 		"settings": {
-			"angle": 18.9,
-			"location": "mid_ring",
+			"angle": 15,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "settings",
-			"tooltip": "display Configuration settings",
-			"text": "conf",
+			"tooltip": "display configuration settings",
 			"action": "show"
 		}
 	},
 	"Calibrator": {
 		"apply_dark": {
-			"angle": 334,
+			"angle": 338,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -153,7 +221,7 @@
 			"initial": true
 		},
 		"apply_flat": {
-			"angle": 328,
+			"angle": 332,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -163,446 +231,253 @@
 			"initial": false
 		},
 		"open_calibration": {
-			"angle": 331.5,
+			"angle": 335,
 			"location": "outer_ring",
 			"control_type": "JButton",
 			"tooltip": "display table of calibration masters",
-			"text": "library",
+			"icon": "info",
 			"action": "show_calibration_table"
 		}
 	},
+	"Experimental": {
+		"fracbin": {
+			"angle": 255,
+			"location": "outer_ring",
+			"tooltip": "access various experimental processes",
+			"control_type": "JButton",
+			"icon": "experimental",
+			"action": "show",
+			"radial": false
+		}
+	},
 	"MultiSpectral": {
+		"spectral_mode": {
+			"angle": 310,
+			"location": "inner_ring",
+			"tooltip": "channel chooser",
+			"control_type": "JButton",
+			"text": "mono",
+			"action": "show",
+			"radial": false
+		},
 		"saturation": {
-			"angle": [286, 304],
+			"angle": [300, 320],
 			"location": "outer_ring",
 			"control_type": "JLever",
-			"values": [0, 0.6],
-			"major": {"-": 0, "sat": 0.3, "+": 0.6},
+			"values": [0, 1],
+			"major": {"-": 0, "sat": 0.5, "+": 1},
 			"groove": true,
-			"tooltip": "change colour saturation",
+			"tooltip": "change colour saturation [o]",
 			"radial": false,
-			"initial": 0
+			"initial": 0,
+            "shortcut": "o",
+            "sc_inc": 0.2
 		},
 		"colour_stretch": {
-			"angle": [288, 322],
+			"angle": [300, 320],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0.1, 0.5],
 			"text": "S",
-			"tooltip": "change colour stretch (corrected gamma function)",
+			"tooltip": "change colour stretch using corrected gamma function [c]",
 			"radial": true,
-			"initial": 0.5
+			"initial": 0.5,
+            "shortcut": "c",
+            "sc_inc": 0.2
 		}
 	},
 	"Monochrome": {
 		"gradient": {
-			"angle": [222, 235],
-			"location": "inner_ring",
+			"angle": [191, 203],
+			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 200],
-			"major": {"-": 0, "gradient": 100, "+": 200},
+			"major": {"-": 0, "grad": 100, "+": 200},
 			"groove": true,
 			"tooltip": "subtract linear gradient estimate (mid-position is usually optimal)",
 			"initial": 100,
 			"radial": false
 		},
 		"lift": {
-			"angle": [222, 235],
-			"location": "outer_ring",
+			"angle": [180, 200],
+			"location": "outside_ring",
 			"control_type": "JLever",
-			"values": [-1, 10],
-			"radial": false,
-			"groove": true,
-			"tooltip": "bring in more of the background",
+			"values": [-1, 20],
+			"radial": true,
+			"text": "bg",
+			"tooltip": "bring in more of the background [b]",
 			"initial": 0.0,
-			"major": {"-": -1, "backgnd": 4.5, "+": 10}
+            "shortcut": "b",
+            "sc_inc": 0.2
 		},
-		"noise_reduction": {
-			"angle": [200, 213],
-			"location": "inner_ring",
-			"control_type": "JLever",
-			"values": [-5, 100],
-			"radial": false,
-			"groove": true,
-			"tooltip": "apply gentle noise reduction",
-			"initial": 0.0,
-			"major": {"-": 0, "nr": 50, "+": 100}
-		},
-		"TNR_param": {
-			"angle": [240, 253],
+		"TNR_amount": {
+			"angle": [210, 222],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [-1, 5],
 			"groove": true,
 			"radial": false,
-			"major": {"-": -1, "denoise": 2.5, "+": 5},
-			"tooltip": "A stronger form of noise reduction than the light touch version provided by the nr slider",
-			"initial": 0.3
+			"major": {"-": -1, "tnr": 2.5, "+": 5},
+			"tooltip": "Tony's noise reduction [d]",
+			"initial": 0.3,
+            "shortcut": "d",
+            "sc_inc": 0.2
+		},
+		"TNR_kernel_size": {
+			"angle": [210, 222],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [3, 30],
+			"radial": false,
+			"text": "R",
+			"tooltip": "TNR kernel size",
+			"initial": 10
 		},
 		"unsharp_amount": {
-			"angle": [240, 253],
-			"location": "inner_ring",
+			"angle": [229, 241],
+			"location": "outer_ring",
 			"control_type": "JLever",
-			"values": [-0.5, 1.2],
-			"groove": true,
+			"values": [-0.1, 1],
 			"radial": false,
-			"major": {"-": -0.5, "sharpen": 0.35, "+": 1.2},
-			"tooltip": "",
-			"initial": 0
+			"groove": true,
+			"tooltip": "sharpen [u]",
+			"initial": 0.5,
+			"major": {"-": -0.1, "sharp": 0.5, "+": 1},
+            "shortcut": "u",
+            "sc_inc": 0.2
+		},
+		"unsharp_radius": {
+			"angle": [229, 241],
+			"location": "outside_ring",
+			"control_type": "JLever",
+			"values": [0, 10],
+			"groove": false,
+			"radial": false,
+			"text": "R",
+			"tooltip": "unsharp radius [r]",
+			"initial": 2,
+            "shortcut": "r",
+            "sc_inc": 0.2
 		},
 		"black": {
-			"angle": [213, 147],
+			"angle": [180, 138],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"groove": true,
 			"radial": true,
 			"initial": 0.1,
-			"tooltip": "set black point (all values below this are set to black)",
+			"tooltip": "set black point [k]",
 			"text": "B",
-			"save": false
+			"save": false,
+            "shortcut": "k",
+            "sc_inc": 0.1
 		},
 		"white": {
-			"angle": [213, 147],
+			"angle": [180, 138],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"radial": true,
-			"tooltip": "set white point (all values above this are set to max brightness)",
+			"tooltip": "set white point [w]",
 			"initial": 0.9,
-			"text": "W"
+			"text": "W",
+            "shortcut": "w",
+            "sc_inc": 1.0
 		},
 		"p1": {
-			"angle": [213, 147],
+			"angle": [179, 135],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"radial": true,
-			"tooltip": "modify degree of stretch applied to luminosity",
+			"tooltip": "modify degree of stretch applied to luminosity [s]",
 			"text": "S",
-			"initial": 0.65
+			"initial": 0.65,
+            "shortcut": "s",
+            "sc_inc": -1.0
 		},
 		"autoblack": {
-			"angle": 216,
+			"angle": 183,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
-			"radial": true,
+			"radial": false,
 			"tooltip": "estimate black point (recommended alongside use of bg)",
-			"text": "est",
+			"icon": "next_sub",
 			"initial": 1
 		},
 		"autowhite": {
-			"angle": 144,
+			"angle": 135,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
-			"radial": true,
+			"radial": false,
 			"tooltip": "estimate white point automatically",
-			"text": "est",
+			"icon": "next_sub",
 			"initial": 0
-		},
-		"linear": {
-			"angle": 179,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "linear",
-			"tooltip": "linear stretch (not recommended in general but useful for inspecting flats)",
-			"group": "stretch",
-			"initial": 0
-		},
-		"log": {
-			"angle": 173,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "log",
-			"tooltip": "log stretch (good for PNs and globs)",
-			"group": "stretch",
-			"initial": 0
-		},
-		"asinh": {
-			"angle": 167,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "asinh",
-			"tooltip": "arcsinh stretch (good for galaxies)",
-			"group": "stretch",
-			"initial": 1
-		},
-		"gamma": {
-			"angle": 159,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "gamma",
-			"tooltip": "corrected gamma stretch (good for star colours)",
-			"group": "stretch",
-			"initial": 0
-		},
-		"hyper": {
-			"angle": 151,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"text": "hyper",
-			"tooltip": "the strongest stretch (good for bringing out faint detail at the expense of noise)",
-			"group": "stretch",
-			"initial": 0
-		}
-	},
-	"Capture": {
-		"capturing": {
-			"angle": 0,
-			"location": "mid_ring",
-			"control_type": "JToggleButton",
-			"icon": "camera",
-			"tooltip": "start/stop camera (or watched folder -- see configuration options under equip)",
-			"font_size": 24,
-			"color": [0.5, 0, 0, 1],
-			"radial": true,
-			"save": false
-		}
-	},
-	"ExposureChooser": {
-		"exposure_button": {
-			"angle": 356,
-			"location": "mid_ring",
-			"tooltip": "exposure chooser",
-			"control_type": "JButton",
-			"text": "",
-			"action": "show",
-			"radial": true
-		}
-	},
-	"FilterChooser": {
-		"filter_button": {
-			"angle": 4,
-			"location": "mid_ring",
-			"control_type": "JButton",
-			"tooltip": "filter(s) chooser",
-			"text": "",
-			"action": "show",
-			"radial": true
-		}
-	},
-	"CaptureScript": {
-		"script_button": {
-			"angle": 8,
-			"location": "mid_ring",
-			"control_type": "JButton",
-			"text": "frame",
-			"radial": true,
-			"tooltip": "select capture script (e.g. normal lights, calibration, etc)",
-			"group": "current_script",
-			"action": "show",
-			"initial": 1
-		}
-	},
-	"DeviceManager": {
-		"devices": {
-			"angle": 351,
-			"location": "mid_ring",
-			"control_type": "JButton",
-			"tooltip": "choose camera/watched folder, filterwheel and scope options (scope control not yet supported)",
-			"text": "equip",
-			"radial": true,
-			"action": "show"
-		}
-	},
-	"Snapshotter": {
-		"snapshot": {
-			"angle": 270,
-			"location": "outer_ring",
-			"control_type": "JIconButton",
-			"icon": "snapshotter",
-			"tooltip": "take snapshot, saved in snapshots subdirectory of your Jocular data directory",
-			"highlight": false,
-			"action": "snap"
-		},
-		"style": {
-			"angle": 270,
-			"location": "inner_ring",
-			"control_type": "JMulti",
-			"values": ["landscape", "eyepiece"],
-			"tooltip": "select image style",
-			"initial": "eyepiece"
-		},
-		"annotation": {
-			"angle": 266,
-			"location": "outer_ring",
-			"control_type": "JMulti",
-			"tooltip": "select amount of annotation of image borders (plain=none, name=DSO name only, full=the full Monty)",
-			"values": ["plain", "name", "full"],
-			"initial": "full"
-		},
-		"save_format": {
-			"angle": 274,
-			"location": "outer_ring",
-			"control_type": "JMulti",
-			"tooltip": "image save format",
-			"values": ["png", "jpg", "fit"],
-			"initial": "png"
 		}
 	},
 	"Stacker": {
-		"sub_or_stack": {
-			"angle": 90,
-			"location": "inner_ring",
-			"control_type": "JMulti",
-			"values": ["sub", "stack"],
-			"tooltip": "toggle view of subs or stack",
-			"initial": "sub",
-			"save": false
-		},
-		"speed": {
-			"angle": [69, 73.5],
+		"show_subs": {
+			"angle": 123,
 			"location": "outer_ring",
-			"control_type": "JLever",
-			"values": [0.3, 7],
-			"major": {"+": 7.0, "-": 0.3},
-			"groove": true,
-			"tooltip": "change speed of animation from 0.3 to 7 frames/sec",
-			"radial": false,
-			"initial": 2,
-			"save": false,
-			"continuous": true
-		},
-		"mean": {
-			"angle": 130,
-			"location": "outer_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "combine subs using averaging (best for SNR, no outlier rejection)",
-			"text": "mean",
-			"group": "combine",
-			"initial": 1
-		},
-		"90": {
-			"angle": 124,
-			"location": "outer_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "combine retaining central 90% of values at each pixel (mild outlier rejection)",
-			"text": "90",
-			"group": "combine"
-		},
-		"80": {
-			"angle": 120,
-			"location": "outer_ring",
-			"control_type": "JToggleButton",
-			"text": "80",
-			"tooltip": "combine retaining central 80% of values at each pixel (good for twilight flats)",
-			"group": "combine"
-		},
-		"70": {
-			"angle": 116,
-			"location": "outer_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "combine retaining central 70% of values at each pixel (strong outlier rejection)",
-			"text": "70",
-			"group": "combine"
-		},
-		"median": {
-			"angle": 110,
-			"location": "outer_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "combine using middle value at each pixel (strongest outlier rejection, worst SNR)",
-			"text": "median",
-			"group": "combine"
-		},
-		"mono": {
-			"angle": 287,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"radial": false,
-			"text": "mono",
-			"tooltip": "treat subs as mono",
-			"initial": false,
-			"group": "spectral_mode",
-			"initial": 1
-		},
-		"LRGB": {
-			"angle": 294,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"radial": false,
-			"tooltip": "generate colour so long as there is at least 1 each of RGB (synthetic L generated in this case)",
-			"text": "LRGB",
-			"initial": false,
-			"group": "spectral_mode"
-		},
-		"L+": {
-			"angle": 301,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"radial": false,
-			"text": "L+",
-			"tooltip": "combine L plus narrowband (click on Ha etc to change). Experiment (ie mediocre/best-avoided)",
-			"initial": false,
-			"group": "spectral_mode"
-		},
-		"L_plus_other": {
-			"angle": 304,
-			"location": "inner_ring",
-			"control_type": "JMulti",
-			"tooltip": "choose narrowband channel to combine with L",
-			"values": ["Ha", "OIII", "SII"],
-			"initial": "Ha"
-		},
-		"animating": {
-			"angle": 73.5,
-			"location": "inner_ring",
-			"control_type": "JToggleButton",
-			"tooltip": "animate sequence of subs (good to spot problems) or stack (useful to see SNR improve)",
-			"icon": "play",
-			"initial": false,
-			"save": false
-		},
-		"gif": {
-			"angle": 70,
-			"location": "inner_ring",
 			"control_type": "JIconButton",
-			"text": "gif",
-			"initial": false,
-			"tooltip": "create animated GIF (good for comets; saved in snapshots)",
-			"save": false,
-			"action": "make_animated_gif"
-		},
-		"clear_stack": {
-			"angle": 126,
-			"location": "inner_ring",
-			"control_type": "JIconButton",
-			"icon": "clear",
-			"tooltip": "clear stack",
-			"action": "clear"
+			"icon": "show_subs",
+			"tooltip": "show subs table",
+			"action": "show_subs_table"
 		},
 		"recompute": {
-			"angle": 119,
-			"location": "inner_ring",
+			"angle": 118,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "redo",
 			"tooltip": "recompute stack (e.g. after changing some setting or selecting darks)",
 			"action": "recompute"
 		},
 		"realign": {
-			"angle": 112,
-			"location": "inner_ring",
+			"angle": 113,
+			"location": "outer_ring",
 			"control_type": "JIconButton",
-			"icon": "stack",
-			"tooltip": "realign stack (same as recompute but rearranges order of subs -- good for fixing alignment issues)",
+			"icon": "realign",
+			"tooltip": "realign stack (same as recompute but rearranges order of subs - \ngood for fixing alignment issues)",
 			"action": "realign"
 		},
-		"sub_m2": {
-			"angle": 98,
-			"location": "outer_ring",
-			"control_type": "JButton",
-			"text": " ",
-			"tooltip": "sub number (background colour indicates filter)",
-			"font_size": "11sp",
+		"viewing_stack": {
+			"angle": 90,
+			"location": "inner_ring",
+			"control_type": "JToggleButton",
+			"icon": "stack",
+			"tooltip": "toggle view of subs or stack",
+			"initial": false,
 			"save": false
 		},
-		"sub_m1": {
+		"delete_sub_or_stack": {
+			"angle": 102,
+			"location": "outer_ring",
+			"control_type": "JIconButton",
+			"icon": "clear",
+			"tooltip": "delete current sub or stack (destructive!)",
+			"action": "delete_sub_or_stack",
+			"save": false
+		},
+		"first_sub": {
+			"angle": 97,
+			"location": "outer_ring",
+			"control_type": "JIconButton",
+			"icon": "first_sub",
+			"font_size": "20",
+			"tooltip": "display first sub",
+			"highlight": false,
+			"action": "first_sub"
+		},
+		"prev_sub": {
 			"angle": 94,
 			"location": "outer_ring",
-			"control_type": "JButton",
-			"text": " ",
-			"tooltip": "sub number (background colour indicates filter)",
-			"font_size": "13sp",
-			"save": false
+			"control_type": "JIconButton",
+			"icon": "prev_sub",
+			"tooltip": "display previous sub (or display stack up to that sub if stack is selected)",
+			"font_size": "20",
+			"highlight": false,
+			"action": "previous_sub"
 		},
 		"sub_0": {
 			"angle": 90,
@@ -615,46 +490,19 @@
 			"save": false,
 			"action": "toggle_selected_sub"
 		},
-		"sub_p1": {
+		"next_sub": {
 			"angle": 86,
 			"location": "outer_ring",
-			"control_type": "JButton",
-			"text": " ",
-			"tooltip": "sub number (background colour indicates filter)",
-			"font_size": "13sp",
-			"save": false
-		},
-		"sub_p2": {
-			"angle": 82,
-			"location": "outer_ring",
-			"control_type": "JButton",
-			"text": " ",
-			"tooltip": "sub number (background colour indicates filter)",
-			"font_size": "11sp",
-			"save": false
-		},
-		"delete_sub": {
-			"angle": 101,
-			"location": "inner_ring",
 			"control_type": "JIconButton",
-			"icon": "clear",
-			"tooltip": "delete current sub (destructive!)",
-			"action": "delete_sub",
-			"save": false
-		},
-		"first_sub": {
-			"angle": 97,
-			"location": "inner_ring",
-			"control_type": "JIconButton",
-			"icon": "first_sub",
+			"icon": "next_sub",
+			"tooltip": "display next sub (or display stack up to that sub if stack is selected)",
 			"font_size": "20",
-			"tooltip": "display first sub",
 			"highlight": false,
-			"action": "first_sub"
+			"action": "next_sub"
 		},
 		"last_sub": {
 			"angle": 83,
-			"location": "inner_ring",
+			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "last_sub",
 			"tooltip": "display last sub (or display full stack if stack is selected)",
@@ -662,25 +510,14 @@
 			"highlight": false,
 			"action": "last_sub"
 		},
-		"prev_sub": {
-			"angle": 94,
-			"location": "inner_ring",
-			"control_type": "JIconButton",
-			"icon": "prev_sub",
-			"tooltip": "display previous sub (or display stack up to that sub if stack is selected)",
-			"font_size": "20",
-			"highlight": false,
-			"action": "previous_sub"
-		},
-		"next_sub": {
-			"angle": 86,
-			"location": "inner_ring",
-			"control_type": "JIconButton",
-			"icon": "next_sub",
-			"tooltip": "display next sub (or display stack up to that sub if stack is selected)",
-			"font_size": "20",
-			"highlight": false,
-			"action": "next_sub"
+		"animating": {
+			"angle": 78,
+			"location": "outer_ring",
+			"control_type": "JToggleButton",
+			"tooltip": "animate sequence of subs (good to spot problems) or stack (useful to see SNR improve)",
+			"icon": "play",
+			"initial": false,
+			"save": false
 		}
 	}
 }

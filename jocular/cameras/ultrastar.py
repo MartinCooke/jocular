@@ -47,8 +47,8 @@ class SXUltrastarCamera(GenericCamera):
 			self.sxcamera = usb.core.find(idVendor=0x1278, idProduct=0x0525)
 			if self.sxcamera is not None:
 				logger.info('found Ultrastar')
-		except:
-			pass
+		except Exception as e:
+			logger.trace('Cannot find Ultrastar')
 
 		if self.sxcamera is None:
 			self.status = 'cannot find Ultrastar'

@@ -15,6 +15,8 @@ from kivymd.uix.dialog import MDDialog
 
 from jocular.component import Component
 from jocular.RA_and_Dec import RA, Dec
+from jocular.widgets.widgets import Pin
+# from jocular.settingsmanager import JSettings
 
 Builder.load_string('''
 
@@ -41,7 +43,7 @@ Builder.load_string('''
             height: '40dp'
             hint_text: 'name'
             on_text: root.dso.Name_changed(self.text)
-            font_size: '{:}sp'.format(int(app.form_font_size[:-2]) + 8) # 28sp
+            font_size: f'{int(app.form_font_size[:-2]) + 8:}sp' # 28sp
 
     DSOBoxLayout:
         JTextField:
@@ -158,10 +160,10 @@ def arcmin_to_str(diam):
     if math.isnan(diam):
         return ''
     if diam > 60:
-        return "{:.2f}\u00b0".format(diam / 60)
+        return f"{diam / 60:.2f}\u00b0"
     if diam < 1:
-        return '{:.2f}"'.format(diam * 60)
-    return "{:.2f}\'".format(diam)
+        return f'{diam * 60:.2f}"'
+    return f"{diam:.2f}\'"
 
 
 def validated_prop(val, prop):
@@ -202,7 +204,7 @@ class DSO_panel(MDBoxLayout):
         super().__init__(**kwargs)
 
 
-class DSO(Component):
+class DSO(Component): # , JSettings):
 
     save_settings = ['show_DSO']
 
@@ -222,21 +224,30 @@ class DSO(Component):
 
     show_DSO = BooleanProperty(False)
 
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        show_DSO = self.app.gui.get_gui_setting('show_DSO')
+        self.show_DSO = False if show_DSO is None else show_DSO
         self.cats = Component.get('Catalogues')
         otypes = self.cats.get_object_types()
         self.otypes = {k: v['name'] for k, v in otypes.items()}
         self.dso_panel = DSO_panel(self)
         self.app.gui.add_widget(self.dso_panel)        
+        self.app.gui.add_widget(Pin(
+            comp=self, 
+            field='show_DSO', 
+            loc='upper-left', 
+            tooltip_text='toggle DSO information panel',
+            show_text='DSO'))
+
 
     def on_new_object(self):
         ''' Called when user clicks new
         '''
         self.update_properties({})
         self.original_props = {}
+
 
     def on_previous_object(self):
         ''' User selected an object in observations table
@@ -258,7 +269,8 @@ class DSO(Component):
         self.original_props = settings
 
         for p, val in settings.items():
-            logger.info('{:} = {:}'.format(p, val))
+            logger.info(f'{p} = {val}')
+
 
     def update_properties(self, props, update_name=True, update_OT=True):
         ''' Fill in fields with properties
@@ -276,6 +288,7 @@ class DSO(Component):
             self.dso_panel.ot_field.text = self.OT
         self.updating = False
  
+
     def new_DSO_name(self, settings):
         ''' Called from ObservingList when user selects a name from the DSO table. 
         '''
@@ -283,7 +296,7 @@ class DSO(Component):
         # if we already have a name and a non-empty stack, ask user to confirm
         new_name = settings.get('Name','')
         if not Component.get('Stacker').is_empty() and self.Name and self.Name != new_name:
-            change = 'from {:} to {:}'.format(self.Name, new_name)
+            change = f'from {self.Name} to {new_name}'
             self.dialog = MDDialog(
                 auto_dismiss=False,
                 text="Are you sure you wish to change the name of the current DSO\n" + change,
@@ -299,6 +312,7 @@ class DSO(Component):
         else:
             self.change_name(settings)
 
+
     def change_name(self, settings, *args):
 
         if hasattr(self, 'dialog'):
@@ -308,8 +322,12 @@ class DSO(Component):
         self.update_properties(self.cats.lookup(
             settings.get('Name', ''), OT=settings.get('OT', '')))
 
+        self.check_for_change()
+
+
     def _cancel(self, *args):
         self.dialog.dismiss()
+
 
     def Name_changed(self, val, *args):
         ''' Name is changed as soon as the text is altered to allow lookup
@@ -322,10 +340,13 @@ class DSO(Component):
         if matches is None:
             self.update_properties({}, update_name=False)
         else:
-            logger.debug('Found match: {:}'.format(matches))
+            logger.debug(f'Found match: {matches}')
             self.update_properties(matches)
         self.Name = val
-        # self.check_for_change()
+
+        # not clear why this is commented out...
+        self.check_for_change()
+
 
     def OT_changed(self, widget):
         ''' Allow any object type of 1-3 chars
@@ -343,6 +364,7 @@ class DSO(Component):
             if props is not None:
                 self.update_properties(props)
         self.check_for_change()
+
 
     def prop_changed(self, widget, prop, update=True):
         if self.updating:
@@ -372,10 +394,11 @@ class DSO(Component):
         now = {p: prop_to_str(p, getattr(self, p)) for p in self.props}
         self.changed = 'DSO properties changed' if orig != now else ''
         if orig != now:
-            logger.trace('orig {:}  now {:}'.format(orig, now))
+            logger.trace(f'orig {orig}  now {now}')
         # self.app.gui.has_changed('DSO', orig != now)
         return orig != now
  
+
     def on_save_object(self):
         ''' Update metadata and add any new or changed DSO to user catalogue
         '''
@@ -393,7 +416,6 @@ class DSO(Component):
 
         logger.trace('Checking for change')
 
-
         # update metadata
         if props['Name'] == '':
             props['Name'] = 'anon'
@@ -410,11 +432,12 @@ class DSO(Component):
                 return
  
         ''' add to user DSO catalogue if new or update if modified and has 
-            well-formed name/OT/RA/Dec
+            well-formed name/OT/RA/Dec; also update DSO table (observing list)
         ''' 
         if props['Name'] and props['OT'] and props['RA'] is not None and props['Dec'] is not None:
             logger.trace('New or modified object and has Name/OT/RA/Dec so updating user catalogue')
             self.cats.update_user_object(props)
+            # Component.get('ObservingList').update_user_object(props)
  
 
 

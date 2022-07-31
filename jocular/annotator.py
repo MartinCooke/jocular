@@ -21,7 +21,8 @@ from kivymd.uix.behaviors import HoverBehavior
 
 from jocular.metrics import Metrics
 from jocular.component import Component
-from jocular.uranography import make_tile
+from jocular.uranography import make_tile, radec2pix
+# from jocular.processing.platesolvers import radec2pix
 
 Builder.load_string(
 '''
@@ -48,7 +49,7 @@ Builder.load_string(
         background_color: .6, 0, .6, 0
         width: dp(100)
         padding: dp(5), dp(1)
-        text: '[b]{:}[/b]'.format(root.param)
+        text: f'[b]{root.param}[/b]'
     Label:
         size_hint: None, 1
         markup: True
@@ -61,7 +62,7 @@ Builder.load_string(
         #font_size: '16sp'
         background_color: .6, 0, .6, 0
         width: dp(250)
-        text: '{:}'.format(root.value)
+        text: root.value
 
 <TitleBar>:
     canvas.before:
@@ -85,7 +86,7 @@ Builder.load_string(
         # font_size: str(int(app.info_font_size[:-2]) + 4) + 'sp'
         font_size: str(int(app.form_font_size[:-2]) + 4) + 'sp'
         width: dp(350)
-        text: '[b]{:}[/b]'.format(root.Name)
+        text: f'[b]{root.Name}[/b]'
 
 <DSOPopup>:
     size_hint: None, 1
@@ -154,13 +155,21 @@ class Annotation(Label, HoverBehavior):
     label_color = ListProperty([0.5, 0.5, 0.5])
     infoline = StringProperty('')
     info = DictProperty({})
-    radius = NumericProperty(0)
+   
     bx = NumericProperty(0)  #  pixel on boundary
     by = NumericProperty(0)
     lab_x = NumericProperty(0)
     lab_y = NumericProperty(0)
     center = BooleanProperty(True)
     mag = NumericProperty(0)
+    radius = NumericProperty(0)
+
+    # Members for drag behavior
+    last_x = NumericProperty(0)
+    last_y = NumericProperty(0)
+    total_delta_x = NumericProperty(0)
+    total_delta_y = NumericProperty(0)
+    dragged = BooleanProperty(False)
 
     def on_enter(self, *args):
         if self.visible:
@@ -170,14 +179,49 @@ class Annotation(Label, HoverBehavior):
         if self.visible:
             self.close_DSOInfo()
 
+    # def on_touch_down(self, touch):
+    #     if self.visible and self.collide_point(*touch.pos):
+    #         self.last_x, self.last_y = touch.pos
+    #         return True  # MC added this
+    #     return False
+
     def on_touch_down(self, touch):
-        if self.visible:
-            if self.collide_point(*touch.pos):
+        if self.collide_point(*touch.pos):
+            if self.visible:
+                self.last_x, self.last_y = touch.pos
+                return True
+        return False
+
+
+    def on_touch_move(self, touch):
+        if self.visible and self.pinned and self.collide_point(*touch.pos):
+            self.dragged = True
+            x, y = touch.pos
+            delta_x = x - self.last_x
+            delta_y = y - self.last_y
+            self.last_x, self.last_y = touch.pos
+            self.x += delta_x
+            self.y += delta_y
+            self.lab_x += delta_x
+            self.lab_y += delta_y
+
+            # These are needed for when the view is dragged after dragging the label
+            self.total_delta_x += delta_x
+            self.total_delta_y += delta_y
+            return True
+        return False
+
+    def on_touch_up(self, touch):
+        if self.visible and self.collide_point(*touch.pos):
+            if self.dragged:
+                self.dragged = False
+            else:
                 if not self.pinned:
                     self.pin()
                 else:
                     self.unpin()
                 return True
+
         return False
 
     def pin(self, dt=None):
@@ -186,10 +230,10 @@ class Annotation(Label, HoverBehavior):
             self.font_size = '15sp'
             # for quasars, label with mag + redshift
             if self.ot == 'QS':
-                lab = '{:4.1f}'.format(self.info['Mag'])
+                lab = f'{self.info["Mag"]:4.1f}'
                 z = self.info.get('z', '?')
                 if not np.isnan(z):
-                    lab += ' z {:3.1f}'.format(z)
+                    lab += f' z {z:3.1f}'
                 self.font_size = '14sp'
             # for members, use member number
             elif self.ot == 'ME':
@@ -206,6 +250,10 @@ class Annotation(Label, HoverBehavior):
             else:
                 self.text = '¤'
             self.pinned = False
+            #self.bx -= self.total_delta_x
+            #self.by -= self.total_delta_y
+            self.total_delta_x = 0
+            self.total_delta_y = 0
             self.display_DSOInfo()
             self.update()
 
@@ -236,8 +284,8 @@ class Annotation(Label, HoverBehavior):
             if self.pinned:
                 self.radius = ((self.sx - bx) ** 2 + (self.sy - by) ** 2) ** 0.5
                 ang_r = np.radians(self.ang)
-                self.lab_x = float(self.sx + self.radius * np.cos(ang_r))
-                self.lab_y = float(self.sy + self.radius * np.sin(ang_r))
+                self.lab_x = float(self.sx + self.radius * np.cos(ang_r)) + self.total_delta_x
+                self.lab_y = float(self.sy + self.radius * np.sin(ang_r)) + self.total_delta_y
             else:
                 self.lab_x = self.sx
                 self.lab_y = self.sy
@@ -290,6 +338,7 @@ class PropVal(BoxLayout):
 
 
 class DSOPopup(BoxLayout):
+
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
         Window.add_widget(self)
@@ -298,7 +347,7 @@ class DSOPopup(BoxLayout):
     def display(self, info=None, title_color=None):
 
         # ideally, exclude some of these in Catalogue
-        exclude = {'OT', 'Name', 'RA', 'Dec', 'List', 'Con', 'Obs', 'List', 'Added', 'MaxAlt', 'Transit'}
+        exclude = {'OT', 'Name', 'RA', 'Dec', 'Con', 'Obs', 'List', 'Added', 'MaxAlt', 'Transit'}
         # there is a subtle bug here which this is going to catch one day
         try:
             self.clear_widgets()
@@ -310,7 +359,7 @@ class DSOPopup(BoxLayout):
             for k, v in info.items():
                 if str(v) and str(v) != 'nan' and k not in exclude:
                     if type(v) == float:
-                        pv = PropVal(param=k, value='{:.3f}'.format(v))
+                        pv = PropVal(param=k, value=f'{v:.3f}')
                     else:
                         pv = PropVal(param=k, value=str(v))
                     self.add_widget(pv)
@@ -320,7 +369,7 @@ class DSOPopup(BoxLayout):
             self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
             self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
         except Exception as e:
-            logger.debug('DSOPopup.display issue ({:})'.format(e))
+            logger.debug(f'DSOPopup.display issue ({e})')
 
     def hide(self):
         self.x = 10 * Window.width
@@ -337,9 +386,11 @@ class Annotator(Component):
         self.app = App.get_running_app()
         self.annotations = []
 
+
     def on_new_object(self):
         self.clear_annotations()
         self.on_mag_limit()
+
 
     def clear_annotations(self):
         # remove previous annotations
@@ -348,13 +399,16 @@ class Annotator(Component):
             n_annots = len(self.annotations)
             for k in self.annotations:
                 gui.remove_widget(k)
-            logger.info('Cleared {:d} annotations'.format(n_annots))
+            logger.info(f'Cleared {n_annots:d} annotations')
             self.annotations = []
+
 
     def has_annotations(self):
         return len(self.annotations) > 0
 
+
     def on_mag_limit(self, *args):
+
         # modify what is visible
         ml = self.mag_limit
 
@@ -377,13 +431,14 @@ class Annotator(Component):
         else:
             for annot in self.annotations:
                 annot.display = annot.pinned or annot.mag < ml
-            mesg = '{:4.1f}'.format(ml)
+            mesg = f'{ml:4.1f}'
 
-        self.app.gui.set_prop('mag_limit', 'text', '   {:}'.format(mesg))
+        self.app.gui.set_prop('mag_limit', 'text', f'   {mesg}')
 
         self.update()
 
-    def get_diam(self, ot, info):
+    @staticmethod
+    def get_diam(info):
         if 'Diam' in info:
             d = info['Diam']
         elif 'diam' in info:
@@ -397,22 +452,41 @@ class Annotator(Component):
         return d
 
 
-    def annotate(self):
+    def annotate(self, solution):
         ''' called by platesolver when finished a platesolve
         '''
 
+        ''' solution is a dict like this:
+            {
+                'ra_centre': ra_centre,
+                'dec_centre': dec_centre,
+                'ra': str(RA(ra_centre)),
+                'dec': str(Dec(dec_centre)),
+                'width': w,
+                'height': h,
+                'fov_w': fov_w,
+                'fov_h': fov_h,
+                'north': north,
+                'projection': projection,
+                'im_stars': im_stars,
+                'ref_stars': ref_stars
+            }
+        '''
+
         self.clear_annotations()
-        solver = Component.get('PlateSolver')
+        # solver = Component.get('PlateSolver')
         cats = Component.get('Catalogues')
 
         # rotate view to north
-        Component.get('View').orientation = solver.north
+        Component.get('View').orientation = solution['north']
 
         # find objects in FOV from tile large enough to encompass sensor
-        w, h = solver.im_width, solver.im_height
-        deg_per_pixel = float(solver.FOV_h / h)
-        fov = 1.5 * max(solver.FOV_w, solver.FOV_h)
-        tile = make_tile(solver.tile_ra0, solver.tile_dec0, fov=fov)
+        w, h = solution['width'], solution['height']
+        deg_per_pixel = float(solution['fov_h'] / h)
+        fov = 1.5 * max(solution['fov_w'], solution['fov_h'])
+        # possible that these should be tile ra/dec]
+        ra0, dec0 = solution['tile_ra0'], solution['tile_dec0']
+        tile = make_tile(ra0, dec0, fov=fov)
 
         dsos = cats.get_annotation_dsos(tile=tile)
 
@@ -442,7 +516,9 @@ class Annotator(Component):
 
         atypes = []
         for nm, info in dsos.items():
-            px, py = solver.ra_dec_to_pixels(info['RA'], info['Dec'])
+            px, py = radec2pix(info['RA'], info['Dec'], ra0, dec0, solution['projection'])
+
+            # px, py = solver.ra_dec_to_pixels(info['RA'], info['Dec'])
             px, py = float(px[0]), float(py[0])
             # check it is actually within the image dimensions
             if (px >= 0) & (py >= 0) & (px < w) & (py < h):
@@ -456,7 +532,7 @@ class Annotator(Component):
                         props[k] = v
                 info['Object type'] = props['name']
                 # try to get a diameter value in case we need it
-                diam = self.get_diam(ot, info)
+                diam = self.get_diam(info)
                 ang = 45
                 center = True
                 if ot in {'OC', 'GC', 'CG', 'GG', 'G+', 'PG'}:
@@ -497,7 +573,8 @@ class Annotator(Component):
         r2 = Metrics.get('inner_radius') ** 2
         gui = App.get_running_app().gui
         for lab in self.annotations:
-            gui.add_widget(lab, index=101)
+            # gui.add_widget(lab, index=101)
+            gui.add_widget(lab, index=0)
             lab.update(mapping=mapping, xc=xc, yc=yc, r2=r2)
             # sort out situations where several have same target name
             if lab.info['Name'] == target:

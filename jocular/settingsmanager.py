@@ -2,6 +2,7 @@
 '''
 
 import json
+import os
 from functools import partial
 from loguru import logger
 
@@ -16,7 +17,7 @@ from kivy.lang import Builder
 
 from jocular.component import Component
 from jocular.formwidgets import configurable_to_widget
-from jocular.widgets import Panel
+from jocular.panel import Panel
 
 Builder.load_string(
     '''
@@ -40,7 +41,7 @@ class SettingsManager(Component, Panel):
 		''' keep a record of all setting instances
 		'''
 		self.instances[name] = settings
-		logger.debug('registered settings for {:}'.format(name))
+		logger.debug(f'registered settings for {name}')
 
 	def on_hide(self, *args):
 		for cls in self.instances.values():
@@ -123,15 +124,29 @@ class SettingsBase():
 		self.app = App.get_running_app()
 		self.name = self.__class__.__name__
 
-		# load and apply settings if they exist
-		try:
-			with open(self.app.get_path('{:}.json'.format(self.name)), 'r') as f:
-				settings = json.load(f)
-			for name, spec in self.configurables:
-				if name in settings:
+		settings = {}
+
+		# load settings if they exist
+		path = self.app.get_path(f'{self.name}.json')
+		if os.path.exists(path):
+			# report any JSON issues
+			try:
+				with open(path, 'r') as f:
+					settings = json.load(f)
+			except Exception as e:
+				logger.error(f'Problem reading json file {path} ({e})')
+		else:
+			logger.debug(f'No {path}; setting to empty')
+
+
+		# initialise values; report any issues caused e.g. by changes 
+		# in types etc between versions
+		for name, spec in self.configurables:
+			if name in settings:
+				try:
 					setattr(self, name, settings[name])
-		except:
-			pass
+				except Exception as e:
+					logger.debug(f'{e}')
 
 	@logger.catch
 	def apply_and_save_settings(self):
@@ -146,7 +161,7 @@ class SettingsBase():
 
 		# save settings
 		settings = {p: getattr(self, p) for p, v in self.configurables if 'action' not in v}
-		with open(self.app.get_path('{:}.json'.format(self.name)), 'w') as f:
+		with open(self.app.get_path(f'{self.name}.json'), 'w') as f:
 			json.dump(settings, f, indent=1)
 
 		# notify anyone who is listening
@@ -154,6 +169,7 @@ class SettingsBase():
 
 		# clear changes for next time
 		self.changed_settings = {}
+
 
 	@logger.catch()	
 	def setting_changed(self, name, value, spec, *args):
@@ -177,17 +193,20 @@ class SettingsBase():
 			if spec.get('update', True):
 				setattr(self, name, value) 
 
+
 	def action_succeeded(self, widget, message, *args):
 		widget.text = message
 
+
 	def action_failed(self, widget, message, *args):
 		widget.text = message
+
 
 	def settings_have_changed(self, *args):
 		pass
 
 
-class Settings(SettingsBase):
+class JSettings(SettingsBase):
 
 	tab_name = StringProperty(None) 
 

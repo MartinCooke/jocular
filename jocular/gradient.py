@@ -54,7 +54,7 @@ def estimate_gradient(im):
             _polyfit2d(x[inds], y[inds], z[inds], deg=[2, 1]))
 
     except Exception as e:
-        logger.warning('gradient estimation failed; returning zeros ({:})'.format(e))
+        logger.warning(f'gradient estimation failed; returning zeros ({e})')
         return np.zeros(im.shape)
 
 
@@ -76,5 +76,6 @@ def image_stats(im):
         #'99.9 percentile': np.percentile(imr, 99.9),
         'min': np.min(imr),
         'max': np.max(imr),
-        'mean': np.mean(imr)
+        'mean': np.mean(imr),
+        'over': np.mean(imr > .99) * 100
         }

@@ -16,8 +16,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url=URL,
-    author='Martin Cooke',
-    author_email='martin.cooke.1917@gmail.com',
+    author='Martin',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: End Users/Desktop',
@@ -36,6 +35,7 @@ setup(
         'astropy>=4.2',  # fits etc
         'mss>=6.1.0',  # snapshots
         'pyusb>=1.1.1',  # camera
+        'photutils==1.4.0',
         'hidapi>=0.10.1',  # filterwheel
         'colour-demosaicing>=0.1.6', # debayering,
         'zwoasi>=0.0.22', # wrapper for ZWO cameras 

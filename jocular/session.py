@@ -13,20 +13,19 @@ from kivy.lang import Builder
 from kivymd.uix.boxlayout import MDBoxLayout
 
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
+from jocular.widgets.widgets import Pin
 
 
 Builder.load_string('''
 
 <MyBoxLayout@BoxLayout>:
     size_hint: (1, None)
-    # height: '{:}dp'.format(int(app.form_font_size[:-2]) + 20)
     height: '42dp'
 
 <SessionInfo>:
     padding: '10dp'
     adaptive_height: True
-    #adaptive_width: True
     pos_hint: {'y': 0, 'x': 0} if root.session.show_session else {'y': 0, 'right': -1000} 
     size_hint: None, None
     orientation: 'vertical'
@@ -39,7 +38,6 @@ Builder.load_string('''
         JTextField:
             width: '180dp'
             height: '32dp'
-            #helper_text: ''
             on_focus: root.session.session_changed(self.text) if not self.focus else None
             text: root.session.session
 
@@ -47,7 +45,6 @@ Builder.load_string('''
         JTextField:
             hint_text: 'transparency'
             width: '220dp'
-            #helper_text: 'e.g. high clouds, good'
             on_focus: root.session.transparency_changed(self.text) if not self.focus else None
             text: root.session.transparency
 
@@ -56,21 +53,18 @@ Builder.load_string('''
         JTextField:
             hint_text: 'seeing'
             width: '240dp'
-            #helper_text: 'e.g. poor, excellent'
             on_focus: root.session.seeing_changed(self.text) if not self.focus else None
             text: root.session.seeing
 
     MyBoxLayout:
         JTextField:
             hint_text: 'temperature'
-            #helper_text: 'e.g. 5C or 45F'
             on_focus: root.session.temperature_changed(self.text) if not self.focus else None
             text: root.session.formatted_temperature
 
         JTextField:
             width: '140dp'
             hint_text: 'brightness'
-            #helper_text: 'e.g. 19.23 or 4.5'
             on_focus: root.session.sky_brightness_changed(self.text) if not self.focus else None
             text: root.session.formatted_sky_brightness
 
@@ -102,6 +96,10 @@ Builder.load_string('''
             text: root.session.session_notes
             on_focus: root.session.session_notes_changed(self.text) if not self.focus else None
 
+    BoxLayout:
+        size_hint: (1, None)
+        height: '22dp'
+
 ''')
 
 
@@ -127,7 +125,7 @@ class SessionInfo(MDBoxLayout):
         super().__init__(**kwargs)
 
 
-class Session(Component, Settings):
+class Session(Component, JSettings):
 
     save_settings = ['show_session']
 
@@ -170,8 +168,16 @@ class Session(Component, Settings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        show_session = self.app.gui.get_gui_setting('show_session')
+        self.show_session = False if show_session is None else show_session
         self.session_info = SessionInfo(self)
         self.app.gui.add_widget(self.session_info)
+        self.app.gui.add_widget(Pin(
+            comp=self, 
+            field='show_session', 
+            loc='lower-left', 
+            tooltip_text='toggle session information panel',
+            show_text='Session'))
 
     def describe(self):
         ''' return information for Snapshotter
@@ -181,8 +187,8 @@ class Session(Component, Settings):
             self.session, 
             self.formatted_sky_brightness,
             self.formatted_temperature,
-            'seeing {:}'.format(self.seeing) if self.seeing else None,
-            'transp {:}'.format(self.transparency) if self.transparency else None
+            f'seeing {self.seeing}' if self.seeing else None,
+            f'transp {self.transparency}' if self.transparency else None
             ]
 
     def theme_changed(self, *args):
@@ -219,8 +225,8 @@ class Session(Component, Settings):
         except:
             return ''
         if self.temperature_units == 'Centigrade':
-            return '{:.0f}\N{DEGREE SIGN}C'.format(temp)
-        return '{:.0f}\N{DEGREE SIGN}F'.format(temp*1.8 + 32)
+            return f'{temp:.0f}\N{DEGREE SIGN}C'
+        return f'{temp*1.8 + 32:.0f}\N{DEGREE SIGN}F'
 
     @logger.catch()
     def on_temperature(self, *args):
@@ -264,8 +270,8 @@ class Session(Component, Settings):
         except:
             return ''
         if self.sky_brightness_units == 'SQM':
-            return '{:.2f} sqm'.format(bright)
-        return '{:.1f} nelm'.format(NELM_to_SQM(bright))
+            return f'{bright:.2f} sqm'
+        return f'{NELM_to_SQM(bright):.1f} nelm'
 
     def on_sky_brightness(self, *args):
         self.formatted_sky_brightness = 'xyz'
@@ -360,7 +366,7 @@ class Session(Component, Settings):
                 self.camera = session.get('camera', '')
         except Exception as e:
             # any problems we just start a fresh session
-            logger.debug('problem loading session: recreating {:}'.format(e))
+            logger.debug(f'problem loading session: recreating {e}')
             self.create_empty_session()
             self.save_session()
 

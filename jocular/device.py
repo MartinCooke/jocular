@@ -36,7 +36,7 @@ class DeviceFamily:
 	def __init__(self, **kwargs):
 		self.app = App.get_running_app()
 		try:
-			with open(self.app.get_path('{:}.json'.format(self.family)), 'r') as f:
+			with open(self.app.get_path(f'{self.family}.json'), 'r') as f:
 				self.settings = json.load(f)
 		except:
 			self.settings = {}
@@ -47,7 +47,7 @@ class DeviceFamily:
 		self.connect()
 
 	def save(self):
-		with open(self.app.get_path('{:}.json'.format(self.family)), 'w') as f:
+		with open(self.app.get_path(f'{self.family}.json'), 'w') as f:
 			json.dump(self.settings, f, indent=1)       
 
 	def set_mode(self, mode):
@@ -58,7 +58,7 @@ class DeviceFamily:
 		self.disconnect()
 		try:
 			if mode in self.modes:
-				devmod = importlib.import_module('jocular.{:}'.format(self.family.lower()))
+				devmod = importlib.import_module(f'jocular.{self.family.lower()}')
 				devclass = getattr(devmod, self.modes[mode])
 				self.device = devclass()
 				self.settings['current_mode'] = mode
@@ -73,12 +73,11 @@ class DeviceFamily:
 
 	def configure(self):
 		if self.device is not None:
-			logger.debug('family {:} settings {:}'.format(self.family, self.settings['current_mode']))
+			logger.debug(f"family {self.family} settings {self.settings['current_mode']}")
 			self.device.configure()
 
 	def connect(self):
-		logger.debug('Connecting {:} (current mode: {:})'.format(
-			self.family, self.settings['current_mode']))
+		logger.debug(f"Connecting {self.family} (current mode: {self.settings['current_mode']})")
 		if self.device is not None:
 			self.device.connect()
 			# only save current mode if we are able to connect
@@ -95,6 +94,8 @@ class DeviceFamily:
 			self.device_disconnected()
 
 	def connected(self):
+		if not hasattr(self, 'device'):
+			return False
 		if self.device is None:
 			return False
 		return self.device.connected
@@ -141,7 +142,7 @@ class Device(EventDispatcher, SettingsBase):
 		pass
 
 	def connect(self):
-		self.status = 'Not implemented for this {:}'.format(self.family)
+		self.status = f'Not implemented for this {self.family}'
 		self.connected = False
 
 	def disconnect(self):
@@ -161,7 +162,7 @@ class Device(EventDispatcher, SettingsBase):
 		pass
 
 	def handle_failure(self, message='problem'):
-		logger.error('{:}: failure {:}'.format(self.family, message))
+		logger.error(f'{self.family}: failure {message}')
 		self.disconnect()
 		self.connected = False
 		self.status = message

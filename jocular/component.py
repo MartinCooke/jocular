@@ -4,8 +4,8 @@
 
 import json
 import importlib
-from loguru import logger
 from collections import OrderedDict
+from loguru import logger
 from kivy.app import App
 from kivy.event import EventDispatcher
 from kivy.properties import StringProperty, ListProperty
@@ -27,12 +27,12 @@ class Component(EventDispatcher):
             class_ = getattr(module, name)
             inst = class_()
             cls.register(inst)
-            logger.info('{:} imported'.format(name))
+            logger.info(f'{name} imported')
             return inst
         except Exception as e:
-            logger.exception('cannot import module {:} ({:})'.format(name, e))
-            return
- 
+            logger.exception(f'cannot import module {name} ({e})')
+            return None
+
     @classmethod
     def is_loaded(cls, name):
         return name in cls.components
@@ -44,15 +44,15 @@ class Component(EventDispatcher):
             cls.components[name] = obj
             App.get_running_app().gui.initialise_component(name)
         else:
-            logger.error('name clash for {:}'.format(name))
- 
+            logger.error(f'name clash for {name}')
+
     @classmethod
     def initialise_new_object(cls):
         logger.info('initialising for new object')
         for v in cls.components.values():
             v.changed = ''
             v.on_new_object()
-        App.get_running_app().gui.is_changed(False)
+        # App.get_running_app().gui.is_changed(False)
 
     @classmethod
     def initialise_previous_object(cls):
@@ -62,8 +62,8 @@ class Component(EventDispatcher):
         for c in comps:
             cls.components[c].changed = ''
             cls.components[c].on_previous_object()
-        App.get_running_app().gui.is_changed(False)
- 
+        # App.get_running_app().gui.is_changed(False)
+
     @classmethod
     def changes(cls):
         ''' return a dictionary of changes since last save
@@ -92,34 +92,35 @@ class Component(EventDispatcher):
     def bind_status(cls):
         for name, inst in cls.components.items():
             cls.get('Status').bind_status(name, inst)
-            #inst.info('loaded')
 
     @classmethod
     def check_for_change(cls):
         ''' Only changed if at least one component reports a change
             and the stack is non-empty
         '''
-        App.get_running_app().gui.is_changed(cls.any_changes())
+        # App.get_running_app().gui.is_changed(cls.any_changes())
+        pass
+
 
     @classmethod
     def any_changes(cls):
         nonempty = not cls.get('Stacker').is_empty()
         return (cls.changes() != {}) and nonempty
 
-    def redraw(self, *args): 
+    def redraw(self, *args):
         pass
 
-    def on_new_object(self, *args): 
+    def on_new_object(self):
         pass
 
     def on_previous_object(self, *args):
         # treat as new object unless a component overrides this
         self.on_new_object(*args)
 
-    def on_save_object(self, *args): 
+    def on_save_object(self, *args):
         pass
 
-    def on_close(self, *args): 
+    def on_close(self, *args):
         pass
 
     def on_changed(self, *args):
@@ -128,5 +129,5 @@ class Component(EventDispatcher):
         '''
         Component.check_for_change()
 
-    def info(self, message=None, prefix=None, typ='normal'):
+    def info(self, message=None): #, prefix=None, typ='normal'):
         self.infoline = message

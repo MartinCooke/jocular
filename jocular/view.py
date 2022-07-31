@@ -1,17 +1,13 @@
-''' View: represents the actual image on the screen; since v0.5 uses
-    a separate class to handle the scatter component where the
-    image is pasted.
+''' View: represents the actual image on the screen; works with
+    ScatterView class
 '''
 
 import os
 import time
 import numpy as np
-import math
 from loguru import logger
 
 from kivy.app import App
-from kivy.lang import Builder
-from kivy.uix.scatter import Scatter
 from kivy.graphics.texture import Texture
 from kivy.graphics.transformation import Matrix
 from kivy.properties import (
@@ -20,106 +16,30 @@ from kivy.properties import (
     )
 from kivy.core.window import Window
 
-from jocular.utils import angle360, toast
+from jocular.utils import toast
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
 from jocular.metrics import Metrics
-
-Builder.load_string('''
-
-<ScatterView>:
-    size: image.size
-    size_hint: None, None 
-    auto_bring_to_front: False
-    do_rotation: True
-    do_translation: True
-    do_scale: True
-    Image:
-        id: image
-''')
-
-class ScatterView(Scatter):
-
-    def __init__(self, controller, **kwargs):
-        super().__init__(**kwargs)
-        self.controller = controller
-
-    def on_touch_down(self, touch):
-        # check if touch is within eyepiece and if so, where
-
-        x, y = touch.pos
-        xc, yc = Metrics.get('origin')
-        r = (((xc - x) ** 2 + (yc - y) ** 2) ** .5) / Metrics.get('inner_radius')
-
-        # touch is not in the eyepiece
-        if r  >  .98:
-            return False
-
-        # in image
-        in_image = self.collide_point(*touch.pos)
-
-        # is it in the outer zone of the image, or not touching image, rotate
-        if not in_image or r > .8:
-            self.controller.ring_selected = True
-            self.theta = math.atan2(y - yc, x - xc) / (math.pi/ 180)
-            self.xc = xc
-            self.yc = yc
-            return True
-
-        if in_image:
-            if touch.is_double_tap:
-                self.controller.invert = not self.controller.invert
-                return True
-            self.controller.image_selected  = True
-            self.last_x = x
-            self.last_y = y
-            return True
-
-        return False
-
-    def on_touch_move(self, touch):
-        if self.controller.ring_selected:
-            x, y = touch.pos
-            theta = math.atan2(y - self.yc, x - self.xc) / (math.pi / 180)
-            self.controller.orientation = angle360(self.controller.orientation + (theta - self.theta))
-            self.theta = theta
-            return True
-        if self.controller.image_selected:
-            x, y = touch.pos
-            delta_x = (x - self.last_x)
-            delta_y = (y - self.last_y)
-            self.x += delta_x
-            self.y += delta_y
-            self.last_x = x
-            self.last_y = y
-            Component.get('Annotator').update()
-            return True
-        return False
-
-    def on_touch_up(self, touch):
-        self.controller.ring_selected = False
-        self.controller.image_selected = False
+from jocular.widgets.scatterview import ScatterView
 
 
-class View(Component, Settings):  # must be in this order
+class View(Component, JSettings):  # must be in this order
 
-    zoom = NumericProperty(0)  # zoom lever ranges from 0 to 1 and maps from min-max zoom using curve
-    show_help = BooleanProperty(False)
+    zoom = NumericProperty(0)
     invert = BooleanProperty(False)
     orientation = BoundedNumericProperty(0, min=0, max=360)
     show_reticle = BooleanProperty(False)
     brightness = NumericProperty(1)
     is_dimmed = BooleanProperty(False)
     transparency = NumericProperty(0)
-    # apply_ROI = BooleanProperty(False)
     ROI = ListProperty(None, allownone=True)
-
     flip_UD = BooleanProperty(False)
     flip_LR = BooleanProperty(False)
     min_zoom = NumericProperty(.5)
     max_zoom = NumericProperty(30)
     zoom_power = NumericProperty(1)
     continuous_update = BooleanProperty(True)
+
 
     configurables = [
         ('flip_UD', {
@@ -148,6 +68,7 @@ class View(Component, Settings):  # must be in this order
             'help': 'apply a power curve to provide more sensitivity'})
         ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cached_image = None
@@ -160,20 +81,23 @@ class View(Component, Settings):  # must be in this order
         self.image_selected = False
         self.old_transparency = self.transparency
         self.old_brightness = self.brightness
-        # self.updating_ROI = False
-        # self.ROI = None
-        logger.debug('View scatter {:}'.format(self.scatter))
+        # logger.debug(f'View scatter {self.scatter}')
+
 
     def on_new_object(self):
-        # until we receive the new object' sizes we cannot really zoom, so do this on first draw
+        ''' until we receive the new object size we cannot zoom, 
+            so zoom first draw
+        '''
         self.reset()
-        self.app.gui.enable(['apply_ROI'])       
+
 
     def on_previous_object(self):
+        ''' Reset read for previous observation but also match
+            orientation to that stored
+        '''
         self.reset()
-        # restore orientation for previous objects
         self.orientation_settings = Component.get('Metadata').get({'orientation'}) 
-        self.app.gui.disable(['apply_ROI'])       
+
 
     def reset(self):
         # Keep as separate method because most likely called on stack reset
@@ -183,36 +107,43 @@ class View(Component, Settings):  # must be in this order
         self.reset_texture()
         self.update_state()
 
+
     def on_save_object(self):
         Component.get('Metadata').set('orientation', self.orientation)
+
 
     def on_show_reticle(self, *args):
         self.app.gui.gui['reticle']['widget'].show = self.show_reticle
 
+
     def on_brightness(self, *args):
         self.app.brightness = self.brightness
 
+
     def on_transparency(self, *args):
         self.app.transparency = max(0, self.transparency)
+
 
     def update_state(self):
         s = 'L-R, ' if self.flip_LR else ''
         s += 'U-D' if self.flip_UD else ''
         if s.endswith(', '):
             s = s[:-2]
-        flipstr = ' | flip {:}'.format(s) if s else ''
+        flipstr = f' | flip {s}' if s else ''
         invstr = ' | inv' if self.invert else ''
-        self.info('rot {:.0f}\u00b0 | {:4.1f}x{:}{:}'.format(
-            self.orientation, self.lever_to_zoom(self.zoom), flipstr, invstr))
+        self.info(f'rot {self.orientation:.0f}\u00b0 | {self.lever_to_zoom(self.zoom):4.1f}x{flipstr}{invstr}')
         Component.get('Annotator').update()
+
 
     def lever_to_zoom(self, z):
         return self.min_zoom + (z ** self.zoom_power) *(self.max_zoom - self.min_zoom)
+
 
     def zoom_to_lever(self, z):
         if z < self.min_zoom: 
             return 0
         return ((z - self.min_zoom) / (self.max_zoom - self.min_zoom)) ** (1 / self.zoom_power)
+
 
     def on_zoom(self, *args):
         # zoom anchored on window centre
@@ -221,14 +152,18 @@ class View(Component, Settings):  # must be in this order
         self.scatter.apply_transform(mat, anchor=Metrics.get('origin'))
         self.update_state()
 
+
     def on_orientation(self, *args):
         # rotate anchored on window center
         rot = self.orientation - self.scatter._get_rotation()
         self.scatter.apply_transform(Matrix().rotate((np.pi/180)*rot, 0 ,0, 1), anchor=Metrics.get('origin'))
         self.update_state()
 
+
     def fit_to_window(self, zero_orientation=True, *args):
-        # compute zoom to fit to window
+        ''' Apply original orientation (from sensor) to image
+            and set zoom to just fit to window
+        '''
         if self.last_image is None:
             return
         shape = self.last_image.shape
@@ -246,6 +181,10 @@ class View(Component, Settings):  # must be in this order
     def apply_ROI(self, *args):
         ''' force or undo ROI
         '''
+
+        if Component.get('ObjectIO').existing_object:
+            toast('ROI only applies to live captures at present', 3)
+            return
 
         # only allow ROI if we have an image
         if self.last_image is None:
@@ -316,6 +255,7 @@ class View(Component, Settings):  # must be in this order
             self.reset_texture(w=width, h=width)
             self.display_image(im)
 
+
     def on_invert(self, *args):
         if self.last_image is None:
             return
@@ -326,34 +266,29 @@ class View(Component, Settings):  # must be in this order
         elif self.invert:
             self.invert = False
 
+
     def on_flip_LR(self, *args):
         self.display_image(use_cached_image=True)
         self.update_state()
+
 
     def on_flip_UD(self, *args):
         self.display_image(use_cached_image=True)
         self.update_state()
 
-    # def reset_texture(self, w=10, h=10, colorfmt='luminance'):
-    #     self.scatter.ids.image.size = h, w
-    #     self.scatter.ids.image.texture = Texture.create(size=(h, w), colorfmt=colorfmt)
-    #     self.scatter._set_center(Metrics.get('origin'))
-    #     self.h, self.w = h, w
-    #     self.colorfmt = colorfmt
-    #     logger.debug('texture reset')
-
+ 
     def reset_texture(self, w=10, h=10, colorfmt='luminance'):
         self.scatter.ids.image.size = w, h
         self.scatter.ids.image.texture = Texture.create(size=(w, h), colorfmt=colorfmt)
         self.scatter._set_center(Metrics.get('origin'))
         self.w, self.h = w, h
         self.colorfmt = colorfmt
-        logger.debug('texture reset w {:} h {:} colorfmt {:}'.format(
-            w, h, colorfmt))
+        logger.debug(f'texture reset w {w} h {h} colorfmt {colorfmt}')
 
 
     def display_blank(self):
         self.display_image(0 * np.ones((self.w, self.h)))
+
 
     def do_flips(self, im):
         # perform flips (< 1 ms)
@@ -362,6 +297,7 @@ class View(Component, Settings):  # must be in this order
         if self.flip_LR:
             im = np.fliplr(im)
         return im
+
 
     def display_image(self, im=None, use_cached_image=False):
         ''' Called with an image, in which case update cached image, perform flips etc
@@ -398,7 +334,10 @@ class View(Component, Settings):  # must be in this order
             im = np.subtract(1, im, dtype=im.dtype)
 
         self.last_image = np.uint8(im * 255)
-        self.scatter.ids.image.texture.blit_buffer(self.last_image.flatten(), colorfmt=colorfmt, bufferfmt='ubyte')
+        self.scatter.ids.image.texture.blit_buffer(
+            self.last_image.flatten(), 
+            colorfmt=colorfmt, 
+            bufferfmt='ubyte')
 
         # first time through for each object, apply settings
         if hasattr(self, 'orientation_settings') and self.orientation_settings is not None:
@@ -415,7 +354,7 @@ class View(Component, Settings):  # must be in this order
         # currently disabled
         if False:
             if (time.time() - self.last_image_time) > .3:
-                np.save(os.path.join(
-                    self.last_image_dir, 'im_{:}.npy'.format(time.time())), self.last_image)
+                np.save(os.path.join(self.last_image_dir, f'im_{time.time()}.npy'), 
+                    self.last_image)
                 self.last_image_time = time.time()
 

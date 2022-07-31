@@ -1,4 +1,5 @@
-''' telescope is really the mount of course...
+''' Mount/scope control
+	Not supported currently.
 '''
 
 from loguru import logger
@@ -52,7 +53,7 @@ class GenericTelescope(Device):
 	family = StringProperty('Telescope')
 
 	def move(self, direction=None, rate=None):
-		logger.debug('moving {:} at rate {:}'.format(direction, rate))
+		logger.debug(f'moving {direction} at rate {rate}')
 
 	def stop_moving(self):
 		logger.debug('stop moving')
@@ -91,11 +92,10 @@ class ASCOMTelescope(GenericTelescope):
 		if self.connected:
 			self.driver = res.get('driver', self.driver)
 			self.scope = res['device']
-			logger.info('current sidereal time  from scope {:}'.format(
-				self.scope.SiderealTime))
+			logger.info(f'current sidereal time  from scope {self.scope.SiderealTime}')
 		else:
 			if 'exception' in res:
-				self.status += ' ({:})'.format(res['exception'])
+				self.status += f' ({res['exception']})'
 
 
 
@@ -105,7 +105,7 @@ class ASCOMTelescope(GenericTelescope):
 
 	def move(self, direction=None, rate=None):
 
-		logger.debug('moving {:} at rate {:}'.format(direction, rate))
+		logger.debug(f'moving {direction} at rate {rate}')
 		''' for ASCOM, negative rate implies moving in other direction
 			so need to convert directions up down etc
 			We will map left right to RA axis for Eq and to azimuth for altaz

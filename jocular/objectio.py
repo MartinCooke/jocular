@@ -8,11 +8,7 @@ from datetime import date, datetime
 from loguru import logger
 
 from kivy.app import App
-from kivy.metrics import dp
-from kivy.properties import BooleanProperty, NumericProperty, StringProperty
-from kivy.lang import Builder
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.label import Label
+from kivy.properties import BooleanProperty
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivy.base import stopTouchApp
@@ -20,85 +16,6 @@ from kivy.base import stopTouchApp
 from jocular.component import Component
 from jocular.utils import add_if_not_exists, generate_observation_name, move_to_dir, toast
 from jocular.image import save_image, Image
-from jocular.formwidgets import configurable_to_widget
-
-Builder.load_string('''
-
-<SaveDialogContent>:
-    orientation: 'vertical'
-    adaptive_height: True
-    # height: '340dp'
-
-    MDLabel:
-        id: text
-        text: root.text
-        font_style: "Body1"
-        theme_text_color: "Custom"
-        text_color: app.theme_cls.disabled_hint_text_color
-        size_hint_y: None
-        height: self.texture_size[1]
-        markup: True
-
-''')
-
-class SaveDialogContent(MDBoxLayout):
-    ''' Save dialog options to allow user to change exposure, temperature, 
-        or sub_type
-    '''
-    configurables = [
-        ('exposure', {'name': 'exposure', 
-            'double_slider_float': (0, 60), 
-            'fmt': '{:.2f} s',
-            'help': 'change if exposure is incorrect'}),
-        ('sub_type', {'name': 'sub type', 'options': ['light', 'dark', 'flat', 'bias'], 
-            'help': 'change if sub type is incorrect'}),
-        ('save_master', {'name': 'save master?', 'switch': True, 
-            'help': 'save subs and create new calibration master?'}),
-        ('temperature', {'name': 'temperature', 'float': (-40, 40, 1), 
-            'fmt': '{:.0f} C',
-            'help': 'change if temperature is incorrect'}),
-        ('change_fits_headers', {'name': 'change FITs?', 'switch': True, 
-            'help': 'permanently write new properties into FITs headers'})
-        ]
-
-    exposure = NumericProperty(0)
-    sub_type = StringProperty('light')
-    temperature = NumericProperty(0, allownone=True)
-    save_master = BooleanProperty(False)
-    change_fits_headers = BooleanProperty(False)
-
-    def __init__(self, text=None, sub_type=None, temperature=None, exposure=None, **kwargs):
-        self.text = text
-        self.sub_type = 'light' if sub_type is None else sub_type
-        self.temperature = -40 if temperature is None else temperature
-        self.exposure = 0 if exposure is None else exposure
-        self.save_master = self.sub_type in {'flat', 'dark', 'bias'}
-        super().__init__(**kwargs)
-
-        self.widgets = {}
-        for name, spec in self.configurables:
-            self.widgets[name] = configurable_to_widget(
-                text=spec.get('name', name),
-                name=name,
-                spec=spec,
-                helptext=spec.get('help', ''),
-                initval=getattr(self, name), 
-                changed=self.setting_changed,
-                textwidth=dp(150),
-                widgetwidth=dp(100))
-
-        self.add_widget(Label(size_hint=(1, None), height='50dp'))  # spacer
-        for widget in self.widgets.values():
-            self.add_widget(widget)
-        self.add_widget(Label(size_hint=(1, None), height='50dp'))  # spacer
-        self.widgets['save_master'].disabled = sub_type == 'light'
-
-    def setting_changed(self, name, value, spec, *args):
-        ''' Called by widget when a setting changes
-        '''
-        if name == 'sub_type':
-            self.widgets['save_master'].disabled = value == 'light'
-        setattr(self, name, value)        
 
 
 class ObjectIO(Component):
@@ -114,23 +31,28 @@ class ObjectIO(Component):
         self.session_dir = os.path.join(self.app.get_path('captures'), date.today().strftime(dformat))
         add_if_not_exists(self.session_dir)
 
+
     def on_close(self):
         self.closing = True
+
 
     def confirm_new_object(self, *args):
         ''' user clicks new on interface, so check for save
         '''
         self.check_save(callback=self.new_object)
 
+
     def confirm_previous_object(self, *args):
         ''' user clicks previous object
         '''
         self.check_save(callback=Component.get('Observations').show_observations)
 
+
     def confirm_quit(self, *args):
         ''' user has pressed quit, so check for save
         '''
         self.check_save(callback=stopTouchApp)
+
 
     def do_callback(self):
         if hasattr(self, 'callback'):
@@ -139,8 +61,9 @@ class ObjectIO(Component):
             else:
                 self.callback()
 
+
     def check_save(self, callback=None):
-        ''' Called if user selects New, Previous, Save or Quit
+        ''' Called if user selects New, Previous or Quit
         '''
 
         logger.debug('')
@@ -156,11 +79,9 @@ class ObjectIO(Component):
 
         self.dialog = MDDialog(
             auto_dismiss=False, 
-            text='Save current observation?\n\nReason(s): {:}'.format(
-                ', '.join(list(changes.values()))), 
+            text=f"Save current observation?\n\nReason(s): {', '.join(list(changes.values()))}", 
             buttons=[
                 MDFlatButton(text="SAVE", on_press=self._save),
-                # MDFlatButton(text="SAVE (ADVANCED)", on_press=self._save_after_edit),
                 MDFlatButton(text="NO",  on_press=self._no_save),
                 MDFlatButton(text="CANCEL", on_press=self._cancel)
             ])
@@ -170,13 +91,13 @@ class ObjectIO(Component):
     def _save(self, *args):
         self.dialog.dismiss()
         self.save()
-
-    def _save_after_edit(self, *args):
-        toast('not yet re-implemented')
-        self.dialog.dismiss()
  
     def _no_save(self, callback, *args):
         self.dialog.dismiss()
+        # for any live observations, move to delete directory
+        if not self.existing_object:
+            self.delete_file(self.current_object_dir)
+            toast('moved FITs for this object to delete directory', 3)
         self.do_callback()
 
     def _cancel(self, *args):
@@ -214,8 +135,6 @@ class ObjectIO(Component):
                 'gain': stacker.get_prop('gain'),
                 'offset': stacker.get_prop('offset'),
                 'binning': stacker.get_prop('binning'),
-                #'ROI': stacker.get_prop('ROI'),
-                #'equal_aspect': stacker.get_prop('equal_aspect'),
                 'camera': stacker.get_prop('camera'),
                 'calibration_method': stacker.get_prop('calibration_method'),
                 'sub_type': sub_type
@@ -243,7 +162,7 @@ class ObjectIO(Component):
                         os.path.join(session_dir, new_name)) 
                     self.current_object_dir = os.path.join(session_dir, new_name)
                 except Exception as e:
-                    logger.exception('cannot change name ({:})'.format(e))
+                    logger.exception(f'cannot change name ({e})')
 
         # save metadata, and if successful update observations
         newpath = self.current_object_dir
@@ -259,97 +178,12 @@ class ObjectIO(Component):
             metadata.save(newpath)
             Component.get('Observations').update(oldpath, newpath)
             Component.get('ObservingList').new_observation()
-            toast('Saved to {:}'.format(newpath))
+            toast(f'Saved to {newpath}')
         except Exception as e:
-            logger.exception('OSError saving info3.json to {:} ({:})'.format(newpath, e))
+            logger.exception(f'OSError saving info3.json to {newpath} ({e})')
 
         # do next action
         self.do_callback()
-
-
-
-
-    # @logger.catch()
-    # def confirm_new_object(self, *args):
-    #     ''' Called when user clicks 'new' on interface. 
-    #         Here we give user a chance to change certain settings such as
-    #         sub type and exposure, decide whether to pull out, add
-    #         temperature if dark, create master and potentially others
-    #     '''
-
-    #     # check for any changes since last save
-    #     changes = Component.changes()
-    #     print('changes:', changes)
-
-    #     stacker = Component.get('Stacker')
-    #     if stacker.is_empty():
-    #         self.new_object()
-    #         return
-
-    #     self.change_fits_headers = False   # force user to set this to True
-
-    #     # find name, sub_type, exposure and temperature
-    #     name = Component.get('DSO').Name
-    #     if name.lower()[:4] in {'dark', 'flat', 'bias'}:
-    #         sub_type = name.lower()[:4]
-    #     else:
-    #         sub_type = stacker.get_prop('sub_type')
-
-    #     exposure = stacker.get_prop('exposure')
-    #     temperature = Component.get('Session').temperature
-
-    #     # nothing to save
-    #     if self.current_object_dir is None:
-    #         self.new_object()
-    #         return
-
-    #     # previous object but unchanged
-    #     # alter this logic
-    #     if self.existing_object and not self.app.gui.something_has_changed():
-    #         self.new_object()
-    #         return
-
-    #     # we have something to confirm so set up dialog
-    #     color = self.app.theme_cls.primary_color
-    #     text = 'Please confirm that you wish to save. You may also change the following properties if required.'
-    #     if self.existing_object:
-    #         text = 'Your previous object has changed. ' + text
-
-    #     content = SaveDialogContent(
-    #         text=text,
-    #         exposure=exposure,
-    #         sub_type=sub_type,
-    #         temperature=temperature)
-
-    #     buttons = [MDFlatButton(text='CANCEL', on_press=self.cancel_save, text_color=color)]
-
-    #     # allow user to save or discard changes
-    #     if self.existing_object:
-    #         buttons += [
-    #             MDFlatButton(
-    #                 text='SAVE CHANGES', 
-    #                 on_press=partial(self.do_save, content),
-    #                 text_color=color),
-    #             MDFlatButton(
-    #                 text='DISCARD CHANGES', 
-    #                 on_press=self.dont_save,
-    #                 text_color=color)
-    #         ]
-    #     else:
-    #         buttons += [
-    #             MDFlatButton(
-    #                 text='SAVE', 
-    #                 on_press=partial(self.do_save, content),
-    #                 text_color=color)
-    #             ]
-
-    #     self.dialog = MDDialog(
-    #         auto_dismiss=False,
-    #         type='custom',
-    #         content_cls=content,
-    #         buttons=buttons
-    #         )
-    #     self.dialog.open()
 
 
     def new_object(self, *args):
@@ -361,6 +195,7 @@ class ObjectIO(Component):
         Component.initialise_new_object()
         self.app.gui.set('frame_script', True, update_property=True)
 
+
     def load_previous(self, path):
         # previous will have been saved by this point
         self.existing_object = True
@@ -369,6 +204,7 @@ class ObjectIO(Component):
         gui.set('show_reticle', False, update_property=True)
         self.current_object_dir = path
         Component.initialise_previous_object()
+
 
     def new_sub(self, data=None, name=None, capture_props=None):
         ''' Called by Capture or WatchedCamera
@@ -384,11 +220,10 @@ class ObjectIO(Component):
         # check dimensions
         if not stacker.is_empty():
             if data.shape != stacker.subs[0].image.shape:
-                toast('sub dimensions {:} incompatible with current stack {:}'.format(
-                    data.shape, stacker.subs[0].image.shape))
+                toast(f'sub dimensions {data.shape} incompatible with current stack {stacker.subs[0].image.shape}')
                 return
 
-        logger.debug('New sub | {:}'.format(capture_props))
+        logger.debug(f'New sub | {capture_props}')
         sub_type = capture_props['sub_type']
  
         if self.current_object_dir is None:
@@ -403,7 +238,7 @@ class ObjectIO(Component):
             else:
                 self.current_object_dir = os.path.join(self.session_dir, 
                     generate_observation_name(self.session_dir, prefix=Component.get('DSO').Name))
-                self.app.gui.disable(['load_previous'])
+                # self.app.gui.disable(['load_previous'])
             add_if_not_exists(self.current_object_dir)
 
         path = os.path.join(self.current_object_dir, name)
@@ -412,7 +247,7 @@ class ObjectIO(Component):
             save_image(data=data, path=path, capture_props=capture_props)
             stacker.add_sub(Image(path))
         except Exception as e:
-            logger.exception('cannot add sub to stack ({:})'.format(e))
+            logger.exception(f'cannot add sub to stack ({e})')
            
 
     def save_original(self, path):
@@ -435,9 +270,8 @@ class ObjectIO(Component):
             if not os.path.exists(delete_path):
                 os.mkdir(delete_path)
             dname = os.path.join(delete_path,
-                '{:}_{:}'.format(os.path.basename(path),
-                datetime.now().strftime('%H_%M_%S.%f')))
+                f"{os.path.basename(path)}_{datetime.now().strftime('%H_%M_%S.%f')}")
             shutil.move(path, dname)
         except Exception as e:
-            logger.exception('Problem deleting {:} ({:})'.format(path, e))
+            logger.exception(f'Problem deleting {path} ({e})')
 

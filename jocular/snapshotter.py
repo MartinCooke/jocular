@@ -3,6 +3,7 @@
 
 import mss
 import os
+from functools import partial
 from datetime import datetime
 import numpy as np
 from skimage.io import imsave
@@ -11,22 +12,50 @@ from loguru import logger
 
 from kivy.app import App
 from kivy.core.window import Window
-from kivy.properties import OptionProperty, BooleanProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 from kivy.metrics import Metrics as KivyMetrics
+from kivy.metrics import dp
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
+from kivy.clock import Clock
 
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
 from jocular.image import save_image
 from jocular.metrics import Metrics
 from jocular.utils import s_to_minsec, purify_name, toast
+from jocular.widgets.widgets import JMDToggleButton
+from jocular.widgets.icons import get_icon
+from jocular.panel import Panel
 
-class Snapshotter(Component, Settings):
+
+class Snapshotter(Panel, Component, JSettings):
+#class Snapshotter(Component, JSettings):
 
     save_settings= ['style', 'annotation', 'save_format']
     
-    style = OptionProperty('eyepiece', options=['eyepiece', 'landscape'])
-    annotation = OptionProperty('full', options=['plain', 'name', 'full'])
-    save_format = OptionProperty('.png', options=['png', 'jpg', 'fit'])
+    style = StringProperty('eyepiece')
+    annotation = StringProperty('full')
+    save_format = StringProperty('png')
+
+    styles = {
+        'eyepiece': 'circular image exactly as seen, with DSO labels if any',
+        'landscape': 'rectangular image with no rotation/zoom/DSO labels'
+    }
+
+    annotations = {
+        'plain': 'just the image',
+        'name': 'image plus DSO name',
+        'full': 'image plus all details (exposure, coords, date etc)'
+    }
+
+    save_formats = {
+        'png': 'save as a .png format file',
+        'jpg': 'save as a .jpg format file',
+        'fits': 'save as a 16-bit FITs format file',
+        'animated gif': 'save whole sequence of images as an animated gif'
+    }
 
     imreduction = NumericProperty(1.8)
     framewidth = NumericProperty(0)
@@ -50,6 +79,88 @@ class Snapshotter(Component, Settings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        self.build()
+        config = self.app.gui.config
+        self.style = config.get('style', 'eyepiece')
+        self.annotation = config.get('annotation', 'full')
+        self.save_format = config.get('save_format', 'jpg')
+
+
+    # panel allowing choice of style etc
+
+    def on_show(self):
+        for c, but in self.style_buttons.items():
+            but.state = 'down' if c == self.style else 'normal'
+        for c, but in self.annotation_buttons.items():
+            but.state = 'down' if c == self.annotation else 'normal'
+        for c, but in self.save_format_buttons.items():
+            but.state = 'down' if c == self.save_format else 'normal'
+
+    def _button(self, name, group, fn, tooltip=None):
+        if tooltip is None:
+            tooltip = group
+        return JMDToggleButton(
+                text=name, 
+                size_hint=(1, None),
+                group=group,
+                font_size='16sp',
+                tooltip_text=tooltip,
+                on_press=partial(fn, name))
+
+    def build(self, *args):
+
+        content = self.contents
+        content.add_widget(Label(text='', size_hint=(1, 1)))
+
+        gl = GridLayout(size_hint=(1, None), cols=5, height=dp(40), spacing=(dp(5), dp(5)))
+        self.style_buttons = {c: self._button(c, 'style', self.choose_style, tooltip=tt)
+            for c, tt in self.styles.items()}
+        for b in self.style_buttons.values():
+            gl.add_widget(b)
+        content.add_widget(gl)
+
+        gl = GridLayout(size_hint=(1, None), cols=5, height=dp(40), spacing=(dp(5), dp(5)))
+        self.annotation_buttons = {c: self._button(c, 'annotation', self.choose_annotation, tooltip=tt)
+            for c, tt in self.annotations.items()}
+        for b in self.annotation_buttons.values():
+            gl.add_widget(b)
+        content.add_widget(gl)
+
+        gl = GridLayout(size_hint=(1, None), cols=5, height=dp(40), spacing=(dp(5), dp(5)))
+        self.save_format_buttons = {c: self._button(c, 'save_format', self.choose_save_format, tooltip=tt)
+            for c, tt in self.save_formats.items()}
+        for b in self.save_format_buttons.values():
+            gl.add_widget(b)
+        content.add_widget(gl)
+
+        content.add_widget(Label(text='', size_hint=(1, None), height=dp(30)))
+
+        snap_text = get_icon('snapshotter', font_size=40) + '\n' + 'snap!'  
+        snap_button = Button(
+            text=snap_text,
+            markup=True,
+            background_color=(0, 0, 0, 0),
+            size_hint=(1, None),
+            height=dp(80),
+            on_press=self.snap_no_return)
+
+        content.add_widget(snap_button)
+
+        self.app.gui.add_widget(self)
+
+
+    def choose_style(self, style, *args):
+        if style != self.style:
+            self.style = style
+
+    def choose_save_format(self, save_format, *args):
+        if save_format != self.save_format:
+            self.save_format = save_format
+
+    def choose_annotation(self, annotation, *args):
+        if annotation != self.annotation:
+            self.annotation = annotation
+
 
     def mss_grabber(self, bbox=None):
         with mss.mss() as sct:
@@ -62,17 +173,35 @@ class Snapshotter(Component, Settings):
         (width, height), (offset_x, offset_y) = font.font.getsize('A')
         return font, f, height
 
+
     def small_font(self, w):
-        f = max(14, int(w / 52))
+        f = max(13, int(w / 60))
         font = ImageFont.truetype(self.app.get_path('Roboto-Medium.ttf'), f)
         (width, height), (offset_x, offset_y) = font.font.getsize('A')
         return font, f, height
+
 
     def grey(self):
         if self.dark_surround:
             return (150, 150, 150, 255)
         else:
             return (50, 50, 50, 255)
+
+
+    def snap_no_return(self, *args):
+        self.hide()
+        Clock.schedule_once(self.delayed_snap, 1)
+
+
+    def delayed_snap(self, dt=None):
+        try:
+            if self.save_format == 'animated gif':
+                Component.get('Stacker').make_animated_gif()
+            else:
+                self.snap()
+        except:
+            pass
+
 
     def snap(self, return_image=False, *args):
 
@@ -89,7 +218,7 @@ class Snapshotter(Component, Settings):
                 datetime.now().strftime('%d%b%y_%H_%M_%S'),
                 self.save_format)
 
-        if not return_image and self.save_format == 'fit':
+        if not return_image and self.save_format == 'fits':
             self.save_as_fits()
 
         elif self.style == 'eyepiece':
@@ -101,12 +230,13 @@ class Snapshotter(Component, Settings):
         if return_image:
             return im
 
+
     def save_as_fits(self):
         stacker = Component.get('Stacker')
         im = stacker.get_stack()
         if im is not None:
             im = im * (2**16 - 1)
-            logger.debug('min {:} max {:}'.format(np.min(im), np.max(im)))
+            logger.debug(f'min {np.min(im)} max {np.max(im)}')
             capture_props = {
                 'exposure': stacker.describe().get('total_exposure', None),
                 'sub_type': stacker.get_prop('sub_type'),
@@ -114,7 +244,7 @@ class Snapshotter(Component, Settings):
             }
             save_image(data=im.astype(np.uint16), path=self.save_path,
                 capture_props=capture_props)
-            toast('Saved fits to {:}'.format(os.path.basename(self.save_path)), duration=2.5)
+            toast(f'Saved fits to {os.path.basename(self.save_path)}', duration=2.5)
         else:
             toast('no image to save')
 
@@ -125,7 +255,7 @@ class Snapshotter(Component, Settings):
         obj_details = []
         if len(dso.OT) > 0 and (dso.OT in dso.otypes):
             if len(dso.Con) > 0:
-                obj_details  += ['{:} in {:}'.format(dso.otypes[dso.OT], dso.Con)]
+                obj_details  += [f'{dso.otypes[dso.OT]} in {dso.Con}']
             else:
                 obj_details  += [format(dso.otypes[dso.OT])]
 
@@ -133,13 +263,13 @@ class Snapshotter(Component, Settings):
             obj_details += [dso.Con]
 
         if dso.RA:
-            obj_details += ['RA {:}'.format(str(dso.RA))]
+            obj_details += [f'RA {str(dso.RA)}']
         if dso.Dec:
-            obj_details += ['Dec {:}'.format(str(dso.Dec))]
+            obj_details += [f'Dec {str(dso.Dec)}']
         if dso.Mag:
-            obj_details += ['mag {:}'.format(dso.Mag)]
+            obj_details += [f'mag {dso.Mag}']
         if dso.Diam:
-            obj_details += ["diam {:}".format(dso.Diam)]
+            obj_details += [f"diam {dso.Diam}"]
 
         return obj_details
 
@@ -158,28 +288,28 @@ class Snapshotter(Component, Settings):
         if d is None:
             return []
 
-        if 'total_exposure' in d:
-            block += [s_to_minsec(d['total_exposure'])]
-            if d['multiple_exposures']:
-                block += ['varied exposures']
-            else:
-                block += ['{:} x {:}'.format(d['nsubs'], s_to_minsec(d['sub_exposure']))]
+        if d['gain'] > 0:
+            block += [f"gain {d['gain']:.0f}"]
 
-        if not d['filters'].endswith('L'): # more interesting than just LUM
-            block += [d['filters']]
-
-        if d['nsubs'] > 1:
-            block += ['{:} stack'.format(stacker.combine)]
-
-        block += ['{:} stretch'.format(Component.get('Monochrome').stretch)]
+        block += [f"{Component.get('StackCombiner').combine_method} stack" if d['nsubs'] > 1 else 'single sub']
+        block += [f"{Component.get('Stretcher').stretch} stretch"]
 
         calib = ','.join([c for c in ['dark', 'flat', 'bias'] if d[c]])
         calib = calib if calib else 'no darks/flats'
         block += [calib]
 
+        if not d['filters'].endswith('L'):
+            block += [d['filters']]
+
+        if 'total_exposure' in d:
+            composition = 'varied expos' if d['multiple_exposures'] else f"{d['nsubs']} x {s_to_minsec(d['sub_exposure'])}"
+            block += [f"{s_to_minsec(d['total_exposure'])} ({composition})"]
+
         return block # block[::-1]  # reverse!
 
-    def eyepiece_view(self):
+
+    def eyepiece_view(self, dt=None):
+
 
         ox, oy = Metrics.get('origin')
         radius = Metrics.get('radius')
@@ -194,8 +324,8 @@ class Snapshotter(Component, Settings):
         try:
             im = self.mss_grabber(bbox=(cx - r, cy - r, cx + r, cy + r))
         except Exception as e:
-            logger.exception('problem with screen grab ({:})'.format(e)) 
-            toast('screen grab error ({:})'.format(e))
+            logger.exception(f'problem with screen grab ({e})') 
+            toast(f'screen grab error ({e})')
             return
 
         blur = 17                     # radius of blurred edge in pixels
@@ -225,8 +355,8 @@ class Snapshotter(Component, Settings):
                 im = im.convert('RGBA')
             im = Image.alpha_composite(im, grad_im)
         except Exception as e:
-            logger.exception('problem compositing ({:})'.format(e))
-            toast('compositing error ({:})'.format(e))
+            logger.exception(f'problem compositing ({e})')
+            toast(f'compositing error ({e})')
             return
 
         # annotate Draw object with required level of detail
@@ -257,7 +387,7 @@ class Snapshotter(Component, Settings):
 
         self.save(im)
 
-
+    @logger.catch
     def landscape_view(self):
 
         # to do: better scaling of fonts based on image size
@@ -269,8 +399,8 @@ class Snapshotter(Component, Settings):
             imsave(nm, im[::-1])
             orig_im = Image.open(nm)
         except Exception as e:
-            logger.exception('load/save problem ({:})'.format(e))
-            toast('load/save error ({:})'.format(e))
+            logger.exception(f'load/save problem ({e})')
+            toast(f'load/save error ({e})')
             return
 
         w, h = orig_im.size
@@ -290,14 +420,15 @@ class Snapshotter(Component, Settings):
         if self.annotation == 'full':
             total_height = int(total_height + max_rows * small_text_height + (max_rows - 1) * rowgap)
 
-        im = Image.new('RGBA', (w + 2 * self.framewidth, total_height + 2 * self.framewidth), 
+        fw = int(self.framewidth)
+        im = Image.new('RGBA', (w + 2 * fw, total_height + 2 * fw), 
             color=(0, 0, 0) if self.dark_surround else (255, 255, 255))
 
-        im.paste(orig_im, (self.framewidth, self.framewidth))
+        im.paste(orig_im, (fw, fw))
         draw = ImageDraw.Draw(im)
 
-        w += 2 * self.framewidth
-        h += 2 * self.framewidth
+        w += 2 * fw
+        h += 2 * fw
 
         # move row base to base of text
         w += large_text_height
@@ -354,7 +485,7 @@ class Snapshotter(Component, Settings):
                 bg = Image.new('RGB', im.size, (255, 255, 255))
                 bg.paste(im, im)
                 bg.save(self.save_path)
-            toast('saved to {:}'.format(self.save_path), duration=2)
+            toast(f'saved to {self.save_path}', duration=2)
         except Exception as e:
-            logger.exception('problem with _save ({:})'.format(e))
-            toast('error saving ({:})'.format(e), duration=2)
+            logger.exception(f'problem with _save ({e})')
+            toast(f'error saving ({e})', duration=2)

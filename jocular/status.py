@@ -8,6 +8,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.properties import BooleanProperty
 
 from jocular.component import Component
+from jocular.widgets.widgets import Pin
 
 Builder.load_string('''
 
@@ -56,12 +57,18 @@ class StatusBox(MDBoxLayout):
 
 class Status(MDBoxLayout, Component):
 
+    save_settings = ['show_status']
+
     show_status = BooleanProperty(False)
-    comps = ['Capture', 'Calibrator', 'View', 'Aligner', 'Stacker', 'PlateSolver']
+    comps = ['Capture', 'Calibrator', 'View', 'Aligner', 'Stacker', 'PlateSolver', 'Monochrome']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        App.get_running_app().gui.add_widget(self, index=2)
+        app = App.get_running_app()
+        app.gui.add_widget(self, index=2)
+
+        show_status = app.gui.get_gui_setting('show_status')
+        self.show_status = False if show_status is None else show_status
 
         # add a status label for each component where we are interested in status updates
         self.labs = {c: StatusLabel(text='') for c in self.comps}
@@ -70,6 +77,17 @@ class Status(MDBoxLayout, Component):
             w.component.text = name.lower()
             w.add_widget(lab)
             self.add_widget(w)
+
+        # add an empty widget
+        self.add_widget(StatusBox())
+
+        app.gui.add_widget(Pin(
+            comp=self, 
+            field='show_status', 
+            loc='lower-right', 
+            tooltip_text='toggle status panel',
+            show_text='Status'))
+
 
     def bind_status(self, name, attr):
         # called by Component when a component is loaded

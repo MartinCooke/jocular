@@ -1,6 +1,0 @@
-# include the necessary data files
-recursive-include jocular *.json *.ttf *.dll *.csv *.fit
-
-# don't include any compiled versions
-recursive-exclude __pycache__ *
-recursive-exclude development *

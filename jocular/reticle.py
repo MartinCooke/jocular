@@ -19,8 +19,7 @@ Builder.load_string('''
 <Arrow>:
     text_color: app.theme_cls.primary_color
     theme_text_color: "Custom"
-    #icon: 'arrow-{:}-thick'.format(root.direction)
-    icon: 'arrow-{:}'.format(root.direction)
+    icon: f'arrow-{root.direction}'
     x: root.reticle.x + root.xoffset - self.width / 2
     y: root.reticle.y + root.yoffset - self.height / 2 if root.reticle.show and root.reticle.mount else -1000
 
@@ -67,7 +66,7 @@ class Arrow(MDIconButton):
             self.yoffset = dist
         elif direction == 'down':
             self.yoffset = -dist
-        self.user_font_size = '{:}sp'.format(20 + 7*rate)
+        self.user_font_size = f'{20 + 7*rate}sp'
         super().__init__(**kwargs)
 
 

@@ -49,16 +49,19 @@ class SXCamera(GenericCamera):
 		self.lodestar = False
 		try:
 			self.sxcamera = usb.core.find(idVendor=0x1278, idProduct=0x0507)
-			if self.sxcamera is not None:
-				self.lodestar = True
-				logger.info('found Lodestar')
-		except:
-			pass
+			if self.sxcamera is None:
+				self.status = 'cannot find Lodestar'
+				logger.info(self.status)
+				return
+			self.lodestar = True
+			logger.info('found Lodestar')
+		except Exception as e:
+			logger.exception(e)
 
-		if self.sxcamera is None:
-			self.status = 'cannot find Lodestar'
-			logger.info(self.status)
-			return
+		# if self.sxcamera is None:
+		# 	self.status = 'cannot find Lodestar'
+		# 	logger.info(self.status)
+		# 	return
 
 		try:
 			self.sxcamera.get_active_configuration()

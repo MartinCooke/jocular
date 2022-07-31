@@ -14,7 +14,7 @@ from kivymd.uix.filemanager import MDFileManager
 
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
-from jocular.widgets import LabelL, LabelR
+from jocular.widgets.widgets import LabelL, LabelR
 
 
 @logger.catch()

@@ -22,7 +22,7 @@ class RA(float):
             return ''
         hr, rest = divmod(self, 15)
         minit, rest = divmod(rest*4, 1)
-        return "{:02d}h {:02d} {:02.0f}".format(int(hr), int(minit), rest*60)
+        return f'{int(hr):02d}h {int(minit):02d} {rest*60:02.0f}'
 
     @classmethod
     def parse(cls, s):
@@ -40,7 +40,7 @@ class RA(float):
                     return float(hrs*15 + mins/4 + secs/240 )
             return None
         except Exception as e:
-            logger.warning('Problem parsing RA {:} ({:})'.format(s, e))
+            logger.warning(f'Problem parsing RA {s} ({e})')
             return None
 
 
@@ -67,11 +67,11 @@ class Dec(float):
         if self >= 0:
             dd, rest = divmod(self, 1)
             dmin, rest = divmod(rest*60, 1)
-            return "+{:d}\u00b0 {:02d} {:02.0f}".format(int(dd), int(dmin), rest*60)
+            return f"+{int(dd):d}\u00b0 {int(dmin):02d} {rest*60:02.0f}"
         else:
             dd, rest = divmod(-self, 1)
             dmin, rest = divmod(rest*60, 1)
-            return "-{:d}\u00b0 {:02d} {:02.0f}".format(int(dd), int(dmin), rest*60)
+            return f"-{int(dd):d}\u00b0 {int(dmin):02d} {rest*60:02.0f}"
 
     @classmethod
     def parse(cls, s):
@@ -91,6 +91,6 @@ class Dec(float):
                     return float(degs - mins/60 - secs/3600)
             return None
         except Exception as e:
-            logger.warning('Problem parsing Dec {:} ({:})'.format(s, e))
+            logger.warning(f'Problem parsing Dec {s} ({e})')
             return None
 

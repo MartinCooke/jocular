@@ -10,6 +10,7 @@ from loguru import logger
 from pathlib import Path
 from kivymd.toast.kivytoast import toast as mdtoast
 
+
 def is_null(v):
     return (v is None) or \
         (isinstance(v, str) and v.strip() == '') or  \
@@ -17,20 +18,24 @@ def is_null(v):
         (isinstance(v, dict) and len(v) == 0) or \
         (isinstance(v, list) and len(v) == 0)
 
+
 def toast(mesg, duration=1):
     mdtoast(mesg, duration=duration)
-    logger.info('toast: {:}'.format(mesg))
+    logger.info(f'toast: {mesg}')
 
-def angle360(angle):
-    if angle < 0:
-        return angle + 360
-    elif angle > 360:
-        return angle - 360
-    else:
-        return angle
+
+# def angle360(angle):
+#     if angle < 0:
+#         return angle + 360
+#     elif angle > 360:
+#         return angle - 360
+#     else:
+#         return angle
+
 
 def percentile_clip(a, perc=80):
     return np.mean(trimboth(np.sort(a, axis=0), (100 - perc)/100, axis=0), axis=0)    
+
 
 def unique_member(l):
     # if list has a single unique member, return it, otherwise None
@@ -38,6 +43,7 @@ def unique_member(l):
         return l[0]
     else:
         return None
+
 
 def get_datadir():
     ''' Read datadir name from .jocular in home; if .jocular doesn't exist,
@@ -52,12 +58,14 @@ def get_datadir():
     except:
         return None
 
+
 def add_if_not_exists(path):
     if not os.path.exists(path):
         try:
             os.mkdir(path)
         except FileExistsError:
             raise FileExistsError
+
 
 def start_logging(path):
     ''' start logging on given path
@@ -73,15 +81,17 @@ def start_logging(path):
     logger.info('Started logging')
     logger.info('')
 
+
 def make_unique_filename(path):
     if not os.path.exists(path):
         return path
     root, name = os.path.split(path) 
     base, ext = os.path.splitext(name)
     cnt = 1
-    while os.path.exists(os.path.join(root, '{:}_{:}{:}'.format(base, cnt, ext))):
+    while os.path.exists(os.path.join(root, f'{base}_{cnt}{ext}')):
         cnt += 1
-    return os.path.join(os.path.join(root, '{:}_{:}{:}'.format(base, cnt, ext)))
+    return os.path.join(os.path.join(root, f'{base}_{cnt}{ext}'))
+
 
 def purify_name(nm):
     # replace any chars that could cause problems with filesystem by spaces
@@ -93,9 +103,9 @@ def generate_observation_name(path, prefix=None):
     # use names of form obs 1, obs 2 if prefix is obs
     if (prefix is None) or (prefix == 'light') or (len(prefix) == 0):
         n = 1
-        while os.path.exists(os.path.join(path, 'obs {:}'.format(n))):
+        while os.path.exists(os.path.join(path, f'obs {n}')):
             n += 1
-        return 'obs {:}'.format(n)
+        return f'obs {n}'
 
     # otherwise using name is possible
     if not os.path.exists(os.path.join(path, prefix)):
@@ -103,20 +113,20 @@ def generate_observation_name(path, prefix=None):
 
     # otherwise add a version number
     n = 1
-    while os.path.exists(os.path.join(path, '{:} v{:}'.format(prefix, n))):
+    while os.path.exists(os.path.join(path, f'{prefix} v{n}')):
         n += 1
-    return '{:} v{:}'.format(prefix, n)
+    return f'{prefix} v{n}'
 
 def s_to_minsec(s):
     if s < 1:
-        return '{:.0f}ms'.format(1000 * s)
+        return f'{1000 * s:.0f}ms'
     mins, secs = divmod(round(s), 60)
     if mins == 0:
-        return '{:}s'.format(secs)
+        return f'{secs}s'
     elif secs == 0:
-        return '{:}m'.format(mins)
+        return f'{mins}m'
     else:
-        return '{:d}m{:d}s'.format(mins, secs)
+        return f'{mins:d}m{secs:d}s'
 
 def move_to_dir(frompath, topath):
     ''' move from frompath to topath, making topath dir and 
@@ -142,6 +152,6 @@ def move_to_dir(frompath, topath):
         shutil.move(frompath, dest)    
 
     except Exception as e:
-        logger.exception('problem moving {:} to {:} ({:})'.format(frompath, topath, e))
+        logger.exception(f'problem moving {frompath} to {topath} ({e})')
 
 

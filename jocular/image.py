@@ -29,7 +29,8 @@ fitspropmap = {
         'stackcnt': 'nsubs',
         'xpixsz': 'pixel_width', 'ypixsz': 'pixel_height',
         'xbinning': 'binning',
-        'ybinning': 'binning'
+        'ybinning': 'binning',
+        'instrume': 'camera'
         }
 
 ''' used to map from image prop names to fits name if they are difference; 
@@ -82,6 +83,54 @@ filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G',
     'oiii': 'O', 'o': 'O',
     'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
 
+# this should be moved to a fits module
+def update_wcs(im=None, path=None, w=None, h=None, fov_w=None, fov_h=None, ra0=None, dec0=None, north=None):
+    ''' add or update FITs at path with WCS keys
+        see 
+            [1] https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
+            [2] https://learn.astropy.org/tutorials/celestial_coords1.html
+            [3] https://docs.astropy.org/en/stable/api/astropy.wcs.Wcsprm.html#astropy.wcs.Wcsprm
+    '''
+    from astropy.wcs import WCS
+
+    # provide rotation matrix
+    theta = np.radians(north)
+    costheta, sintheta = np.cos(theta), np.sin(theta)
+
+    # NB axis 1 is RA
+    wcs_dict = {
+        'CTYPE1': 'RA---TAN', # RA to gnomonic
+        'CUNIT1': 'deg',      # RA in degrees
+        'CDELT1': -fov_w / w, # degrees increment per pixel (neg because RA decreases to R)
+        'CRPIX1': w // 2,     # central pixel in x; might need to alter this by 1 
+        'CRVAL1': ra0,        # RA value at central pixel
+        'NAXIS1': w,          # size of axis 1
+        'CTYPE2': 'DEC--TAN', 
+        'CUNIT2': 'deg', 
+        'CDELT2': fov_h / h, 
+        'CRPIX2': h // 2,     # might need to alter this by 1?
+        'CRVAL2': dec0,
+        'PC1_1':  costheta,   # rotation matrix
+        'PC1_2':  -sintheta,  #   cos -sin  ===   PC1_1 PC1_2
+        'PC2_1':  sintheta,   #   sin  cos  ===   PC2_1 PC2_2
+        'PC2_2':  costheta,   # 
+        'NAXIS2': h
+    }
+
+    wcs_hdr = WCS(wcs_dict)
+
+    # # to do: update FITs header
+    # # to start with, generate a testfits with the image and WCS info
+    # # to plot and overlay axes
+    from astropy.io import fits
+    from datetime import datetime
+
+    hdu = fits.PrimaryHDU(im, header=wcs_hdr.to_header())
+    hdr = hdu.header
+    hdr['CREATOR'] = ('Jocular')
+    date_obs = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
+    hdr['DATE-OBS'] = date_obs
+    hdu.writeto('platesolved_wcs_' + date_obs + '.fits')
 
 
 def convert_fits_props(hdr):
@@ -110,8 +159,6 @@ def save_image(data=None, path=None, capture_props=None):
     ''' saves sub or master to path
         capture_props is a dict to save e.g. gain, offset, expo
     '''
-
-    # print('save image capture props', capture_props)
 
     dupes = [
         ('SUBTYPE', 'IMAGETYP'),
@@ -159,30 +206,30 @@ def save_image(data=None, path=None, capture_props=None):
                 hdr[altkey] = hdr[key]
 
         hdu.writeto(path, overwrite=True)
-        logger.info('saved {:}'.format(path))
+        logger.info(f'saved {path}')
         for k, v in hdr.items():
-            logger.trace('{:9s} = {:}'.format(k, v))
+            logger.trace(f'{k:9s} = {v}')
 
     except Exception as e:
-        logger.warning('unable to save to {:} ({:})'.format(path, e))
+        logger.warning(f'unable to save to {path} ({e})')
 
-def update_fits_header(path, exposure=None, sub_type=None, temperature=None):
-    ''' modify headers; not used currently but will be used when advanced
-        save is re-implemented in ObjectIO
-    '''
-    try:
-        with fits.open(path, mode='update') as hdu:
-            hdr = hdu[0].header
-            if exposure is not None:
-                hdr['EXPOSURE'] = (exposure, 'seconds')
-            if sub_type is not None:
-                hdr['SUBTYPE'] = sub_type
-            if temperature is not None:
-                hdr['TEMPERAT'] = temperature
-            hdu.close()
-    except Exception as e:
-        logger.exception('Unable to read fits header for {:} ({:})'.format(path, e))
-        return
+# def update_fits_header(path, exposure=None, sub_type=None, temperature=None):
+#     ''' modify headers; not used currently but will be used when advanced
+#         save is re-implemented in ObjectIO
+#     '''
+#     try:
+#         with fits.open(path, mode='update') as hdu:
+#             hdr = hdu[0].header
+#             if exposure is not None:
+#                 hdr['EXPOSURE'] = (exposure, 'seconds')
+#             if sub_type is not None:
+#                 hdr['SUBTYPE'] = sub_type
+#             if temperature is not None:
+#                 hdr['TEMPERAT'] = temperature
+#             hdu.close()
+#     except Exception as e:
+#         logger.exception('Unable to read fits header for {:} ({:})'.format(path, e))
+#         return
 
 
 class Image:
@@ -195,13 +242,13 @@ class Image:
         '''
 
         # while testing
-        verbose = True
+        verbose = False
 
         if path is None:
             return
 
         if not is_fit(path):
-            raise Exception('not a fits file {:}'.format(path))
+            raise Exception(f'not a fits file {path}')
 
         try:
             # added in v0.5.6 ignore missing end
@@ -215,39 +262,44 @@ class Image:
                         self.image = hdu1[0].data
                     else:
                         self.image = hdu1[0].data / 2 ** bp
+
+                    self.minval = np.min(self.image) * 100
+                    self.maxval = np.percentile(self.image, 99.99) * 100
+                    self.meanval = np.mean(self.image) * 100
+                    self.overexp = np.mean(self.image > .99) * 100
                 else:
                     self.image = None
+                    self.minval, self.maxval, self.meanval, self.overexp = .0, .0, .0, .0
+
         except Exception as e:
             self.image = None
-            raise ImageNotReadyException(
-                'Cannot read fits header for {:} ({:})'.format(path, e))
+            raise ImageNotReadyException(f'Cannot read fits header for {path} ({e})')
 
         if verbose:
             logger.trace('From FITS header')
             for k, v in hdr.items():
-                logger.trace('{:9s} = {:}'.format(k, v))
+                logger.trace(f'{k:9s} = {v}')
 
         # check for a well-formed image (new in v0.5)
         if self.image is not None:
             shape = self.image.shape
             if len(shape) == 3:
                 if shape[0] != 3 and shape[2] != 3:
-                    raise Exception('3D fits without 3 planes {:}'.format(path))
+                    raise Exception(f'3D fits without 3 planes {path}')
             elif len(shape) != 2:
-                raise Exception('can only handle 2D or 3D fits {:}'.format(path))
+                raise Exception(f'can only handle 2D or 3D fits {path}')
 
         try:
-
             self.path = path
             self.create_time = datetime.fromtimestamp(os.path.getmtime(path))
             self.arrival_time = datetime.now()
             self.age = (self.arrival_time - self.create_time).days
             self.created_by_jocular = 'CREATOR' in hdr and hdr['CREATOR'].startswith('Jocular')
             self.shape = hdr['NAXIS1'], hdr['NAXIS2']
-            self.shape_str = '{:}x{:}'.format(self.shape[0], self.shape[1])
+            self.shape_str = f'{self.shape[0]}x{self.shape[1]}'
             self.fullname = os.path.basename(path)
             self.name = os.path.splitext(os.path.basename(path).lower())[0]
-
+            self.pp_create_time = self.create_time.strftime('%d %b %y %H:%M:%S')
         except Exception as e:
             logger.exception(e)
 
@@ -289,12 +341,15 @@ class Image:
                 props['sub_type'] = 'light'
 
             # filter might be R, r, red, filter: red, red filter, ...
-            v = props['filter'].lower()
-            if v.endswith('filter'):
-                v = v[:-6].strip()
-            if v.startswith('filter'):
-                v = v[6:].strip()
-            props['filter'] = filter_map.get(v, v)   # untested change in v0.5
+            if type(props['filter']) == str:
+                v = props['filter'].lower()
+                if v.endswith('filter'):
+                    v = v[:-6].strip()
+                if v.startswith('filter'):
+                    v = v[6:].strip()
+                props['filter'] = filter_map.get(v, v)   # untested change in v0.5
+            else:
+                props['filter'] = 'L'
 
             # temperature format might be a number, or followed by C
             if props['temperature'] is not None:
@@ -321,6 +376,7 @@ class Image:
             setattr(self, p, props[p])
 
         self.status = 'select'
+        self.aligned = 'no'
         self.arrival_time = int(time.time())
         self.keyframe = False
         self.calibrations = {'dark': False, 'flat': False, 'bias': False}
@@ -334,20 +390,19 @@ class Image:
     def describe(self, fits_props=None, name_props=None, verbose=False):
         created_by = 'Jocular' if self.created_by_jocular else 'alien'
         if self.is_master:
-            logger.debug('{:} Master {:}'.format(created_by, self.name))
+            logger.debug(f'{created_by} Master {self.name}')
         else:
-            logger.debug('{:} Sub {:}'.format(created_by, self.name))
+            logger.debug(f'{created_by} Sub {self.name}')
         if not verbose:
             return
 
         # list essential props
         for p in default_props:
-            logger.trace('{:} = {:}'.format(p, getattr(self, p)))
+            logger.trace(f'{p} = {getattr(self, p)}')
 
         # some image stats
         im = self.get_image()
-        logger.trace('min {:.4f} max {:.4f} mean {:.4f}'.format(
-            np.min(im), np.max(im), np.mean(im)))
+        logger.trace(f'min {np.min(im):.4f} max {np.max(im):.4f} mean {np.mean(im):.4f}')
 
         # may be other props we want to output at some point
         # logger.trace('{:9s} {:14s} ({:} days) {:5s} expo {:} filt {:} gain {:} bin {:} {:} {:}'.format(
@@ -370,6 +425,8 @@ class Image:
         # should extend this to support same parsing as calibration masters
 
         props = {}
+
+        # bug here if user has 3 underscores in name....
 
         # pre v3 Jocular convention first
         try:
@@ -425,25 +482,18 @@ class Image:
                 with fits.open(self.path) as hdu:
                     bp = hdu[0].header['BITPIX']
                     self.image = np.array(hdu[0].data, dtype=np.float32)
-                    #self.image = np.array(hdu[0].data, dtype=np.float64)
                     if bp > 0:
                         self.image /= (2 ** bp)
+                    self.minval = np.min(self.image) * 100
+                    self.maxval = np.percentile(self.image, 99.99) * 100
+                    self.meanval = np.mean(self.image) * 100
+                    self.overexp = np.mean(self.image > .99) * 100   
             except Exception as e:
-                logger.warning('cannot read image data from {:} ({:})'.format(self.path, e))
+                logger.warning(f'cannot read image data from {self.path} ({e})')
         return self.image
 
-    # def get_image(self):
-    #     ''' If anywhere, this is the place to ensure it is float32
+
+    # def get_cached_image(self):
+    #     ''' Images are stored in a temp folder
     #     '''
-    #     if self.image is None:
-    #         try:
-    #             with fits.open(self.path) as hdu:
-    #                 bp = hdu[0].header['BITPIX']
-    #                 if bp < 0:
-    #                     self.image = hdu[0].data
-    #                 else:
-    #                     self.image = hdu[0].data / 2 ** bp
-    #         except Exception as e:
-    #             logger.warning('cannot read image data from {:} ({:})'.format(self.path, e))
-    #     return self.image
 

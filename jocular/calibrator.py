@@ -16,7 +16,7 @@ from kivy.core.window import Window
 from jocular.table import Table
 from jocular.utils import make_unique_filename, toast, percentile_clip
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
 from jocular.image import Image, save_image, fits_in_dir
 from jocular.exposurechooser import exp_to_str
 from jocular.gradient import estimate_background
@@ -64,7 +64,7 @@ def subregion(m, s):
 
     return None
 
-class Calibrator(Component, Settings):
+class Calibrator(Component, JSettings):
 
     save_settings = ['apply_dark', 'apply_flat']
 
@@ -141,13 +141,13 @@ class Calibrator(Component, Settings):
                 if s.is_master:
                     self.add_to_library(s)
             except Exception as e:
-                logger.warning('Calibrator: unable to parse calibration {:} ({:})'.format(f, e))
+                logger.warning(f'Calibrator: unable to parse calibration {f} ({e})')
 
 
     def on_new_object(self, *args):
         n_masters = len(self.library)
         if n_masters > 0:
-            self.info('{:d} masters'.format(n_masters))
+            self.info(f'{n_masters:d} masters')
         else:
             self.info('no masters')
 
@@ -167,7 +167,6 @@ class Calibrator(Component, Settings):
             'offset': none_to_empty(m.offset),
             'bin': none_to_empty(m.binning),
             'calibration_method': none_to_empty(m.calibration_method),
-            #'ROI': none_to_empty(m.ROI),
             'filter': m.filter,
             'created': m.create_time.strftime(date_time_format),
             'shape_str': m.shape_str,
@@ -229,19 +228,19 @@ class Calibrator(Component, Settings):
             calibration masters.
         '''
 
-        name = 'master{:}.fit'.format(capture_props['sub_type'])
+        name = f'master{capture_props["sub_type"]}.fit'
         path = make_unique_filename(os.path.join(self.calibration_dir, name))
         save_image(data=data, path=path, capture_props=capture_props)
         self.add_to_library(Image(path))
 
         # add to notes field of current DSO
-        notes = 'Exposure {:}\n'.format(exp_to_str(capture_props.get('exposure', 0)))
-        notes += '\n'.join(['{:} {:}'.format(k, v) for k, v in capture_props.items() 
+        notes = f'Exposure {exp_to_str(capture_props.get("exposure", 0))}\n'
+        notes += '\n'.join([f'{k} {v}' for k, v in capture_props.items() 
             if k in {'filter', 'temperature', 'gain', 'offset', 'camera', 
                 'binning', 'calibration_method'}])
         Component.get('Notes').notes = notes
 
-        logger.info('new master {:}'.format(capture_props))
+        logger.info(f'new master {capture_props}')
 
 
     def calibrate(self, sub):
@@ -260,12 +259,14 @@ class Calibrator(Component, Settings):
             self.info('none')
             return
 
+        logger.trace('starting calibration')
+
         # get all masters anyway (~1ms)
         dark = self.get_dark(sub)
         flat = self.get_flat(sub)
         bias = self.get_bias(sub)
         
-        logger.trace('D {:} F {:} B {:}'.format(dark, flat, bias))
+        logger.trace(f'D {dark} F {flat} B {bias}')
 
         D = self.get_master(dark)
         F = self.get_master(flat)
@@ -276,8 +277,7 @@ class Calibrator(Component, Settings):
         # to apply dark we just need a dark
         if self.apply_dark and dark is not None:
             dx0, dx1, dy0, dy1 = subregion(self.masters[dark], sub)
-            logger.trace('Dark subregion {:} {:} {:} {:}'.format(
-                dx0, dx1, dy0, dy1))
+            logger.trace(f'Dark subregion {dx0} {dx1} {dy0} {dy1}')
             im = im - D[dy0: dy1, dx0: dx1]
             sub.calibrations = {'dark'}
 
@@ -331,13 +331,33 @@ class Calibrator(Component, Settings):
         if exposure_tol is None:
             exposure_tol = self.exposure_tol
 
+        # diagnostics
+        if False:
+            for k, v in self.masters.items():
+                logger.trace('')
+                logger.trace(f'Testing {k}, {v}')
+                if v.sub_type != 'dark':
+                    logger.trace('not dark')
+                if v.binning != sub.binning:
+                    logger.trace(f'different binning {v.binning} vs {sub.binning}')
+                if subregion(v, sub) is None:
+                    logger.trace('incompatible subregion')
+                if v.gain != (sub.gain if v.gain is not None else v.gain):
+                    logger.trace(f'different gain {v.gain} vs {sub.gain}')
+                if v.offset != (sub.offset if v.offset is not None else v.offset):
+                    logger.trace(f'different offset {v.offset} vs {sub.offset}')
+                if v.camera != (sub.camera if v.camera is not None else v.camera):
+                    logger.trace(f'different camera {v.camera} vs {sub.camera}')
+                if v.exposure is not None and abs(v.exposure - sub.exposure) > self.exposure_tol:
+                    logger.trace(f'exposure outside tolerance {v.exposure} vs {sub.exposure}')
+
         darks = {k: v for k, v in self.masters.items()
                     if v.sub_type == 'dark' and
                         v.binning == sub.binning and
                         subregion(v, sub) is not None and
                         v.gain == (sub.gain if v.gain is not None else v.gain) and
                         v.offset == (sub.offset if v.offset is not None else v.offset) and
-                        v.camera == (sub.camera if v.camera is not None else v.camera) and
+                        # v.camera == (sub.camera if v.camera is not None else v.camera) and
                         v.exposure is not None and
                         abs(v.exposure - sub.exposure) <= self.exposure_tol
                 }
@@ -366,7 +386,7 @@ class Calibrator(Component, Settings):
 
         # find the one with the closest exposure
         for k in sorted(darks, key=darks.get):
-            logger.debug('matching flatdark {:}'.format(k))
+            logger.debug(f'matching flatdark {k}')
             return k
 
 
@@ -405,7 +425,7 @@ class Calibrator(Component, Settings):
         else:
             flats_in_filt = {} 
 
-        # if we have none and can use L filter, use these
+        # if we have none and can use L or C filter, use these
         if (len(flats_in_filt) == 0) and self.use_l_filter:
             flats_in_filt = {k:v for k, v in flats.items() if v.filter == 'L'}
 
@@ -489,24 +509,24 @@ class Calibrator(Component, Settings):
             name='Calibration masters',
             description='Calibration masters',
             cols={
-                'Name': {'w': 120, 'align': 'left', 'field': 'name', 
-                'action': self.show_calibration_frame},
-                'Camera': {'w': 140, 'align': 'left', 'field': 'camera', 'type': str},
-                'Type': {'w': 60, 'field': 'type', 'align': 'left'},
-                'Exposure': {'w': 80, 'field': 'exposure'},
-                'Temp. C': {'w': 80, 'field': 'temperature', 'type': str},
-                'Gain': {'w': 50, 'field': 'gain', 'type': int},
-                'Offset': {'w': 60, 'field': 'offset', 'type': int},
-                #'ROI': {'w': 80, 'field': 'ROI', 'type': str},
-                'Bin': {'w': 45, 'field': 'bin', 'type': int},
-                'Calib': {'w': 120, 'field': 'calibration_method', 'type': str},
-                'Filter': {'w': 80, 'field': 'filter'},
-                'Created': {'w': 120, 'field': 'created', 'sort': {'DateFormat': date_time_format}},
-                'Size': {'w': 110, 'field': 'shape_str'},
-                'Age': {'w': 50, 'field': 'age', 'type': int},
-                'Subs': {'w': 50, 'field': 'nsubs', 'type': int}
+                'name': {'w': 120, 'align': 'left', 'label': 'Name', 'action': self.show_calibration_frame},
+                'type': {'w': 60, 'label': 'Type', 'align': 'left'},
+                'exposure': {'w': 80, 'label': 'Exposure'},
+                'temperature': {'w': 80, 'label': 'Temp. C', 'type': str},
+                'gain': {'w': 50, 'label': 'Gain', 'type': int},
+                'offset': {'w': 60, 'label': 'Offset', 'type': int},
+                'bin': {'w': 45, 'label': 'Bin', 'type': int},
+                'calibration_method': {'w': 120, 'label': 'Calib?', 'type': str},
+                'filter': {'w': 80, 'label': 'Filter'},
+                'created': {'w': 130, 'label': 'Created', 'sort': {'DateFormat': date_time_format}},
+                'shape_str': {'w': 110, 'label': 'Size'},
+                'age': {'w': 50, 'label': 'Age', 'type': int},
+                'nsubs': {'w': 50, 'label': 'Subs', 'type': int},
+                'camera': {'w': 1, 'align': 'left', 'label': 'Camera', 'type': str},
                 },
             actions={'move to delete dir': self.move_to_delete_folder},
+            initial_sort_column='created',
+            reverse_initial_sort=True,
             on_hide_method=self.app.table_hiding
             )
 
@@ -524,7 +544,7 @@ class Calibrator(Component, Settings):
 
         self.calibration_table.show()    
 
-    def show_calibration_frame(self, row):
+    def show_calibration_frame(self, row, col, value):
         self.calibration_table.hide()
         # convert row.key to str (it is numpy.str by default)
         # get image from path
@@ -535,7 +555,7 @@ class Calibrator(Component, Settings):
                 im.image /= 2
             Component.get('Monochrome').display_sub(im.image)
         except Exception as e:
-            logger.error('{:}'.format(e))
+            logger.error(f'{e}')
 
 
     def move_to_delete_folder(self, *args):
@@ -545,5 +565,5 @@ class Calibrator(Component, Settings):
                 objio.delete_file(os.path.join(self.calibration_dir, nm))
                 del self.library[nm]
                 del self.masters[nm]
-        logger.info('deleted {:} calibration masters'.format(len(self.calibration_table.selected)))
+        logger.info(f'deleted {len(self.calibration_table.selected)} calibration masters')
         self.calibration_table.update()

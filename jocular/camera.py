@@ -5,6 +5,7 @@ from kivy.event import EventDispatcher
 
 from jocular.component import Component
 from jocular.device import DeviceFamily
+from jocular.settingsmanager import JSettings
 
 from jocular.cameras.watchedcamera import WatchedCamera
 from jocular.cameras.sxcamera import SXCamera
@@ -15,7 +16,7 @@ from jocular.cameras.asicamera import ASICamera
 
 class Camera(Component, EventDispatcher, DeviceFamily):
 
-	modes = { 
+	modes ={ 
 		'Watched dir': 'WatchedCamera', 
 		'Simulator': 'SimulatorCamera',
 		#'ASCOM': 'ASCOMCamera',
@@ -24,8 +25,15 @@ class Camera(Component, EventDispatcher, DeviceFamily):
 		'SX Ultrastar': 'SXUltrastarCamera'
 	}
 
+	configurables = []
+
 	default_mode = 'Watched dir'
 	family = 'Camera'
+
+	# def __init__(self, **args):
+	# 	print('init camera')
+	# 	super().__init__(**args)
+
 
 	def on_new_object(self, *args):
 		if self.connected():

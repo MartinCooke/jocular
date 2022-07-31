@@ -69,7 +69,8 @@ class SimulatorCamera(GenericCamera):
 
 	def get_capture_props(self):
 		return {
-			'camera': 'simulator'
+			'camera': 'simulator',
+			'temperature': None
 		}
 
 	def check_exposure(self, on_capture, dt):

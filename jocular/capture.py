@@ -14,9 +14,9 @@ from kivy.clock import Clock
 from jocular.component import Component
 # from jocular.gradient import image_stats
 from jocular.utils import toast, percentile_clip
+from jocular.processing.starextraction import extract_stars
 
 capture_controls = {'devices', 'script_button', 'capturing', 'exposure_button', 'filter_button'}
-
 
 class Capture(Component):
 
@@ -38,7 +38,7 @@ class Capture(Component):
         self.gui.disable(['capturing'])
 
     def reset(self, stop_capturing=True):
-        logger.debug('stop capturing? {:}'.format(stop_capturing))
+        logger.debug(f'stop capturing? {stop_capturing}')
         self.series_number = None
         self.fps = 0
         self.last_faf = None
@@ -80,12 +80,12 @@ class Capture(Component):
         self.gui.set('capturing', False, update_property=True)
         self.gui.enable(capture_controls)
         self.gui.enable({'new_DSO', 'apply_ROI'})
-        if Component.get('Stacker').is_empty():
-            self.gui.enable({'load_previous'})
+        # if Component.get('Stacker').is_empty():
+        self.gui.enable({'load_previous'})
         if message is not None:
             Component.get('CaptureScript').reset_generator()
-            logger.error('problem capturing ({:})'.format(message))
-            toast('Capture problem: {:}'.format(message))
+            logger.error(f'problem capturing ({message})')
+            toast(f'Capture problem: {message}')
         self.info('stopped')
 
     def capture(self, *args):
@@ -132,9 +132,9 @@ class Capture(Component):
                     self.expo = self.exposure
                     self.exposure_start_time = time.time()
                     Clock.schedule_once(self.tick, 0)
-                self.info('capturing [{:.1f} fps]'.format(self.fps))
+                self.info(f'capturing [{self.fps:.1f} fps]')
             except Exception as e:
-                logger.exception('problem in expose long {:}'.format(e))
+                logger.exception(f'problem in expose long {e}')
 
         elif op == 'expose short':
             try:
@@ -144,9 +144,11 @@ class Capture(Component):
                     on_capture=self.send_to_display,
                     on_failure=self.stop_capture,
                     is_faf=True)
-                self.info('capturing [{:.1f} fps]'.format(self.fps))
+                # for focus, info is updated in send_to_display
+                if Component.get('CaptureScript').current_script != 'focus':
+                    self.info(f'[{self.fps:.1f} fps]')  
             except Exception as e:
-                logger.exception('problem in expose short {:}'.format(e))
+                logger.exception(f'problem in expose short {e}')
 
         elif op == 'expose bias':
             self.start_capture_time = time.time()
@@ -154,7 +156,7 @@ class Capture(Component):
                 on_capture=self.save_capture,
                 on_failure=self.stop_capture,
                 is_bias=True)
-            self.info('capturing bias [{:.1f} fps]'.format(self.fps))
+            self.info(f'capturing bias [{self.fps:.1f} fps]')
 
         elif op == 'autoflat':
             auto_expo = self.get_flat_exposure()
@@ -173,7 +175,7 @@ class Capture(Component):
         '''
         dur = time.time() - self.exposure_start_time
         if self.capturing:
-            self.info('Exposing {:2.0f}s [{:.1f} fps]'.format(dur, self.fps))
+            self.info(f'Exposing {dur:2.0f}s [{self.fps:.1f} fps]')
             Clock.schedule_once(self.tick, 1)
 
     def send_to_display(self, *args):
@@ -183,10 +185,19 @@ class Capture(Component):
             im = Component.get('Camera').get_image()
             # new: store last short sub in case we want to platesolve
             self.last_faf = im
-            Component.get('Monochrome').display_sub(im)
+            fwhm = None
+            if Component.get('CaptureScript').current_script == 'focus':
+                # compute and show FWHM
+                try:
+                    stars = extract_stars(im, star_method='photutils', target_stars=5)
+                    fwhm = np.median(stars['fwhm'])
+                    self.info(f'FWHM {fwhm:.1f}"/pix')
+                except Exception as e:
+                    self.info('')
+            Component.get('Monochrome').display_sub(im, fwhm=fwhm)
             self.capture()
         except Exception as e:
-            logger.exception('problem send to display {:}'.format(e))
+            logger.exception(f'{e}')
 
     def save_capture(self, *args):
         ''' Called via camera when image is ready.
@@ -210,7 +221,9 @@ class Capture(Component):
             self.series_number += 1
 
         capture_props['exposure'] = self.exposure
-        capture_props['filter'] = Component.get('FilterWheel').current_filter
+        filt = Component.get('FilterWheel').current_filter
+        # map 'C' filter to 'L' at the point of capture
+        capture_props['filter'] = 'L' if filt == 'C' else filt
         if capture_props['temperature'] is None:
             capture_props['temperature'] = Component.get('Session').temperature
         sub_type = Component.get('CaptureScript').get_sub_type()
@@ -218,7 +231,7 @@ class Capture(Component):
 
         # check why no bias in below (just a naming convention, but still...)
         prefix = sub_type if sub_type in {'flat', 'dark'} else capture_props['filter']
-        name = '{:}_{:d}.fit'.format(prefix, self.series_number)
+        name = f'{prefix}_{self.series_number:d}.fit'
         
         Component.get('ObjectIO').new_sub(
             data=im.astype(np.uint16),
@@ -273,8 +286,7 @@ class Capture(Component):
         xvals = np.linspace(min_exposure, max_exposure, 500)
         best = np.argmin(np.abs(adu_target - f(xvals)))
         best_exposure = xvals[best]
-        mesg = 'best exposure for autoflat {:} with ADU {:}'.format(
-            best_exposure, f(best_exposure))
+        mesg = f'best exposure for autoflat {best_exposure} with ADU {f(best_exposure)}'
         toast(mesg)
         logger.info(mesg)
         return float(best_exposure)

@@ -12,16 +12,18 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 
 from jocular.component import Component
-from jocular.widgets import Panel, TextInputC, JMDToggleButton
+from jocular.widgets.widgets import TextInputC, JMDToggleButton
+from jocular.panel import Panel
+
 
 def exp_to_str(e):
     if e < .001:
-        return '{:.0f} µs'.format(e*1e6)
+        return f'{e*1e6:.0f} µs'
     if e < 1:
-        return '{:.0f} ms'.format(e*1000)
+        return f'{e*1000:.0f} ms'
     if e - int(e) < .0001:
-        return '{:.0f}s'.format(e)
-    return '{:.2f}s'.format(e)
+        return f'{e:.0f}s'
+    return f'{e:.2f}s'
 
 def str_to_exp(s):
     s = str(s)

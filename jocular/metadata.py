@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from loguru import logger
 
-from jocular.image import fits_in_dir, update_fits_header
+from jocular.image import fits_in_dir # , update_fits_header
 from jocular.component import Component
 
 
@@ -153,16 +153,16 @@ class Metadata(Component):
             with open(os.path.join(path, 'info3.json'), 'w') as f:
                 json.dump(self.md, f, indent=1)
         except Exception as e:
-            logger.warning('Problem saving info3.json to {:} ({:})'.format(path, e))
+            logger.warning(f'Problem saving info3.json to {path} ({e})')
 
         # change FITs header if requested
-        if change_fits_headers:
-            logger.debug('Changing fits headers')
-            for f in fits_in_dir(path):
-                update_fits_header(f, 
-                    exposure=self.md.get('exposure', None),
-                    sub_type=self.md.get('sub_type', None),
-                    temperature=self.md.get('temperature', None))
+        # if change_fits_headers:
+        #     logger.debug('Changing fits headers')
+        #     for f in fits_in_dir(path):
+        #         update_fits_header(f, 
+        #             exposure=self.md.get('exposure', None),
+        #             sub_type=self.md.get('sub_type', None),
+        #             temperature=self.md.get('temperature', None))
 
     def set(self, field, value=None):
         # set one or more fields of metadata

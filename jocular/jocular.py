@@ -19,15 +19,14 @@ from kivy.core.text import LabelBase
 from jocular import __version__
 from jocular.component import Component
 from jocular.gui import GUI
-
 from jocular.utils import get_datadir, start_logging
-
 from jocular.appearance import sat_to_hue
+
 
 class Jocular(MDApp):
 
     showing = OptionProperty(
-        'main', options=['main', 'observing list', 'calibration', 'observations']
+        'main', options=['main', 'observing list', 'calibration', 'observations', 'subs', 'singlesub']
     )
 
     lowlight_color = ListProperty([0.5, 0.5, 0.5, 1])
@@ -40,8 +39,6 @@ class Jocular(MDApp):
     # info_font_size = StringProperty('14sp')
     form_font_size = StringProperty('15sp')
 
-    tooltip_delay = NumericProperty(2)
-
     data_dir = StringProperty(None)
 
     subdirs = {'captures', 'calibration', 'snapshots', 'deleted', 
@@ -50,16 +47,18 @@ class Jocular(MDApp):
     brightness = NumericProperty(1)
     transparency = NumericProperty(0)
 
+
     def get_dir_in_datadir(self, name):
         path = os.path.join(self.data_dir, name)
         try:
             if not os.path.exists(path):
-                logger.debug('Creating path {:}'.format(path))
+                logger.debug(f'Creating path {path}')
                 os.mkdir(path)
             return os.path.join(self.data_dir, name)
         except Exception as e:
-            logger.exception('Cannot create path {:} ({:})'.format(path, e))
+            logger.exception(f'Cannot create path {path} ({e})')
             sys.exit('Cannot create subdirectory of Jocular data directory')
+
 
     def get_path(self, name):
         ''' centralised way to access resources
@@ -77,7 +76,12 @@ class Jocular(MDApp):
         elif name == 'example_captures':
             return os.path.join(self.directory, 'example_captures')
 
-        elif name in {'configurables.json', 'gui.json', 'object_types.json', 'filter_properties.json'}:
+        elif name in {
+            'configurables.json', 
+            'gui.json', 
+            'object_types.json', 
+            'filter_properties.json',
+            'multispectral.json'}:
             return os.path.join(self.directory, 'resources', name)
 
         # jocular settings
@@ -111,18 +115,22 @@ class Jocular(MDApp):
         else:
             return os.path.join(self.directory, 'resources', name)
 
+
     def on_brightness(self, *args):
         for c in ['hint_color', 'lowlight_color', 'line_color', 'lever_color']:
             getattr(self, c)[-1] = self.brightness
 
+
     @logger.catch()
     def build(self):
 
+        self.icon = self.get_path('jocular.png')
         self.data_dir = get_datadir()
+
         if self.data_dir is not None:
             start_logging(self.get_path('logs'))
 
-        self.title = 'Jocular v{:}'.format(__version__)
+        self.title = f'Jocular v{__version__}'
         self.theme_cls.theme_style = "Dark"     
 
         LabelBase.register(name='Jocular', fn_regular=self.get_path('jocular4.ttf'))
@@ -143,13 +151,11 @@ class Jocular(MDApp):
                 lg = v / 100
                 setattr(self, p, [lg, lg, lg, 1])
             elif p.endswith('font_size'):
-                setattr(self, p, '{:}sp'.format(v))
+                setattr(self, p, f'{v}sp')
             elif p == 'transparency':
                 self.transparency = int(v) / 100
             elif p == 'colour_saturation':
                 self.theme_cls.accent_hue = sat_to_hue(v)
-            elif p == 'tooltip_delay':
-                self.tooltip_delay = v
 
         self.gui = GUI()
 
@@ -164,7 +170,7 @@ class Jocular(MDApp):
         if exception is None:
             logger.info('normal close down')
         else:
-            logger.exception('root exception: {:}'.format(exception))
+            logger.exception(f'root exception: {exception}')
         # save width and height
         Config.set('graphics', 'width', str(int(Window.width / dp(1))))
         Config.set('graphics', 'height', str(int(Window.height /dp(1))))
@@ -173,17 +179,17 @@ class Jocular(MDApp):
         self.gui.on_close()
         logger.info('finished close down')
 
+
     # reset showing to main when any table is hidden
     def table_hiding(self, *args):
         self.showing = 'main'
 
 
 
-
 def startjocular():
 
     # remove possibility of exiting with escape key
-    Config.set('kivy', 'log_level', 'error')
+    Config.set('kivy', 'log_level', 'error') # was debug
     Config.set('kivy', 'exit_on_escape', '0')
     Config.write()
 
@@ -196,5 +202,5 @@ def startjocular():
             devices are disconnected, etc.
         '''
         joc.on_stop(exception=e)
-        sys.exit('Jocular failed with error {:}'.format(e))
+        sys.exit(f'Jocular failed with error {e}')
 

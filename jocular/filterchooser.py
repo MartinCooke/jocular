@@ -18,7 +18,9 @@ from kivy.lang import Builder
 from kivy.properties import ListProperty
 
 from jocular.component import Component
-from jocular.widgets import Panel, LabelR
+from jocular.widgets.widgets import LabelR
+from jocular.panel import Panel
+
 
 Builder.load_string('''
 
@@ -66,8 +68,8 @@ class FilterChooser(Panel, Component):
     def on_show(self):
         # ensure filterchooser reflects current filterwheel device
         state = Component.get('FilterWheel').get_state()
-        logger.debug('state from FW {:}'.format(state))
-        logger.debug('previous state {:}'.format(self.state))
+        logger.debug(f'state from FW {state}')
+        logger.debug(f'previous state {self.state}')
         if state['filtermap'] != self.state['filtermap']:
             logger.debug('rebuilding FilterChooser')
             # need to rebuild
@@ -150,9 +152,9 @@ class FilterChooser(Panel, Component):
     def filter_selected(self, filt, but):
         # set exposure on GUI and on scripts panel
         if Component.get('CaptureScript').current_script == 'seq':
-            logger.debug('toggled filter {:}'.format(filt))
+            logger.debug(f'toggled filter {filt}')
         else:
-            logger.debug('selected filter {:}'.format(filt))
+            logger.debug(f'selected filter {filt}')
             for f, b in self.buts.items():
                 b.state = 'down' if f == filt else 'normal'
             #filts = [f for f, b in self.buts.items() if b.state == 'down']
@@ -167,7 +169,7 @@ class FilterChooser(Panel, Component):
         nsubs = Component.get('CaptureScript').get_nsubs()
         if nsubs > 1:
             self.nsubs_slider.value = nsubs
-            self.nsubs_label.text = '{:} subs/filter'.format(nsubs)
+            self.nsubs_label.text = f'{nsubs} subs/filter'
             self.nsubs = nsubs
             self.title_label.text = 'Select filters'
             self.nsubs_box.disabled = False
@@ -176,7 +178,7 @@ class FilterChooser(Panel, Component):
             self.nsubs_box.disabled = True
 
     def nsubs_changed(self, slider, nsubs):
-        self.nsubs_label.text = '{:} subs/filter'.format(nsubs)
+        self.nsubs_label.text = f'{nsubs} subs/filter'
         self.nsubs = nsubs
 
     def order_by_transmission(self, filts):

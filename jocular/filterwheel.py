@@ -39,17 +39,17 @@ class FilterWheel(Component, DeviceFamily):
         # create map from filtername to position e.g. {'L': 1, 'R': 2}
         if self.device is None:
             return {}
-        return {getattr(self.device, 'f{:}'.format(p)): p for p in range(1, 10)}
+        return {getattr(self.device, f'f{p}'): p for p in range(1, 10)}
 
     def select_filter(self, name='L', changed_action=None, not_changed_action=None):
 
-        logger.debug('trying to change to filter {:}'.format(name))
+        logger.debug(f'trying to change to filter {name}')
         self.changed_action = changed_action
         self.not_changed_action = not_changed_action
 
         # no change of filter
         if self.current_filter == name:
-            logger.debug('no need to change filter {:}'.format(name))
+            logger.debug(f'no need to change filter {name}')
             changed_action()
             return
 
@@ -77,8 +77,8 @@ class FilterWheel(Component, DeviceFamily):
                 self.dialog.open()
 
             else:
-                toast('Cannot find filter {:}'.format(name))
-                logger.warning('Cannot find filter {:} in current filterwheel'.format(name))
+                toast(f'Cannot find filter {name}')
+                logger.warning(f'Cannot find filter {name} in current filterwheel')
                 if not_changed_action is not None:
                     not_changed_action()
         else:
@@ -101,7 +101,7 @@ class FilterWheel(Component, DeviceFamily):
                 success_action=partial(self.fw_changed, name),
                 failure_action=self.fw_not_changed)
         except Exception as e:
-            toast('problem moving EFW ({:})'.format(e))
+            toast(f'problem moving EFW ({e})')
             if self.not_changed_action is not None:
                 self.not_changed_action()
             return
@@ -109,7 +109,7 @@ class FilterWheel(Component, DeviceFamily):
     def fw_changed(self, name, dt=None):
         # change has been done
         self.current_filter = name
-        logger.debug('Filter changed to {:}'.format(name))
+        logger.debug(f'Filter changed to {name}')
         if self.changed_action is not None:
             self.changed_action()
 
@@ -120,6 +120,9 @@ class FilterWheel(Component, DeviceFamily):
 
     def device_connected(self):
         # called by DeviceFamily when a device connects
+        if not hasattr(self, 'device'):
+            return False
+
         if self.device is not None:
             self.device.settings_have_changed()
 
@@ -157,7 +160,7 @@ class GenericFW(Device):
         logger.debug('Checking for and removing duplicate and non-existent filters')
         filts = set({})
         for pos in range(1, 10):
-            fname = 'f{:}'.format(pos)
+            fname = f'f{pos}'
             f = getattr(self, fname)
             if f not in ftypes:
                 setattr(self, fname, '-')
@@ -199,7 +202,7 @@ class ManualFW(GenericFW):
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         self.dialog = MDDialog(
             auto_dismiss=False,
-            text='Change filter to {:} in position {:}'.format(name, position),
+            text=f'Change filter to {name} in position {position}',
             buttons=[
                 MDFlatButton(text="DONE", 
                     text_color=self.app.theme_cls.primary_color,
@@ -231,7 +234,7 @@ class SXFW(GenericFW):
         try:
             import hid
         except Exception as e:
-            logger.warning('Cannot import HID ({:})'.format(e))
+            logger.warning(f'Cannot import HID ({e})')
             self.status = 'Cannot import HID'
             return
 
@@ -245,7 +248,7 @@ class SXFW(GenericFW):
                 logger.debug('got HID device')
 
         except Exception as e:
-            logger.warning('Failed to get HID ({:})'.format(e))
+            logger.warning(f'Failed to get HID ({e})')
             self.status = 'Failed to get HID device'
             return
 
@@ -257,7 +260,7 @@ class SXFW(GenericFW):
             self.status = 'SX filterwheel connected'
             logger.debug('successful')
         except Exception as e:
-            logger.warning('fw.open failed ({:})'.format(e))
+            logger.warning(f'fw.open failed ({e})')
             self.status = 'fw.open failed'
             self.connected = False
 
@@ -265,13 +268,13 @@ class SXFW(GenericFW):
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         try:
             # move SX filterwheel
-            logger.debug('Moving SX EFW to position {:}'.format(position))
+            logger.debug(f'Moving SX EFW to position {position}')
             self.fw.write([position + 128, 0])
             # wait three seconds before informing controller it has been done
-            logger.debug('success so setting up action {:}'.format(success_action))
+            logger.debug(f'success so setting up action {success_action}')
             Clock.schedule_once(success_action, 3)
         except Exception as e:
-            logger.debug('failed to select position ({:})'.format(e))
+            logger.debug(f'failed to select position ({e})')
             # controller will handle this further
             if failure_action is not None:
                 failure_action()
@@ -302,15 +305,15 @@ class ASCOMFW(GenericFW):
             self.fw = res['device']
         else:
             if 'exception' in res:
-                self.status += ' ({:})'.format(res['exception'])
+                self.status += " ({res['exception']})"
 
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         try:
             # move filterwheel
-            logger.debug('Moving ASCOM EFW to position {:}'.format(position))
+            logger.debug(f'Moving ASCOM EFW to position {position}')
             self.fw.Position = position
             # wait three seconds before informing controller it has been done
-            logger.debug('success so setting up action {:}'.format(success_action))
+            logger.debug(f'success so setting up action {success_action}')
             Clock.schedule_once(success_action, 3)
         except:
             # controller will handle this

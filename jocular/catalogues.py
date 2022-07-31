@@ -14,13 +14,14 @@ from loguru import logger
 from kivy.properties import BooleanProperty
 
 from jocular.component import Component
-from jocular.settingsmanager import Settings
+from jocular.settingsmanager import JSettings
+from jocular.utils import toast
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
 
 
-class Catalogues(Component, Settings):
+class Catalogues(Component, JSettings):
 
     VS = BooleanProperty(True)
     WDS = BooleanProperty(True)
@@ -45,7 +46,6 @@ class Catalogues(Component, Settings):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.star_db = None
-        self.user_objects = {}
 
         ''' load object types and normalise colour values to 0-1 
         '''
@@ -66,14 +66,22 @@ class Catalogues(Component, Settings):
             restarting Jocular
         '''
         if self.star_db is None:
-            try:
-                self.star_db  = np.load(self.app.get_path('star_db'))
-                logger.info('loaded platesolving star database')
-            except:
-                pass
+            path = self.app.get_path('star_db')
+            if os.path.exists(path):
+                try:
+                    self.star_db  = np.load(path)
+                    logger.info('loaded platesolving star database')
+                except Exception as e:
+                    logger.warning(f'cannot load star database from {path}: {e}')
+
 
     def has_platesolving_db(self):
-        return self.star_db is not None
+        return self.star_db is not Non
+
+
+    def get_star_db(self):
+        return self.star_db
+
 
     def in_tile(self, tile, ras, decs):
         ''' return indices of coordinates within tile
@@ -84,6 +92,7 @@ class Catalogues(Component, Settings):
             return (decs >= dmin) & (decs < dmax) & (ras >= rmin) & (ras < rmax)
         else:
             return (decs >= dmin) & (decs < dmax) & ((ras >= rmin) | (ras < rmax))
+
 
     def get_tiles(self, tile, rstep, dstep):
         ''' return database tiles covering region defined in tile
@@ -101,6 +110,7 @@ class Catalogues(Component, Settings):
                 list(range(0, intstep(rmax, rstep) + rstep, rstep))
         return ra_tiles, dec_tiles        
 
+
     def get_platesolving_stars(self, tile=None):
         # get stars in tile by reading npys that are spaced at 30 x 10 degrees in RA/Dec
 
@@ -111,13 +121,14 @@ class Catalogues(Component, Settings):
         ras, decs, mags = np.array([]), np.array([]), np.array([])
         for ra in ra_tiles:
             for dec in dec_tiles:
-                quad = 'r{:}_d{:}_'.format(ra, dec)
+                quad = f'r{ra}_d{dec}_'
                 ras = np.append(ras, self.star_db[quad+'ra'])
                 decs = np.append(decs, self.star_db[quad+'dec'])
                 mags = np.append(mags, self.star_db[quad+'mag']/100.) # mags are ints * 100
 
         locs = self.in_tile(tile, ras, decs)
         return ras[locs], decs[locs], mags[locs]
+
 
     def get_basic_dsos(self):
         if self.dsos is None:
@@ -126,46 +137,45 @@ class Catalogues(Component, Settings):
 
 
     def load_basic_dsos(self):
-        ''' load shipped catalogues then update/overwrite with any user 
-            catalogue items; convert to uppercase name/OT as keys on read-in
-            for speed of matching later
+        ''' load shipped catalogues, user catalogues, and user objects (i.e. those
+            resulting from user observations)
         '''
 
         shipped = glob.glob(os.path.join(self.app.get_path('dsos'), '*.csv'))
         usercats = glob.glob(os.path.join(self.app.get_path('catalogues'), '*.csv'))
+        allcats = [c for c in shipped + usercats if not c.endswith('user_objects.csv')] # legacy
 
         self.dsos = {}
-        for objfile in shipped + usercats:
-            # legacy: don't handle user_objects.csv (now using json)
-            if not objfile.endswith('user_objects.csv'):
-                # form dict from user_objects
-                cnt = 0
-                with open(objfile, newline='') as f:
+        for cat in allcats:
+            cnt = 0
+            try:
+                with open(cat, newline='') as f:
                     reader = csv.DictReader(f)
                     for d in reader:
-                        nm = '{:}/{:}'.format(d['Name'], d['OT']).upper()
+                        d['Name'] = d['Name'].strip()
+                        nm = f"{d['Name']}/{d['OT']}".upper()
                         self.dsos[nm] = d
-                        self.dsos[nm]['U'] = ''
+                        self.dsos[nm]['Usr'] = ''
                         cnt += 1
-
-                logger.info('loaded {:} DSOs from {:}'.format(
-                    cnt, objfile))
-
-        logger.info('loaded {:} DSOs from {:} catalogues'.format(
-            len(self.dsos), len(shipped + usercats)))
+                logger.info(f'loaded {cnt} DSOs from {cat}')
+            except Exception as e:
+                logger.error(f'problem loading/reading catalogue {cat} ({e})')
 
         # read user objects or initialise
         try:
             with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json')) as f:
-                self.user_objects = json.load(f)
-        except:
-            pass
+                user_objects = json.load(f)
+            # add to dsos only if not already present, and mark as user objects
+            for k, v in user_objects.items():
+                ku = k.upper()
+                if ku not in self.dsos:
+                    self.dsos[ku] = v
+                    self.dsos[ku]['Usr'] = 'Y'
+        except Exception as e:
+            logger.error(f'problem loading/reading user_objects.json ({e})')
 
-        # force user objects to overwrite
-        for k, v in self.user_objects.items():
-            nm = k.upper()
-            self.dsos[nm] = v
-            self.dsos[nm]['U'] = 'Y'
+        # update user objects (test)
+        self.save_user_objects()
 
         # ensure all fields are present and consistent
         for v in self.dsos.values():
@@ -180,7 +190,6 @@ class Catalogues(Component, Settings):
             v['Other'] = v.get('Other', '')
 
 
-
     def lookup(self, name, OT=None):
         ''' lookup object details for name
             If name is in form name/OT then return match or None
@@ -190,7 +199,7 @@ class Catalogues(Component, Settings):
         name = name.upper()
 
         if OT is not None and OT and '/' not in name:
-            name = '{:}/{:}'.format(name, OT)
+            name = f'{name}/{OT}'
 
         logger.debug(name)
         dsos = self.get_basic_dsos()
@@ -206,49 +215,50 @@ class Catalogues(Component, Settings):
 
         return None
 
-    def is_user_defined(self, key):
-        return key in self.user_objects
 
     def update_user_object(self, props):
         ''' Called from DSO when object is saved and is new or altered
         '''
 
-        name = '{:}/{:}'.format(props['Name'], props['OT']).upper()
+        name = f"{props['Name']}/{props['OT']}".upper()
 
-        # add to or update to user objects
-        self.user_objects[name] = props.copy()
-
-        logger.debug('Adding to user objects for {:}: {:}'.format(name, props))
-
-        try:
-            logger.trace('Writing props to user_objects: {:}'.format(self.user_objects[name]))
-            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
-                json.dump(self.user_objects, f, indent=1)
-            logger.info('{:} {:}'.format(name, props))
-        except Exception as e:
-            logger.warning('Unable to save user_objects.json ({:})'.format(e))
+        if name in self.dsos and self.dsos[name]['Usr'] != 'Y':
+            logger.warning(f'cannot update non-user-defined DSO {name}')
+            return
 
         # update main DSO list
         self.dsos[name] = props.copy()
-        self.dsos[name]['U'] = 'Y'
+        self.dsos[name]['Usr'] = 'Y'
+
+        self.save_user_objects()
+
+
+    def save_user_objects(self):
+        fields = ['Name', 'OT', 'Con', 'RA', 'Dec', 'Diam', 'Mag', 'Other']
+        udict = {}
+        for k, v in self.dsos.items():
+            if v['Usr'] == 'Y':
+                udict[k] = {k1: v1 for k1, v1 in v.items() if k1 in fields}
+        try:
+            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
+                json.dump(udict, f, indent=1)
+        except Exception as e:
+            logger.warning(f'Unable to save user_objects.csv ({e})')
 
 
     def delete_user_object(self, name):
-        ''' Remove user object both online and offline
+        ''' Remove user object and save user objects list
         '''
-        if name in self.user_objects:
-            del self.user_objects[name]
-        if name in self.dsos:
-            del self.dsos[name]
-        try:
-            with open(os.path.join(self.app.get_path('catalogues'), 'user_objects.json'), 'w') as f:
-                json.dump(self.user_objects, f, indent=1)
-        except Exception as e:
-            logger.warning('Unable to save user_objects.json ({:})'.format(e))
 
+        name = name.upper()
+        if name in self.dsos and self.dsos[name]['Usr'] == 'Y':
+            del self.dsos[name]
+            self.save_user_objects()
+       
 
     def is_excluded(self, catname):
         return hasattr(self, catname) and not getattr(self, catname)
+
 
     def get_annotation_dsos(self, tile=None):
         ''' Retrieve all DSOs in the specified tile. Use basic DSOs combined
@@ -283,6 +293,7 @@ class Catalogues(Component, Settings):
         # return copy in case receiver decides to modify things
         return deepcopy(matches)
 
+
     def load_deepcat(self, nm, tile):
 
         cat = np.load(nm, allow_pickle=True)
@@ -301,7 +312,7 @@ class Catalogues(Component, Settings):
         matches = {}
         for ra in ra_tiles:
             for dec in dec_tiles:
-                subdat = cat['r{:}_d{:}'.format(ra, dec)][0]
+                subdat = cat[f'r{ra}_d{dec}'][0]
                 ras, decs = subdat['RA'], subdat['Dec']
                 locs = self.in_tile(tile, ras, decs)
                 for l in np.where(locs)[0]:
