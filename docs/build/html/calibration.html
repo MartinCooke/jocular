@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calibration and hot pixel removal &mdash; Jocular 0.5.6.dev2 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Adding your own DSO catalogues" href="catalogues.html" />
+    <link rel="prev" title="Choosing a stretch function" href="stretch.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Jocular
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installing Jocular</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">New users</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="liveobservation.html">Live observation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">A typical observing session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">In more depth</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="dsoplanner.html">The DSO planner</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotator.html">Labelling objects in the image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stretch.html">Choosing a stretch function</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced features</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Calibration and hot pixel removal</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bad-pixel-removal">Bad pixel removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deploying-darks-and-flats">Deploying darks and flats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#collecting-calibration-frames-with-jocular">Collecting calibration frames with Jocular</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#specifics-for-flats">Specifics for flats</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#your-calibration-library">Your calibration library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#collecting-calibration-frames-in-watched-mode">Collecting calibration frames in watched mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-calibration-masters-to-the-library-directly">Adding calibration masters to the library directly</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="catalogues.html">Adding your own DSO catalogues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filters.html">Filters and colour</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Solving problems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Jocular</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Calibration and hot pixel removal</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/calibration.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="calibration-and-hot-pixel-removal">
+<h1>Calibration and hot pixel removal<a class="headerlink" href="#calibration-and-hot-pixel-removal" title="Permalink to this headline"></a></h1>
+<p>Electronically-enhanced visual astronomy is not as concerned with image quality as astrophotography – after all, the goal is to observe – but some cleaning up processes can be applied automatically, with little or no effort.</p>
+<section id="bad-pixel-removal">
+<h2>Bad pixel removal<a class="headerlink" href="#bad-pixel-removal" title="Permalink to this headline"></a></h2>
+<p>Perhaps the most intrusive artefacts while observing are caused by those pixels that are essentially dead, stuck at a high or low value, or bright pixels that tend to proliferate on hotter nights. While they may not stand out on a single sub, when stacking multiple subs these pixels (especially the bright ones) create little trails across the image due to image translation and rotation applied during image registration.</p>
+<p>Traditionally, bad pixels are removed using <a class="reference internal" href="#darks"><span class="std std-ref">darks</span></a>. However, if you don’t have any darks handy, or don’t want the bother of collecting darks, it is quite easy to remove them in Jocular. Simply turn hot pixel removal on in the <code class="docutils literal notranslate"><span class="pre">Bad</span> <span class="pre">pixel</span> <span class="pre">map</span></code> settings panel (it will be on by default).</p>
+<p>It can be informative to switch bad pixel mapping off and recompute the stack by clicking the <img alt="recompute" src="_images/recompute.png" /> icon. Any hot pixels will become visible. Indeed, their track provides a record of mount tracking so you may be able to diagnose tracking issues by observing hot pixels.</p>
+<p>The image below shows bad pixel removal off (left) and on (right).</p>
+<p><img alt="hotpix" src="_images/hotpix.png" />.</p>
+</section>
+<section id="deploying-darks-and-flats">
+<h2>Deploying darks and flats<a class="headerlink" href="#deploying-darks-and-flats" title="Permalink to this headline"></a></h2>
+<p>Assuming you have already collected calibration frames (either using Jocular, as described below, or using a different source), it is very easy to use them. Simply toggle the buttons marked <code class="docutils literal notranslate"><span class="pre">dark</span></code> and/or <code class="docutils literal notranslate"><span class="pre">flat</span></code> in the lower-right quadrant of the interface. Jocular will then apply any suitable calibration frames it can find in your calibration library. Whether Jocular is able to calibrate depends on several factors (see next para); Jocular reports the outcome in the status panel (lower left).</p>
+<p>If you wish to un-apply calibration frames, simply click the button again and perform a recompute <img alt="recompute" src="_images/recompute.png" />.</p>
+<p>Asking for your incoming subs to be calibrated is one thing, but of course it requires a suitable master calibration frame to exist in your library. Jocular first identifies any suitable candidates and then looks for the best match. For example, darks need to be within a specified exposure and temperature tolerance, and for cameras with user-settable gain/offset these values must match exactly. Check out the <code class="docutils literal notranslate"><span class="pre">Calibration</span></code> settings to explore the kinds of factors at play.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Jocular also calibrates subs which correspond to a sub-region of a master frame i.e. subs collected with ROI set.</p>
+</div>
+</section>
+<section id="collecting-calibration-frames-with-jocular">
+<span id="darks"></span><h2>Collecting calibration frames with Jocular<a class="headerlink" href="#collecting-calibration-frames-with-jocular" title="Permalink to this headline"></a></h2>
+<p>Assuming Jocular is controlling your camera directly (if not, see <a class="reference internal" href="#watchedmodecalibration"><span class="std std-ref">watched mode calibration</span></a> below), calibration frames are collected using one of the four calibration scripts that appear when you click the name above the camera icon <img alt="camera" src="_images/camera.png" />. The options are <code class="docutils literal notranslate"><span class="pre">dark</span></code>, <code class="docutils literal notranslate"><span class="pre">flat</span></code>, <code class="docutils literal notranslate"><span class="pre">bias</span></code> and <code class="docutils literal notranslate"><span class="pre">autoflat</span></code>.</p>
+<p>The capture process is almost identical to collecting normal <code class="docutils literal notranslate"><span class="pre">light</span></code> frames (i.e. click the camera to start/stop), with just a couple of differences:</p>
+<ul class="simple">
+<li><p>when saving (i.e., when clicking on the new object <img alt="new" src="_images/newicon.png" /> icon), you will be asked if you wish to save a master calibration frame (the answer is normally yes!)</p></li>
+<li><p>the default method for stack combination is <code class="docutils literal notranslate"><span class="pre">80%</span></code> rather than <code class="docutils literal notranslate"><span class="pre">mean</span></code> when you are collecting flats (however, you can change the stack combination method and Jocular will use your choice when saving the calibration frame)</p></li>
+</ul>
+<p>Since collecting calibration frames is pretty much the same as collecting lights, this means that all the individual subs are saved, subs can be selected or deselected, and the object (we can’t really call it a DSO) can be reloaded in the future and perhaps further edited/refined (whenever you reload a calibration object you’ll be asked if you want to save a master).</p>
+<p>To take an example scenario, suppose you collect some darks but forget to cap the scope and only realise this some subs into the capture. Just deselect those subs and Jocular will ignore them when creating the master dark.</p>
+<p>### Specifics for darks</p>
+<p>It is really important to supply a temperature value if Jocular cannot read it directly from the sensor. Saving a dark frame without temperature information limits its usefulness. Temperature-less darks can still be deployed within the current session, since it is assumed that the temperature won’t have changed much.</p>
+<section id="specifics-for-flats">
+<h3>Specifics for flats<a class="headerlink" href="#specifics-for-flats" title="Permalink to this headline"></a></h3>
+<p>A master flat will only be produced if the flat itself is calibrated. This (quasi-draconian?) requirement avoids many of the issues that arise when flats are deployed. If Jocular cannot calibrate the flat itself, a message appears to warn that the master flat is not generated. However, all is not lost! The flat subs can be reloaded at any point in the future when it is possible to calibrate them (see below), at on saving a master flat will be produced.</p>
+<p>What is involved in calibrating flats? Essentially, it is necessary to subtract either a master bias from each flat sub, or to subtract a so called master flat-dark (also known as dark-flat). A third option, to subtract a constant value, is also possible. The choice of which to use is available in the <code class="docutils literal notranslate"><span class="pre">Calibrator</span></code> settings. If you choose <code class="docutils literal notranslate"><span class="pre">bias</span></code>, for a flat sub to be properly calibrated you should ensure that you have previously collected a master bias (e.g. using the <code class="docutils literal notranslate"><span class="pre">bias</span></code> script). Likewise, for flat-darks it is necessary to have a master dark within a certain exposure of that used for the flats. An option is available to set this tolerance.</p>
+<p>The best policy on obtaining a new camera is to create a good quality master bias (i.e. made up of a large numbr of subs); this is very quick to do and once the master is saved and in the library it will be applied silently to your flat subs.</p>
+</section>
+</section>
+<section id="your-calibration-library">
+<span id="calibrationlibrary"></span><h2>Your calibration library<a class="headerlink" href="#your-calibration-library" title="Permalink to this headline"></a></h2>
+<p>Jocular maintains a library of all your calibration masters so that it can deploy them effortlessly. you can inspect (and maintain) the library by clicking on the <img alt="info" src="_images/infoicon.png" /> icon next to the <code class="docutils literal notranslate"><span class="pre">dark</span></code> and <code class="docutils literal notranslate"><span class="pre">flat</span></code> toggles on the eyepiece ring. In fact, the calibration library is simply a view on to the <code class="docutils literal notranslate"><span class="pre">calibration</span></code> subdirectory of your joculardata directory.</p>
+</section>
+<section id="collecting-calibration-frames-in-watched-mode">
+<span id="watchedmodecalibration"></span><h2>Collecting calibration frames in watched mode<a class="headerlink" href="#collecting-calibration-frames-in-watched-mode" title="Permalink to this headline"></a></h2>
+<p>If you are using a separate capture program, you can still collect calibration frames by ensuring that the capture program writes appropriate information into the FITS header, or, failing that, that the names of the subs start with <code class="docutils literal notranslate"><span class="pre">flat_</span></code>, <code class="docutils literal notranslate"><span class="pre">dark_</span></code> or <code class="docutils literal notranslate"><span class="pre">bias_</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Using the watched camera method to collect calibration frames is not guaranteed to work since different capture programs use different FITS headers to identify the type of sub. If in doubt, contact me, preferably with an example FITS, so that I can add the necessary header handling into Jocular. One approach that ought to work as a last resort is to set the <code class="docutils literal notranslate"><span class="pre">sub_type</span></code> value to <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">user</span></code> in the <code class="docutils literal notranslate"><span class="pre">watched</span> <span class="pre">dir</span></code> device configuration screen, and then choose <code class="docutils literal notranslate"><span class="pre">dark</span></code>, <code class="docutils literal notranslate"><span class="pre">flat</span></code> or <code class="docutils literal notranslate"><span class="pre">bias</span></code> on the button above the camera icon before your subs start to arrive in the watched directory.</p>
+</div>
+</section>
+<section id="adding-calibration-masters-to-the-library-directly">
+<h2>Adding calibration masters to the library directly<a class="headerlink" href="#adding-calibration-masters-to-the-library-directly" title="Permalink to this headline"></a></h2>
+<p>While it is possible to add calibration masters manually to the <code class="docutils literal notranslate"><span class="pre">calibration</span></code> directory, a better option is to set Jocular into <code class="docutils literal notranslate"><span class="pre">watched</span></code> mode and place the calibration master into the watched directory. Jocular will then perform some checks before automatically adding the master to the calibration library.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Depending on the capture program used to collect the master, Jocular may or may not be able to work out that it is dealing with a master calibration frame.</p>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="stretch.html" class="btn btn-neutral float-left" title="Choosing a stretch function" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="catalogues.html" class="btn btn-neutral float-right" title="Adding your own DSO catalogues" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Martin Meredith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

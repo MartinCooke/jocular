@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick start &mdash; Jocular 0.5.6.dev2 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Live observation" href="liveobservation.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Jocular
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installing Jocular</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">New users</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#exploring-the-interface">Exploring the interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#viewing-individual-subs-or-the-stack">Viewing individual subs or the stack</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deselecting-and-deleting">Deselecting and deleting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adjusting-the-image">Adjusting the image</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pan-zoom-and-rotate">Pan, zoom and rotate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#negative-mode">Negative mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#taking-a-snapshot">Taking a snapshot</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="liveobservation.html">Live observation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">A typical observing session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">In more depth</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="dsoplanner.html">The DSO planner</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotator.html">Labelling objects in the image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stretch.html">Choosing a stretch function</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="calibration.html">Calibration and hot pixel removal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogues.html">Adding your own DSO catalogues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filters.html">Filters and colour</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Solving problems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Jocular</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Quick start</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/quickstart.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quick-start">
+<h1>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline"></a></h1>
+<p>You can practise using Jocular using some example captures – I’ve put a couple of DSOs at <a class="reference external" href="https://transpy.eu.pythonanywhere.com/jocular/examples.zip">this link (30M)</a>.</p>
+<p>Put the unzipped directory (called ‘examples’) in the <code class="docutils literal notranslate"><span class="pre">captures</span></code> directory of you jocular data directory, then start Jocular and click on <img alt="open file icon" src="_images/openicon.png" /> in the upper right quadrant to bring up a table of captures. This will initially be empty, so click <code class="docutils literal notranslate"><span class="pre">rebuild</span> <span class="pre">observations</span></code> at the bottom of the table and the two DSOs you’ve just added will be ready to load.</p>
+<p>Loading is done by clicking on the DSO name. All the subs for that object will be loaded and aligned exactly as if you were observing live.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Normally, you wouldn’t go thru this procedure because Jocular organises all the DSOs you’ve captured with Jocular automatically so that they appear in the table. However, the procedure does serve to demonstrate how to include any of your own previous captures into Jocular. Place all the FITS for each DSO into its own directory (I suggest naming the directory for the DSO), and then add each DSO directory to any subdirectory of <code class="docutils literal notranslate"><span class="pre">captures</span></code> (e.g. you could use the <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory, but it really doesn’t matter). Then ask Jocular to rebuild observations and it will find them and make them available. Jocular organises its own captures by sessions and DSOs within sessions, which is why we have a two-level directory structure for captures.</p>
+</div>
+<section id="exploring-the-interface">
+<h2>Exploring the interface<a class="headerlink" href="#exploring-the-interface" title="Permalink to this headline"></a></h2>
+<p>Jocular’s eyepiece-like view contains most of the controls needed in an observing session. To explore the interface, <strong>turn tooltips on</strong> by clicking the <img alt="config" src="_images/configicon.png" /> icon to accesses Jocular’s <a class="reference internal" href="config.html"><span class="doc std std-doc">settings system</span></a>, choose <code class="docutils literal notranslate"><span class="pre">Appearance</span></code> from the dropdown at the top, and set <code class="docutils literal notranslate"><span class="pre">show</span> <span class="pre">tooltips</span></code> to <code class="docutils literal notranslate"><span class="pre">on</span></code>. Hovering over the various controls will now bring up a short description of what each control does.</p>
+<section id="viewing-individual-subs-or-the-stack">
+<h3>Viewing individual subs or the stack<a class="headerlink" href="#viewing-individual-subs-or-the-stack" title="Permalink to this headline"></a></h3>
+<p>The group of controls at the top of the eyepiece relate to <strong>subs</strong> and the <strong>stack</strong>. When Jocular loads a previous capture, it defaults to showing the individual subs as they come in. The number of the currently displayed sub is indicated at the top of the ring. To view the stack (i.e. the result of combining the individual subs after ensuring they are properly aligned), click on the sub/stack toggle <img alt="stack" src="_images/stackicon.png" /> just below the number. Clicking again will return to the sub view. Jocular provides access to all the subs that make up an observation. Step through these using the arrow icons. There is also an option to animate the sequence of subs (or the stack as it builds up) using the <img alt="play" src="_images/playicon.png" /> icon.</p>
+</section>
+<section id="deselecting-and-deleting">
+<h3>Deselecting and deleting<a class="headerlink" href="#deselecting-and-deleting" title="Permalink to this headline"></a></h3>
+<p>You can <strong>deselect</strong> a sub (i.e. remove it from the stack) by clicking on the sub number. Deselection is useful for removing single subs that would otherwise ruin the image, as is the case for Arp 100 below which scored a direct hit from a satellite! The left image shows the stack; even though the satellite was present only on the first 2 subs of the stack, its influence is still clear after stacking a further 10 subs. The rightmost image shows the stack with the first two subs deselected.</p>
+<p id="arp100"><img alt="Arp 100" src="_images/Arp100_satellite.png" /></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There is an alternative (and often better) way to remove artefacts such as satellite trails. That is to use a different form of stack combination. The default is to take the average of all the subs in the stack at each pixel, but to remove outliers you can select to preserve just the middle value after sorting (the median), or to use the middle 70, 80 or 90% of subs after sorting.</p>
+</div>
+<p>Removing a sub by deselection does not delete it permanently; you can re-include the sub in the stack by clicking the number again. If you really do want to <strong>delete a sub</strong> – perhaps because it is irrecoverably blurred – then click the <img alt="bin" src="_images/binicon.png" /> icon . If Jocular is displaying subs, the sub will be deleted silently and the remaining subs renumbered. However, if a stack is displayed, Jocular will, by default, ask you to confirm that you really do wish to delete the entire stack of subs. There is an option to change this default behaviour in the <a class="reference internal" href="config.html"><span class="doc std std-doc">configuration system</span></a>.</p>
+<div class="warning admonition">
+<p class="admonition-title">Beware</p>
+<ol class="arabic simple">
+<li><p>It is not currently possible to delete the first sub in the stack.</p></li>
+<li><p>The delete stack option only applies to live observations.</p></li>
+</ol>
+</div>
+<p>Normally, the numbers you see for selected subs are in green. This indicates a successful alignment. If the sub is red, Jocular was unable to align it, and it is not included in the stack. Deselected subs are shown in grey.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you are using <a class="reference internal" href="filters.html"><span class="doc std std-doc">filters</span></a>, you’ll see that the <em>background colour</em> of the number changes to indicate which filter was used to take the image.</p>
+</div>
+</section>
+<section id="adjusting-the-image">
+<h3>Adjusting the image<a class="headerlink" href="#adjusting-the-image" title="Permalink to this headline"></a></h3>
+<p>The controls for modifying how the intensities are displayed are grouped in the upper-left quadrant of the eyepiece ring, and consist of</p>
+<ul class="simple">
+<li><p><strong>blackpoint</strong> (B) and <strong>whitepoint</strong> (W) sliders</p></li>
+<li><p>a choice of <a class="reference internal" href="stretch.html"><span class="doc std std-doc">stretch functions</span></a> along with a slider (S) that controls the <strong>degree of stretch</strong></p></li>
+<li><p>a control that allows more or less of the <strong>background</strong> (bg) to be displayed</p></li>
+</ul>
+<p>Black and whitepoints can also be estimated automatically by clicking the arrows at the end of the groove where the B and W sliders reside.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is recommended to leave automatic blackpoint detection and use the bg slider to fine-tune the blackpoint.</p>
+</div>
+<p>Just below the blackpoint control you’ll find a slider that handles simple <strong>background gradient subtraction</strong>. Jocular estimates the best 2D planar fit to the background and when the gradient slider is in the middle of the range it subtracts that estimate from the image. At the upper end of the slider no gradient subtraction occurs, while at the lower end double the estimate is subtracted, and usually it is possible to find a setting within this range that removes most of the gradient.</p>
+</section>
+<section id="pan-zoom-and-rotate">
+<h3>Pan, zoom and rotate<a class="headerlink" href="#pan-zoom-and-rotate" title="Permalink to this headline"></a></h3>
+<p>The image can be moved by selecting and dragging near the centre of the image, zoomed in/out using the Z slider on the right, or rotated by selecting and dragging near the edge of the image. More precise zooming can also be done using keyboard shortcuts ctrl-z (zoom in) and option-z (zoom out).</p>
+</section>
+<section id="negative-mode">
+<h3>Negative mode<a class="headerlink" href="#negative-mode" title="Permalink to this headline"></a></h3>
+<p>Sometimes it is easier to see faint details when the image intensities are inverted, as in a photographic negative. Double click the image to show the negative view (double click again to return to the normal view)</p>
+</section>
+<section id="taking-a-snapshot">
+<span id="snapshot"></span><h3>Taking a snapshot<a class="headerlink" href="#taking-a-snapshot" title="Permalink to this headline"></a></h3>
+<p>What better way to preserve an interesting observation than to take a quick snapshot! Simply click on the <img alt="snapshot" src="_images/snapshoticon.png" /> icon. You can then select whether to</p>
+<ul class="simple">
+<li><p>show a <em>landscape</em> view (as it would look directly off the sensor) or the view in the <em>eyepiece</em>, complete with any zooming and rotation of the image</p></li>
+<li><p>save a <em>plain</em> image, an image annotated with the object’s <em>name</em>, or one which includes <em>full</em> details of the object, observing session etc</p></li>
+<li><p>save in <em>png</em>, <em>jpg</em> or <em>fits</em> format. There is also an option to create an <em>animated gif</em> of all the subs in the stack.</p></li>
+</ul>
+<p>The snapshot is saved in the <em>snapshots</em> directory within your Jocular data directory.</p>
+<p>The <a class="reference internal" href="#arp100"><span class="std std-ref">Arp 100</span></a> image above is an example of an eyepiece view with a name annotation while this shot of the galaxy group <strong>Abell 2151</strong> below is a full landscape view.</p>
+<p><img alt="Abell 2151" src="_images/Abell2151.png" /></p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="liveobservation.html" class="btn btn-neutral float-right" title="Live observation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Martin Meredith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

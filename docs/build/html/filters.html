@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filters and colour &mdash; Jocular 0.5.6.dev2 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Adding your own DSO catalogues" href="catalogues.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Jocular
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installing Jocular</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">New users</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="liveobservation.html">Live observation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">A typical observing session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">In more depth</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="dsoplanner.html">The DSO planner</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotator.html">Labelling objects in the image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stretch.html">Choosing a stretch function</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="calibration.html">Calibration and hot pixel removal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogues.html">Adding your own DSO catalogues</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Filters and colour</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#colour-manipulations">Colour manipulations</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Solving problems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Jocular</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Filters and colour</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/filters.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="filters-and-colour">
+<h1>Filters and colour<a class="headerlink" href="#filters-and-colour" title="Permalink to this headline"></a></h1>
+<p>This section explores how Jocular can be used with multiple filters to synthesise colour images.</p>
+<p>While Jocular does not support one-shot-colour cameras in any meaningful way (yet), it does support <strong>multispectral</strong> processing i.e. generation of coloured images from a sequence of monochrome-plus-filtered images. This approach can be used to create <code class="docutils literal notranslate"><span class="pre">RGB</span></code> and <code class="docutils literal notranslate"><span class="pre">LRGB</span></code> images as well as for the combination of narrowband filters e.g. <code class="docutils literal notranslate"><span class="pre">SHO</span></code>, <code class="docutils literal notranslate"><span class="pre">HOS</span></code>, <code class="docutils literal notranslate"><span class="pre">HRGB</span></code>.</p>
+<p>Every monochrome sub that is either captured directly or otherwise received by Jocular has a <code class="docutils literal notranslate"><span class="pre">filter</span></code> property which indicates what filter was used during the capture. In the case of subs arriving in the watched directory, Jocular attempts to access this information from the FITS header, or failing that from the file name. Jocular can also read the filter information from the user if the appropriate <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">user</span></code> option is set in the watched camera settings. The background colour of the sub number at the top of the eyepiece provides a visual indication of the filter used.</p>
+<p>Once Jocular has a stack of subs with known filters for each one, on clicking the spectral mode button in the lower-right quadrant (initally set to <code class="docutils literal notranslate"><span class="pre">mono</span></code>, but set to <code class="docutils literal notranslate"><span class="pre">lrgb</span></code> in the image below), a menu containing all the possible filter combinations appears. Those that are highlighted are legal options given the subs that are currently on the stack.</p>
+<p>For instance, in the image of <em>NGC 40</em> below, a user has collected subs through <code class="docutils literal notranslate"><span class="pre">L</span></code>, <code class="docutils literal notranslate"><span class="pre">R</span></code>, <code class="docutils literal notranslate"><span class="pre">G</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code> filters, so has the option of viewing the DSO in <code class="docutils literal notranslate"><span class="pre">mono</span></code>, in <code class="docutils literal notranslate"><span class="pre">LRGB</span></code>, or examining the stack made up of <code class="docutils literal notranslate"><span class="pre">L</span></code>, <code class="docutils literal notranslate"><span class="pre">R</span></code>, <code class="docutils literal notranslate"><span class="pre">G</span></code> or <code class="docutils literal notranslate"><span class="pre">B</span></code> subs only. These are all the possible options for this stack.</p>
+<p><img alt="multispectral" src="_images/multispectral.png" /></p>
+<p>The image below of the irregular galaxy <em>NGC 4449</em> contains luminosity (L) and H-alpha (H) subs. Here’s we’re viewing the <code class="docutils literal notranslate"><span class="pre">L+H</span></code> combination (indicating that the H-alpha is mapped to a different layer from the luminosity).</p>
+<p><img alt="l plus h" src="_images/lplush.png" /></p>
+<p>We can also view the L (left) and H (right) contributions separately:</p>
+<p><img alt="l and h" src="_images/lh.png" /></p>
+<section id="colour-manipulations">
+<h2>Colour manipulations<a class="headerlink" href="#colour-manipulations" title="Permalink to this headline"></a></h2>
+<p>Jocular provides two controls on the main eyepiece ring to modify colour: <code class="docutils literal notranslate"><span class="pre">saturation</span></code> and <code class="docutils literal notranslate"><span class="pre">colour</span> <span class="pre">stretch</span></code>, labelled <code class="docutils literal notranslate"><span class="pre">sat</span></code> and <code class="docutils literal notranslate"><span class="pre">S</span></code> respectively. However, the underlying colour model separated luminosity (L) from chrominance, so all the normal luminosity controls (B/W/stretch etc) also affect the image displayed.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="catalogues.html" class="btn btn-neutral float-left" title="Adding your own DSO catalogues" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Martin Meredith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live observation &mdash; Jocular 0.5.6.dev2 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="A typical observing session" href="session.html" />
+    <link rel="prev" title="Quick start" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Jocular
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installing Jocular</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">New users</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Live observation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#direct-mode">Direct mode</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#capture-modes-and-exposure-setting">Capture modes and exposure setting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#watched-mode">Watched mode</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">A typical observing session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">In more depth</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="dsoplanner.html">The DSO planner</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotator.html">Labelling objects in the image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stretch.html">Choosing a stretch function</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="calibration.html">Calibration and hot pixel removal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogues.html">Adding your own DSO catalogues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filters.html">Filters and colour</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Solving problems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Jocular</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Live observation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/liveobservation.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="live-observation">
+<h1>Live observation<a class="headerlink" href="#live-observation" title="Permalink to this headline"></a></h1>
+<p>Although reloading and studying previous captures can be useful and informative, Jocular was designed primarily for live observing, so let’s see how to use the program under the stars.</p>
+<p>There are two ways to get your camera talking to Jocular:</p>
+<ol class="arabic simple">
+<li><p><strong>Direct mode</strong> Jocular directly controls the camera</p></li>
+<li><p><strong>Watched mode</strong> A separate capture program dumps its subs into a place where Jocular can find them</p></li>
+</ol>
+<p>Jocular remembers your choice of mode between sessions so if you are only ever going to use one mode, this is a once-only operation.</p>
+<div class="warning admonition">
+<p class="admonition-title">Supported cameras</p>
+<p>Jocular currently supports the ZWO ASI range of monochrome cameras as well as the Starlight Xpress Lodestar mono camera. If you wish to use a different camera you will have to use the watched mode.</p>
+</div>
+<section id="direct-mode">
+<h2>Direct mode<a class="headerlink" href="#direct-mode" title="Permalink to this headline"></a></h2>
+<p>In direct mode, Jocular connects to your camera and is able to set parameters (e.g., gain, exposure time, binning) and initiate captures. In this mode Jocular can be used for all aspects of capture, including the use of short exposures for framing, alignment and focusing.</p>
+<p>Plug in your camera and select the devices menu using the telescope icon <img alt="telescope icon" src="_images/telescopeicon.png" />. Click on the camera type dropdown next to the red dot, select the desired camera type, then click connect. If Jocular successfully finds your camera, the red dot will turn green and you’re ready to go!</p>
+<p>The lower part of the devices panel allows you to set various capture parameters. You don’t need to do this immediately, but can return to this screen whenever you like to changes things like gain and binning. Commonly-changed settings such as exposure are accessed directly from the Jocular interface as we’ll see in a moment.</p>
+<p>To start a capture click on the camera icon <img alt="camera icon" src="_images/camera.png" /> at the base of the eyepiece view. The captured images will appear on the screen. Click the camera icon again to pause or stop the capture.</p>
+<section id="capture-modes-and-exposure-setting">
+<h3>Capture modes and exposure setting<a class="headerlink" href="#capture-modes-and-exposure-setting" title="Permalink to this headline"></a></h3>
+<p>Jocular currently supports 9 different capture modes, but most of the time you’ll be using just two:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">frame</span></code>: used for framing the image (perhaps with the help of platesolving to identify the DSO); these images are not saved or stacked</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">light</span></code>: your ‘main’ captures that are saved and live-stacked as they arrive</p></li>
+</ol>
+<p>To change from <code class="docutils literal notranslate"><span class="pre">frame</span></code> mode to <code class="docutils literal notranslate"><span class="pre">light</span></code> mode, click on the currently-displayed mode (in this case <code class="docutils literal notranslate"><span class="pre">frame</span></code>) that can be found just above the camera icon, and select <code class="docutils literal notranslate"><span class="pre">light</span></code> from the options that pop up. At the start of each new capture Jocular defaults to the <code class="docutils literal notranslate"><span class="pre">frame</span></code> mode.</p>
+<p>To set a suitable exposure for either mode, click on value representing the current exposure (to the left of the camera icon), and choose a new exposure value. This will then be used for that mode until you change it.</p>
+</section>
+</section>
+<section id="watched-mode">
+<h2>Watched mode<a class="headerlink" href="#watched-mode" title="Permalink to this headline"></a></h2>
+<p>In this mode, Jocular monitors a directory for incoming FITS files. As subs arrive, they are added to the stack as for direct camera control.</p>
+<p>Watched mode is selected in the same way as choosing a directly-controlled camera, but instead of choosing a camera type, select <code class="docutils literal notranslate"><span class="pre">watched</span> <span class="pre">dir</span></code> and click connect (this checks that the directory exists and is readable).</p>
+<p>If you don’t specify it, Jocular looks for the watched directory within your <code class="docutils literal notranslate"><span class="pre">JocularData</span></code> directory, but you can change to whatever directory is most convenient.</p>
+<p>Jocular needs to know about the type of sub (light, dark), whether it has been <a class="reference internal" href="filters.html"><span class="doc std std-doc">filtered</span></a> and its exposure time. Depending on the capture program you use, some or all of these will have been written into the FITS header. If this isn’t the case you can tell Jocular how to get this information by choosing the appropriate option on the configuration panel:</p>
+<p id="watched"><img alt="Watched mode configuration" src="_images/watchedmode.png" /></p>
+<p>One way to test watched mode without having a capture program active (e.g. during daylight hours) is to simply drop FITS files manually into the watched directory, and check that Jocular displays them. See <a class="reference internal" href="troubleshooting.html"><span class="doc std std-doc">troubleshooting</span></a> for what to check if things go wrong at this point.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="session.html" class="btn btn-neutral float-right" title="A typical observing session" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Martin Meredith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

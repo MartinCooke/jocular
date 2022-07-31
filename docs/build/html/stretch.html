@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Choosing a stretch function &mdash; Jocular 0.5.6.dev2 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Calibration and hot pixel removal" href="calibration.html" />
+    <link rel="prev" title="Labelling objects in the image" href="annotator.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Jocular
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Installing Jocular</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">New users</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="liveobservation.html">Live observation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">A typical observing session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration options</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">In more depth</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="dsoplanner.html">The DSO planner</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotator.html">Labelling objects in the image</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Choosing a stretch function</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#some-personal-preferences">Some personal preferences</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="calibration.html">Calibration and hot pixel removal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogues.html">Adding your own DSO catalogues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filters.html">Filters and colour</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Solving problems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Jocular</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Choosing a stretch function</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/stretch.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="choosing-a-stretch-function">
+<h1>Choosing a stretch function<a class="headerlink" href="#choosing-a-stretch-function" title="Permalink to this headline"></a></h1>
+<p>Jocular currently provides 6 different families of stretch functions which differ in the extent to which they boost faint regions at the expense of brighter regions. In order of faint boosting, these are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">hyper</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">asinh</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">log</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gamma</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">linear</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sublin</span></code></p></li>
+</ul>
+<p>The easiest way to appreciate the differences is to explore them all. Just open the stretch panel by clicking on the name of the current stretch in the upper left quadrant and select one stretch after another to judge its effect on the image.</p>
+<section id="some-personal-preferences">
+<h2>Some personal preferences<a class="headerlink" href="#some-personal-preferences" title="Permalink to this headline"></a></h2>
+<p>The most useful stretch functions are <code class="docutils literal notranslate"><span class="pre">log</span></code>, <code class="docutils literal notranslate"><span class="pre">gamma</span></code> and <code class="docutils literal notranslate"><span class="pre">asinh</span></code>. <code class="docutils literal notranslate"><span class="pre">log</span></code> is particularly good for globular clusters while <code class="docutils literal notranslate"><span class="pre">gamma</span></code> works well for objects synthesised from monochrome + filters. As a general galaxy stretch, <code class="docutils literal notranslate"><span class="pre">asinh</span></code> boosts fainter regions without too much noise.</p>
+<p>To see really faint stuff, perhaps when viewing the image in <strong>negative mode</strong> (recall that this is achieved by double clicking the image), use the <code class="docutils literal notranslate"><span class="pre">hyper</span></code> stretch.</p>
+<p>For those objects that are really bright (some planetary nebulae, for example), a <code class="docutils literal notranslate"><span class="pre">linear</span></code> stretch might be useful. There is even a sub-linear stretch (<code class="docutils literal notranslate"><span class="pre">sublin</span></code>) for the occasional tricky object.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="annotator.html" class="btn btn-neutral float-left" title="Labelling objects in the image" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="calibration.html" class="btn btn-neutral float-right" title="Calibration and hot pixel removal" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Martin Meredith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
