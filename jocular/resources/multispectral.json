@@ -1,0 +1,50 @@
+{
+    "mono": {
+        "needs": []
+        },
+    "LRGB": {
+        "needs": ["R", "G", "B"]
+        },
+    "L": {
+        "needs": ["L"]
+        },
+    "R": {
+        "needs": ["R"]
+        },
+    "G": {
+        "needs": ["G"]
+        },
+    "B": {
+        "needs": ["B"]
+        },
+    "H": {
+        "needs": ["H"]
+        },
+    "O": {
+        "needs": ["O"]
+        },
+    "S": {
+        "needs": ["S"]
+        },
+    "LSHO": {
+        "needs": ["S", "H", "O"]
+        },
+    "LHOS": {
+        "needs": ["H", "O", "S"]
+        },
+    "LHOO": {
+        "needs": ["H", "O"]
+        },
+    "L+H": {
+        "needs": ["L", "H"]
+        },
+    "L+O": {
+        "needs": ["L", "O"]
+        },
+    "L+S": {
+        "needs": ["L", "S"]
+        },
+    "HRGB": {
+        "needs": ["H", "R", "G", "B"]
+        }
+}
