@@ -14,7 +14,7 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import myst_parser
+# import myst_parser
 
 # -- Project information -----------------------------------------------------
 
