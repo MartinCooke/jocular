@@ -12,7 +12,7 @@
 #
 # import os
 # import sys
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('.'))
 
 # import myst_parser
 
@@ -23,7 +23,7 @@ copyright = '2022, Martin Meredith'
 author = 'Martin Meredith'
 
 # The full version, including alpha/beta/rc tags
-release = '0.5.6.dev2'
+release = '0.5.6'
 
 
 # -- General configuration ---------------------------------------------------
