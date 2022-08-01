@@ -46,7 +46,7 @@ If the name is one known to Jocular, the rest of the information (object type, c
 
 ## Recording observing conditions
 
-Optionally, you might wish to provide some information about the current sky conditions e.g. seeing, transparency, brightness. Any information so recorded is saved alongside the object for when you reload the observation in the future, and some of it is added automatically to snapshots. The session information panel appears at the bottom left corner of the display, and can be toggled as for the DSO information panel.
+You might wish to provide some information about the current sky conditions e.g. seeing, transparency, brightness. Any information so recorded is saved alongside the object for when you reload the observation in the future, and some of it is added automatically to snapshots. The session information panel appears at the bottom left corner of the display, and can be toggled as for the DSO information panel.
 
 This panel also allows you to identify the telescope and camera used for the observation. Anything you type in the `scope` and `camera` fields is persistent between observing sessions. 
 

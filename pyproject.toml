@@ -4,8 +4,4 @@ line-length = 88
 [tool.pylint.format]
 max-line-length = "88"
 
-[project.optional-dependencies]
-doc = [
-    "myst-parser>=0.13.1",
-]
 

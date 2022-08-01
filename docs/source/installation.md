@@ -1,6 +1,6 @@
 # Installation
 
-Installation is generally a straightforward process taking a few minutes, but if you come across any problems, check out [the troubleshooting section](troubleshooting).
+Installation is generally a straightforward process taking a few minutes, but if you come across any problems, check out [the troubleshooting section](troubleshootinginstallation).
 
 ## Step 1. Check that you have Python on your system
 
@@ -77,7 +77,7 @@ If you run into any issues with the latest version, it is easy to downgrade to a
 pip install --upgrade jocular==0.5.4
 ```
 
-(troubleshooting)=
+(troubleshootinginstallation)=
 ## Troubleshooting
 
 ### All operating systems
