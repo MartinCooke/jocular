@@ -65,3 +65,11 @@ Indices and tables
 
    troubleshooting.md
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Acknowledgements
+
+   thanks.md
+   
+
+
