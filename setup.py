@@ -39,7 +39,8 @@ setup(
         'hidapi>=0.10.1',  # filterwheel
         'colour-demosaicing>=0.1.6', # debayering,
         'zwoasi>=0.0.22', # wrapper for ZWO cameras 
-        'loguru>=0.5.3' # logging
+        'loguru>=0.5.3', # logging
+        'myst-parser>=0.13.1' # shouldn't need to put it here...
     ],
     entry_points='''
         [console_scripts]
