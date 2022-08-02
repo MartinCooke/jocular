@@ -15,7 +15,7 @@ from kivy.properties import BooleanProperty
 
 from jocular.component import Component
 from jocular.settingsmanager import JSettings
-from jocular.utils import toast
+
 
 def intstep(d, step):
     return int(np.floor(step * np.floor(d / step)))
@@ -57,8 +57,10 @@ class Catalogues(Component, JSettings):
         self.dsos = None
         self.on_new_object()
 
+
     def get_object_types(self):
         return self.object_types
+
 
     def on_new_object(self):
         ''' Every time we get a new object, check for the existence
@@ -76,7 +78,7 @@ class Catalogues(Component, JSettings):
 
 
     def has_platesolving_db(self):
-        return self.star_db is not Non
+        return self.star_db is not None
 
 
     def get_star_db(self):

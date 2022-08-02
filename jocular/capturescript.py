@@ -47,6 +47,7 @@ class CaptureScript(Panel, Component):
         'autoflat': 'as flat but exposure is estimated automatically (recommended)'
     }
 
+
     def __init__(self, **args):
         super().__init__(**args)
         self.app = App.get_running_app()
@@ -121,7 +122,6 @@ class CaptureScript(Panel, Component):
         self.app.gui.add_widget(self)
 
 
-
     def on_show(self):
         ''' display choice of next script, taking into account what is
             compatible with current subs or not
@@ -144,10 +144,12 @@ class CaptureScript(Panel, Component):
                 for k in calibration_scripts:
                     self.script_buttons[k].disabled = True
 
+
     def script_chosen(self, item):
         ''' user has selected script, so update
         '''
         self.current_script = item.text
+
 
     def save(self, *args):
         ''' save capture scripts
@@ -158,13 +160,14 @@ class CaptureScript(Panel, Component):
         except Exception as e:
             logger.exception(f'Unable to save capture_scripts.json ({e})')
 
+
     def on_new_object(self, *args):
         ''' default to framing at start
         '''
         self.app.gui.enable(self.capture_controls)
         try:
             camera_mode = Component.get('Camera').settings['current_mode']
-        except Exception as e:
+        except:
             # catch this exception because on first time usage we can't get to settings
             camera_mode = 'Watched dir'
         # don't go into framing mode unless connected to a camera
@@ -174,10 +177,12 @@ class CaptureScript(Panel, Component):
             self.current_script = 'frame'
         self.on_current_script()
 
+
     def on_previous_object(self, *args):
         ''' don't allow user to perform captures when loading previous object
         '''
         self.app.gui.disable(self.capture_controls)
+
 
     def on_current_script(self, *args):
         ''' carry out any special actions when certain scripts are selected
@@ -200,6 +205,7 @@ class CaptureScript(Panel, Component):
         # self.app.gui.set('80' if self.current_script == 'flat' else 'mean' , 
         #     True, update_property=True)
 
+
     def filterwheel_changed(self):
         ''' when filterwheel changes we need to change the available
             filters in the capture scripts and therefore update the scripts
@@ -218,6 +224,7 @@ class CaptureScript(Panel, Component):
         logger.debug('scripts changed to accommodate new filterwheel')
         self.update()
 
+
     def update(self):
         ''' update panel, gui elements and save capture script details
         ''' 
@@ -227,11 +234,13 @@ class CaptureScript(Panel, Component):
         self.save()
         self.reset_generator()
 
+
     def get_exposure(self):
         ''' called by ExposureChooser, and also by Watcher to get 
             exposure in case user wishes to override
         '''
         return self.scripts[self.current_script]['exposure']
+
 
     def get_sub_type(self):
         ''' called by Watcher and Capture
@@ -242,21 +251,25 @@ class CaptureScript(Panel, Component):
             return 'flat'
         return self.current_script
 
+
     def get_filters(self):
         ''' called by FilterChooser
         '''
         return self.scripts[self.current_script]['filter']
+
 
     def get_nsubs(self):
         ''' called by FilterChooser
         '''
         return self.scripts[self.current_script].get('nsubs', 1)
 
+
     def exposure_changed(self, exposure):
         ''' called by exposure chooser
         '''
         self.scripts[self.current_script]['exposure'] = exposure
         self.update()
+
 
     def filter_changed(self, filt, nsubs=None):
         ''' called by filter chooser
@@ -265,6 +278,7 @@ class CaptureScript(Panel, Component):
         if nsubs is not None:
             self.scripts['seq']['nsubs'] = nsubs
         self.update()
+
 
     def set_external_details(self, filt=None, exposure=None, sub_type=None):
         ''' Display capture details on the interface. Used for previous captures 
@@ -276,6 +290,7 @@ class CaptureScript(Panel, Component):
         self.app.gui.set('filter_button', '?' if filt is None else filt)
         self.app.gui.set('script_button', '?' if sub_type is None else sub_type)
 
+
     def faffing(self):
         return self.current_script in faf_scripts
 
@@ -286,12 +301,14 @@ class CaptureScript(Panel, Component):
         logger.debug(f'reset {self.current_script} generator')
         self.generator = getattr(self, f'{self.current_script}_generator')()
 
+
     def light_generator(self):
         script = self.scripts['light']
         yield 'set filter', script['filter'][0]
         yield 'set exposure', script['exposure']
         while True:
             yield 'expose long'
+
 
     def seq_generator(self):
         script = self.scripts['seq']
@@ -302,12 +319,14 @@ class CaptureScript(Panel, Component):
                 for i in range(script['nsubs']):
                     yield 'expose long'
 
+
     def frame_generator(self):
         script = self.scripts['frame']
         yield 'set filter', script['filter'][0]
         yield 'set exposure', script['exposure']
         while True:
             yield 'expose short'
+
 
     def focus_generator(self):
         script = self.scripts['focus']
@@ -316,6 +335,7 @@ class CaptureScript(Panel, Component):
         while True:
             yield 'expose short'
 
+
     def align_generator(self):
         script = self.scripts['align']
         yield 'set filter', script['filter'][0]
@@ -323,11 +343,13 @@ class CaptureScript(Panel, Component):
         while True:
             yield 'expose short'
 
+
     def dark_generator(self):
         yield 'set filter', 'dark'
         yield 'set exposure', self.scripts['dark']['exposure']
         while True:
             yield 'expose long'
+
 
     def bias_generator(self):
         yield 'set filter', 'dark'
@@ -335,11 +357,13 @@ class CaptureScript(Panel, Component):
         while True:
             yield 'expose bias'
 
+
     def autoflat_generator(self):
         yield 'set filter', self.scripts['autoflat']['filter'][0]
         yield 'autoflat'
         while True:
             yield 'expose long'
+
 
     def flat_generator(self):
         script = self.scripts['flat']

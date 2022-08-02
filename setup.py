@@ -7,7 +7,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-URL = 'https://jocular.readthedocs.org'
+URL = 'https://jocular.readthedocs.io/en/latest/'
 
 setup(
     name='jocular',
@@ -40,7 +40,6 @@ setup(
         'colour-demosaicing>=0.1.6', # debayering,
         'zwoasi>=0.0.22', # wrapper for ZWO cameras 
         'loguru>=0.5.3', # logging
-        'myst-parser>=0.13.1' # shouldn't need to put it here...
     ],
     entry_points='''
         [console_scripts]

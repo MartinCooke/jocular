@@ -71,6 +71,7 @@ Builder.load_string(
 
 ''')
 
+
 class Panel(BoxLayout):
 	''' Represents the centre panel used for config/choosers etc
 	'''
@@ -105,6 +106,7 @@ class Panel(BoxLayout):
 		self.width = height
 		self.height = height
 
+
 	def hide(self, *args):
 
 		if Panel.current_panel is None:
@@ -131,14 +133,18 @@ class Panel(BoxLayout):
 		if r > 1:
 			self.on_leave()
 
+
 	def on_show(self):
 		pass
+
 
 	def on_hide(self):
 		pass
 
+
 	def on_leave(self, *args):
 		self.hide()
+
 
 	def toggle(self, *args):
 		if self.pos_hint['center_x'] > 1:

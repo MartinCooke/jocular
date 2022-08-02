@@ -22,7 +22,7 @@ from kivymd.uix.behaviors import HoverBehavior
 from jocular.metrics import Metrics
 from jocular.component import Component
 from jocular.uranography import make_tile, radec2pix
-# from jocular.processing.platesolvers import radec2pix
+
 
 Builder.load_string(
 '''
@@ -44,7 +44,6 @@ Builder.load_string(
         halign: 'left'
         text_size: self.size
         color: [.5, .5, .5, .7] # app.lowlight_color
-        # font_size: app.info_font_size
         font_size: app.form_font_size
         background_color: .6, 0, .6, 0
         width: dp(100)
@@ -55,14 +54,12 @@ Builder.load_string(
         markup: True
         halign: 'left'
         text_size: self.size
-        # color: app.lowlight_color
         color: [.5, .5, .5, .7] # app.lowlight_color
-        # font_size: app.info_font_size
         font_size: app.form_font_size
-        #font_size: '16sp'
         background_color: .6, 0, .6, 0
         width: dp(250)
         text: root.value
+
 
 <TitleBar>:
     canvas.before:
@@ -83,16 +80,17 @@ Builder.load_string(
         valign: 'middle'
         text_size: self.size
         color: root.title_color
-        # font_size: str(int(app.info_font_size[:-2]) + 4) + 'sp'
         font_size: str(int(app.form_font_size[:-2]) + 4) + 'sp'
         width: dp(350)
         text: f'[b]{root.Name}[/b]'
+
 
 <DSOPopup>:
     size_hint: None, 1
     width: dp(350)
     orientation: 'vertical'
     padding: dp(5), dp(2)
+
 
 <Annotation>:
     size_hint: None, None
@@ -101,6 +99,7 @@ Builder.load_string(
     text_size: None, None  # forces size to be that of text
     color: (self.label_color if self.pinned else self.marker_color) + [self.visible]
     pos: (self.lab_x - self.width / 2, self.lab_y - self.height / 2) if self.center and not self.pinned else (self.lab_x, self.lab_y)
+
 
 <AnnotCluster>:
     canvas:
@@ -113,6 +112,7 @@ Builder.load_string(
             dash_length: 4
             width: 1
 
+
 <AnnotQuasar>:
     canvas:
         Color:
@@ -124,6 +124,7 @@ Builder.load_string(
         Line:
             points: [self.sx, self.sy - self.gap - self.length, self.sx, self.sy - self.gap]
             width: 1
+
 
 <AnnotFOV>:
     canvas:
@@ -171,19 +172,16 @@ class Annotation(Label, HoverBehavior):
     total_delta_y = NumericProperty(0)
     dragged = BooleanProperty(False)
 
+
     def on_enter(self, *args):
         if self.visible:
             self.display_DSOInfo()
+
 
     def on_leave(self, *args):
         if self.visible:
             self.close_DSOInfo()
 
-    # def on_touch_down(self, touch):
-    #     if self.visible and self.collide_point(*touch.pos):
-    #         self.last_x, self.last_y = touch.pos
-    #         return True  # MC added this
-    #     return False
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
@@ -211,6 +209,7 @@ class Annotation(Label, HoverBehavior):
             return True
         return False
 
+
     def on_touch_up(self, touch):
         if self.visible and self.collide_point(*touch.pos):
             if self.dragged:
@@ -223,6 +222,7 @@ class Annotation(Label, HoverBehavior):
                 return True
 
         return False
+
 
     def pin(self, dt=None):
         if not self.pinned:
@@ -243,6 +243,7 @@ class Annotation(Label, HoverBehavior):
             self.close_DSOInfo()
             self.update()
 
+
     def unpin(self, dt=None):
         if self.pinned:
             if self.ot == 'QS':
@@ -250,21 +251,23 @@ class Annotation(Label, HoverBehavior):
             else:
                 self.text = '¤'
             self.pinned = False
-            #self.bx -= self.total_delta_x
-            #self.by -= self.total_delta_y
             self.total_delta_x = 0
             self.total_delta_y = 0
             self.display_DSOInfo()
             self.update()
 
+
     def close_DSOInfo(self, *args):
         dsopopup.hide()
+
 
     def display_DSOInfo(self, *args):
         dsopopup.display(info=self.info, title_color=self.marker_color)
 
+
     def in_eyepiece(self, xc, yc, r2):
         return (xc - self.sx) ** 2 + (yc - self.sy) ** 2 < r2
+
 
     def update(self, mapping=None, xc=None, yc=None, r2=None):
         if xc is not None:
@@ -320,8 +323,10 @@ class AnnotFOV(Annotation):
         self.lab_y = self.sy + 20
         self.visible = self.display
 
+
     def on_enter(self, *args):
         pass
+
 
     def on_touch_down(self, touch):
         return False
@@ -344,38 +349,38 @@ class DSOPopup(BoxLayout):
         Window.add_widget(self)
         self.hide()
 
+
     def display(self, info=None, title_color=None):
 
         # ideally, exclude some of these in Catalogue
         exclude = {'OT', 'Name', 'RA', 'Dec', 'Con', 'Obs', 'List', 'Added', 'MaxAlt', 'Transit'}
-        # there is a subtle bug here which this is going to catch one day
-        try:
-            self.clear_widgets()
-            tb = TitleBar(Name=info.get('Name', ''))
-            if title_color is not None:
-                tb.title_color = title_color
-            self.add_widget(tb)
 
-            for k, v in info.items():
-                if str(v) and str(v) != 'nan' and k not in exclude:
-                    if type(v) == float:
-                        pv = PropVal(param=k, value=f'{v:.3f}')
-                    else:
-                        pv = PropVal(param=k, value=str(v))
-                    self.add_widget(pv)
+        self.clear_widgets()
+        tb = TitleBar(Name=info.get('Name', ''))
+        if title_color is not None:
+            tb.title_color = title_color
+        self.add_widget(tb)
 
-            # position to popup info; not yet working in terms of limiting it to screen
-            pos = Window.mouse_pos
-            self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
-            self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
-        except Exception as e:
-            logger.debug(f'DSOPopup.display issue ({e})')
+        for k, v in info.items():
+            if str(v) and str(v) != 'nan' and k not in exclude:
+                if type(v) == float:
+                    pv = PropVal(param=k, value=f'{v:.3f}')
+                else:
+                    pv = PropVal(param=k, value=str(v))
+                self.add_widget(pv)
+
+        # position to popup info; not yet working in terms of limiting it to screen
+        pos = Window.mouse_pos
+        self.x = min(pos[0] + dp(9), Window.width - self.minimum_width - dp(20))
+        self.y = min(pos[1], Window.height - self.minimum_height - dp(20))
+
 
     def hide(self):
         self.x = 10 * Window.width
 
 # ensures that there is only one ie singleton popup
 dsopopup = DSOPopup()
+
 
 class Annotator(Component):
 
@@ -436,6 +441,7 @@ class Annotator(Component):
         self.app.gui.set_prop('mag_limit', 'text', f'   {mesg}')
 
         self.update()
+
 
     @staticmethod
     def get_diam(info):
@@ -587,6 +593,7 @@ class Annotator(Component):
                 # print('found G2V im px {:} {:}'.format(lab.px, lab.py), props)
 
         self.on_mag_limit()
+
 
     def update(self):
 

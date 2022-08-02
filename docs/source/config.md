@@ -31,3 +31,4 @@ Under the `View` panel, the first two options control how the image from your se
 Precisely what flips you need can be determined by experimentation or by consulting any astronomy primer that indicates how different types of scope/diagonal combinations affect the view. The settings shown below correspond to the flips I need to make for my Newtonian: 
 
 ![flips](images/viewflips.png)
+

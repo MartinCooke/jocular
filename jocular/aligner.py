@@ -88,12 +88,15 @@ class Aligner(Component, JSettings):
         ),
     ]
 
+
     def __init__(self):
         super().__init__()
         self.reset()
 
+
     def on_new_object(self):
         self.reset()
+
 
     def reset(self):
         self.keystars = None
@@ -101,6 +104,7 @@ class Aligner(Component, JSettings):
         self.align_count = 0
         self.starcounts = []
         self.info("reset")
+
 
     def align(self, sub):
 

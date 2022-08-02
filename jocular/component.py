@@ -17,6 +17,7 @@ class Component(EventDispatcher):
     save_settings = ListProperty([])
     changed = StringProperty('')
 
+
     @classmethod
     def get(cls, name):
         # Returns component whose class is identified by name; loads if not found
@@ -33,9 +34,11 @@ class Component(EventDispatcher):
             logger.exception(f'cannot import module {name} ({e})')
             return None
 
+
     @classmethod
     def is_loaded(cls, name):
         return name in cls.components
+
 
     @classmethod
     def register(cls, obj):
@@ -46,13 +49,14 @@ class Component(EventDispatcher):
         else:
             logger.error(f'name clash for {name}')
 
+
     @classmethod
     def initialise_new_object(cls):
         logger.info('initialising for new object')
         for v in cls.components.values():
             v.changed = ''
             v.on_new_object()
-        # App.get_running_app().gui.is_changed(False)
+
 
     @classmethod
     def initialise_previous_object(cls):
@@ -62,7 +66,7 @@ class Component(EventDispatcher):
         for c in comps:
             cls.components[c].changed = ''
             cls.components[c].on_previous_object()
-        # App.get_running_app().gui.is_changed(False)
+
 
     @classmethod
     def changes(cls):
@@ -70,11 +74,13 @@ class Component(EventDispatcher):
         '''
         return {c: v.changed for c, v in cls.components.items() if v.changed != ''}
 
+
     @classmethod
     def save_object(cls):
         for v in cls.components.values():
             v.on_save_object()
             v.changed = ''
+
 
     @classmethod
     def close(cls):
@@ -88,17 +94,18 @@ class Component(EventDispatcher):
         for c in cls.components.keys():
             cls.components[c].on_close()
 
+
     @classmethod
     def bind_status(cls):
         for name, inst in cls.components.items():
             cls.get('Status').bind_status(name, inst)
+
 
     @classmethod
     def check_for_change(cls):
         ''' Only changed if at least one component reports a change
             and the stack is non-empty
         '''
-        # App.get_running_app().gui.is_changed(cls.any_changes())
         pass
 
 
@@ -107,21 +114,27 @@ class Component(EventDispatcher):
         nonempty = not cls.get('Stacker').is_empty()
         return (cls.changes() != {}) and nonempty
 
+
     def redraw(self, *args):
         pass
 
+
     def on_new_object(self):
         pass
+
 
     def on_previous_object(self, *args):
         # treat as new object unless a component overrides this
         self.on_new_object(*args)
 
+
     def on_save_object(self, *args):
         pass
 
+
     def on_close(self, *args):
         pass
+
 
     def on_changed(self, *args):
         ''' Called when any of the component 'changed' is altered
@@ -129,5 +142,6 @@ class Component(EventDispatcher):
         '''
         Component.check_for_change()
 
-    def info(self, message=None): #, prefix=None, typ='normal'):
+
+    def info(self, message=None):
         self.infoline = message

@@ -10,7 +10,6 @@ from kivy.properties import (
     BooleanProperty
 )
 
-from jocular.component import Component
 from jocular.uranography import angle_diff
 from jocular.widgets.widgets import JRotWidget
 
@@ -42,11 +41,14 @@ class JLever(JRotWidget, Label):
         self.min_value, self.max_value = values[0], values[1]
         self.value = value
         self.selected = False
+
+        # disabled this because can't get View on init reliably it seems
         # if continuous_update is None:
         #     self.update_on_move = Component.get('View').continuous_update # True
         # else:
         #     self.update_on_move = continuous_update
         self.update_on_move = True
+
         self._k = (self.max_angle - self.min_angle) / (self.max_value - self.min_value)
         self.rotangle = self.value_to_angle(self.value)
 

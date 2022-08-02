@@ -53,6 +53,7 @@ class FilterToggle(ToggleButton):
 
 class FilterChooser(Panel, Component):
 
+
     def __init__(self, **args):
         super().__init__(**args)
         self.app = App.get_running_app()
@@ -64,6 +65,7 @@ class FilterChooser(Panel, Component):
             self.filter_properties = {}
         self.nsubs = 4
         self.build()
+
 
     def on_show(self):
         # ensure filterchooser reflects current filterwheel device
@@ -79,11 +81,13 @@ class FilterChooser(Panel, Component):
             self.build_fw()
         self.update_panel()
 
+
     def build(self, dt=None):
         self.state = Component.get('FilterWheel').get_state()
         if len(self.state['filtermap']) > 0:
             self.build_fw()
         self.app.gui.add_widget(self)
+
 
     def build_fw(self, dt=None):
         ''' Generate filterwheel selection widget
@@ -149,6 +153,7 @@ class FilterChooser(Panel, Component):
             Component.get('CaptureScript').filter_changed(filts, nsubs=self.nsubs)
         self.hide()
 
+
     def filter_selected(self, filt, but):
         # set exposure on GUI and on scripts panel
         if Component.get('CaptureScript').current_script == 'seq':
@@ -157,10 +162,8 @@ class FilterChooser(Panel, Component):
             logger.debug(f'selected filter {filt}')
             for f, b in self.buts.items():
                 b.state = 'down' if f == filt else 'normal'
-            #filts = [f for f, b in self.buts.items() if b.state == 'down']
-
             Component.get('CaptureScript').filter_changed([filt])
-            # self.hide()
+
 
     def update_panel(self):
         filters = Component.get('CaptureScript').get_filters()
@@ -177,20 +180,22 @@ class FilterChooser(Panel, Component):
             self.title_label.text = 'Select a filter'
             self.nsubs_box.disabled = True
 
+
     def nsubs_changed(self, slider, nsubs):
         self.nsubs_label.text = f'{nsubs} subs/filter'
         self.nsubs = nsubs
+
 
     def order_by_transmission(self, filts):
         if type(filts) != list:
             filts = [filts]
         trans = {f: self.filter_properties[f]['trans'] for f in filts}
         return sorted(trans, key=trans.get)
-        #t_order = ['SII', 'OIII', 'Ha', 'B', 'G', 'R', 'L']
-        #return [f for f in t_order if f in filts]
+
 
     def get_filter_types(self):
         return list(self.filter_properties.keys())
+
 
     def on_touch_down(self, touch):
         handled = super().on_touch_down(touch)

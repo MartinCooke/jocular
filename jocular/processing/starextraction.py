@@ -12,7 +12,8 @@ from skimage.transform import downscale_local_mean, rescale
 from skimage.feature import blob_dog
 from astropy.stats import mad_std
 from photutils.detection import DAOStarFinder
-from photutils.aperture import aperture_photometry, CircularAperture, ApertureStats
+# from photutils.aperture import aperture_photometry, CircularAperture, ApertureStats
+
 
 def extract_stars(
     im, 
@@ -187,7 +188,6 @@ def compute_fwhm(imfrag, upfac=5, fwhm_method='count'):
 
     imfrag2 = rescale(imfrag, upfac, preserve_range=True)
     h, w = imfrag2.shape
-    r = (w - 1) // 2
 
     # remove background (might want to alter radfac so it doesn't use entire stellar radius)
     background = compute_background(imfrag2, radfac=1)
@@ -214,6 +214,7 @@ def _stars_DAO(im, nstars=30, fwhm=4, nsigmas=5):
         return None
 
     return np.transpose([stars['xcentroid'], stars['ycentroid'], stars['peak']])
+
 
 class DoGStars:
     ''' Simple class that extracts stars using difference of Gaussian
@@ -298,8 +299,6 @@ class DoGStars:
                     hi = t
                     t = (lo + t) / 2
         return t, its <= maxits
-
-
 
 
 ''' materials for future photometry

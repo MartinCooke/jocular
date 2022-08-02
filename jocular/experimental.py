@@ -16,14 +16,17 @@ class Experimental(Panel, Component):
 
     fracbin = NumericProperty(1)
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.build()
         self.panel_opacity = 0
 
+
     def on_show(self):
         pass
+
 
     def build(self, *args):
 
@@ -40,6 +43,7 @@ class Experimental(Panel, Component):
         gl.add_widget(slider)
         layout.add_widget(gl)
         self.app.gui.add_widget(self)
+
 
     def fracbin_changed(self, widget, *args):
         Component.get('Monochrome').fracbin = widget.value

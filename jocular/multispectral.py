@@ -112,6 +112,7 @@ class MultiSpectral(Panel, Component, JSettings):
     redgreen = NumericProperty(0)
     yellowblue = NumericProperty(0)
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.stacker = Component.get('Stacker')
@@ -126,8 +127,10 @@ class MultiSpectral(Panel, Component, JSettings):
         self.panel_opacity = 0
         self.set_spectral_mode('mono')
 
+
     def on_new_object(self):
         self.reset()
+
 
     def reset(self):
         # set these to None to force updates in the colour-generation sequence
@@ -144,6 +147,7 @@ class MultiSpectral(Panel, Component, JSettings):
         self.RGB = None
         self.layer = None
         self.layer_stretched = None
+
 
     ''' chooser stuff
     '''
@@ -198,21 +202,23 @@ class MultiSpectral(Panel, Component, JSettings):
     def on_colour_stretch(self, *args):
         self.adjust_colour_stretch()
 
+
     # not currently used
     def on_redgreen(self, *args):
         self.adjust_hue()
 
+
     def on_yellowblue(self, *args):
         self.adjust_hue()
+
 
     def on_bin_colour(self, *args):
         self.create_LAB()
 
+
     def on_subtract_gradients(self, *args):
         self.create_LAB()
 
-    # def get_spectral_mode(self):
-    #     return self.spectral_mode
 
     def set_spectral_mode(self, mode):
         ''' User selects one of many available spectral
@@ -292,18 +298,6 @@ class MultiSpectral(Panel, Component, JSettings):
         else:
             self.set_spectral_mode(self.spectral_mode)         
 
-        
-        # if self.spectral_mode == 'LRGB':
-        #     self.LRGB_changed()
-        # # elif self.spectral_mode == 'L+':
-        # #     self.L_plus_changed()
-        # elif self.spectral_mode == 'map:':
-        #     self.chan_map_changed()
-        # else:
-        #     L = self.stacker.get_stack(filt='all')
-        #     Component.get('Monochrome').L_changed(L)
-        #     self.reset()            
-
 
     ''' these methods are part of the chain of processes used in
         colour manipulation; they generally do some specialised
@@ -318,6 +312,7 @@ class MultiSpectral(Panel, Component, JSettings):
                 g=self.colour_stretch)
             self.layer_sat_changed()
 
+
     def layer_sat_changed(self):
         if self.layer_stretched is not None:
             r = 3 * self.saturation * self.layer_stretched + self.lum
@@ -325,9 +320,11 @@ class MultiSpectral(Panel, Component, JSettings):
             r[r > 1] = 1            
             Component.get('View').display_image(np.stack([r, self.lum, self.lum], axis=-1))
 
+
     def luminance_only(self):
         Component.get('Monochrome').L_changed(
             self.stacker.get_stack(filt='all'))
+
 
     def luminance_updated(self, lum):
         # called from monochrome if user updates luminance control e.g. white
@@ -416,6 +413,7 @@ class MultiSpectral(Panel, Component, JSettings):
         # rest of process
         self.adjust_colour_stretch()
 
+
     def modgamma(self, x, g=.5, a0=.01):
         y = x.copy()
         s = g / (a0 * (g - 1) + a0 ** (1 - g))
@@ -424,10 +422,12 @@ class MultiSpectral(Panel, Component, JSettings):
         y[x >= a0] =  (1 + d) * (x[x >= a0] ** g) - d
         return y
 
+
     def avail(self, props):
         if type(props) != list:
             props = [props]
         return all([hasattr(self, p) and getattr(self, p) is not None for p in props])
+
 
     def adjust_colour_stretch(self, *args):
         # intercept LAB process here if we need to stretch colour
@@ -441,6 +441,7 @@ class MultiSpectral(Panel, Component, JSettings):
             self.LAB = rgb2lab(np.stack(ims, axis=-1))  # 80ms
             self.adjust_saturation()
 
+
     def adjust_saturation(self, *args):
         # Modify saturation and call next process
         
@@ -452,6 +453,7 @@ class MultiSpectral(Panel, Component, JSettings):
             self.B_sat = modify_saturation(self.LAB[:, :, 2], self.saturation)
             self.adjust_hue() # next process in hue adjustment
 
+
     def adjust_hue(self, *args):
         # Modify hue and generate RGB image
         
@@ -459,6 +461,7 @@ class MultiSpectral(Panel, Component, JSettings):
             self.A_hue = modify_hue(self.A_sat, self.redgreen)
             self.B_hue = modify_hue(self.B_sat, self.yellowblue)
             self.create_RGB()  # next process
+
 
     def create_RGB(self):
         ''' Combine L, A and B into RGB image. Called here when previous colour process

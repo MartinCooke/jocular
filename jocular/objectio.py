@@ -91,7 +91,8 @@ class ObjectIO(Component):
     def _save(self, *args):
         self.dialog.dismiss()
         self.save()
- 
+
+
     def _no_save(self, callback, *args):
         self.dialog.dismiss()
         # for any live observations, move to delete directory
@@ -100,8 +101,10 @@ class ObjectIO(Component):
             toast('moved FITs for this object to delete directory', 3)
         self.do_callback()
 
+
     def _cancel(self, *args):
         self.dialog.dismiss()
+
 
     def save(self, *args):
         ''' save sub metadata and potentially master also
@@ -238,7 +241,6 @@ class ObjectIO(Component):
             else:
                 self.current_object_dir = os.path.join(self.session_dir, 
                     generate_observation_name(self.session_dir, prefix=Component.get('DSO').Name))
-                # self.app.gui.disable(['load_previous'])
             add_if_not_exists(self.current_object_dir)
 
         path = os.path.join(self.current_object_dir, name)

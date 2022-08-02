@@ -29,6 +29,7 @@ class StackCombiner(Panel, Component):
         self.build()
         self.panel_opacity = 0
 
+
     def on_new_object(self):
         self.reset()
 
@@ -132,7 +133,6 @@ class StackCombiner(Panel, Component):
             }
 
         return stacked
-
 
 
 def combine_stack(subs, method='mean'):

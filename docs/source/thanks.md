@@ -1,6 +1,6 @@
 # Thanks
 
-Jocular has benefitted enormously from interactions with fellow amateur astronomers, particularly Bill S, Mike JW, Callump, Zak, Grant Privett, London David & CatBurglar.
+Jocular has benefitted enormously from interactions with fellow amateur astronomers, particularly Bill S, Mike JW, Callump, Zak, Grant Privett, London David, CatBurglar and RemyP (sincere apologies if I have forgotten anybody...).
 
 I'd particularly like to thank
 

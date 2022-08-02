@@ -122,12 +122,14 @@ class Monochrome(Component, JSettings):
         'unsharp_radius', 'autoblack', 'autowhite'
         ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.mono = None  # not 100% sure why this is needed on init
         self.view = Component.get("View")
         self.stacker = Component.get("Stacker")
         self.gui = App.get_running_app().gui
+
 
     def on_new_object(self):
         self.mono = None
@@ -141,40 +143,52 @@ class Monochrome(Component, JSettings):
         self.gui.set('TNR_amount', -1, update_property=True)
         self.gui.set('unsharp_amount', -.1, update_property=True)
 
+
     def on_p1(self, *args):
         self.adjust_lum()
+
 
     def on_white(self, *args):
         if not self.autowhite:
             self.adjust_lum()
 
+
     def on_black(self, *args):
         if not self.autoblack:
             self.adjust_lum()
 
+
     def on_gradient(self, *args):
         self.adjust_lum()
+
 
     def on_fracbin(self, *args):
         self.adjust_lum()
 
+
     def on_TNR_amount(self, *args):
         self.adjust_lum()
+
 
     def on_TNR_kernel_size(self, *args):
         self.adjust_lum()
 
+
     def on_unsharp_radius(self, *args):
         self.adjust_lum()
+
 
     def on_unsharp_amount(self, *args):
         self.adjust_lum()
 
+
     def on_lift(self, *args):
         self.adjust_lum()
 
+
     def on_noise_reduction(self, *args):
         self.adjust_lum()
+
 
     def on_RL_width(self, *args):
         self.adjust_lum()
@@ -204,9 +218,11 @@ class Monochrome(Component, JSettings):
         self._blackpoint, self._std_background = estimate_background(im)
         self.gui.set("black", float(self._blackpoint))
 
+
     def update_whitepoint(self, im):
         self._whitepoint = np.percentile(im.ravel(), 99.99)
         self.gui.set("white", float(self._whitepoint))
+
 
     def update_gradient(self, im):
         # Estimate gradient and normalise to zero mean
@@ -216,12 +232,14 @@ class Monochrome(Component, JSettings):
         else:
             self._gradient = estimate_gradient_local(im)
 
+
     def update_background(self, im):
         if self.TNR_method == 'gaussian':
             self._background = filters.gaussian(im, self.TNR_kernel_size)
         elif self.TNR_method == 'median':
             neighbourhood = disk(radius=self.TNR_kernel_size)
             self._background = filters.rank.median(im, neighbourhood) / 255.
+
 
     def display_sub(self, im, do_gradient=False, fwhm=None):
         ''' Called by Stacker when user selects sub, and by Capture, when 
@@ -248,6 +266,7 @@ class Monochrome(Component, JSettings):
         self.view.display_image(self.luminance())
         self.update_info(im, fwhm=fwhm)
 
+
     def adjust_lum(self, *args):
         ''' User has changed control position so generate luminance and either
             display it (if sub or in mono mode) or advise multispectral of the update
@@ -263,10 +282,12 @@ class Monochrome(Component, JSettings):
             else:
                 multispectral.luminance_updated(lum)
 
+
     def L_changed(self, L):
         if L is not None:
             lum = self.update_lum(L)
             self.view.display_image(lum)
+
 
     def update_lum(self, im):
         ''' Create gradient-adjusted luminance image; called here by L_changed and by
@@ -276,6 +297,7 @@ class Monochrome(Component, JSettings):
         self.update_gradient(im)
         self.update_blackpoint(im)
         return self.luminance()
+
 
     def update_info(self, im, fwhm=None):
 
@@ -351,17 +373,6 @@ class Monochrome(Component, JSettings):
             NR=self.noise_reduction,
             background=bkg,
         )
-
-
-        # im = stretch(
-        #     im,
-        #     method=self.stretch,
-        #     param=self.p1,
-        #     NR=self.noise_reduction,
-        #     background=0
-        #     if self._std_background is None
-        #     else self.lift * self._std_background,
-        # )
 
         # order of these two is not clear; seem to get fewer ringing
         # artefacts if sharpening is done first

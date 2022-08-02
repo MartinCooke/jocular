@@ -95,7 +95,7 @@ class ASCOMTelescope(GenericTelescope):
 			logger.info(f'current sidereal time  from scope {self.scope.SiderealTime}')
 		else:
 			if 'exception' in res:
-				self.status += f' ({res['exception']})'
+				self.status += f" ({res['exception']})"
 
 
 

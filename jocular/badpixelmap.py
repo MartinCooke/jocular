@@ -46,12 +46,11 @@ class BadPixelMap(Component, JSettings):
         ),
     ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
-        # self.bpm = None
-        # self.bplist = []
-        # self.frame_count = 0
+
 
     def on_new_object(self, *args):
         self.bpm = None
@@ -137,22 +136,3 @@ class BadPixelMap(Component, JSettings):
         self.frame_count += 1
         self.compute_bpm()
 
-
-    # def remove_hotpix(self, im, apply_BPM=False):
-    #     """Called by Stacker, in which case whether we apply or not is determined
-    #     by BPM settings, and by calibrator, in which apply_BPM will
-    #     be set to true
-    #     """
-    #     if self.apply_BPM or apply_BPM:
-    #         hotpix = self.find_hot_pixels(im)
-    #         logger.trace(f"removing {len(hotpix)} hot pixels")
-    #         return self.do_bpm(im, hotpix)
-    #     return im
-
-
-
-    # def do_bpm(self, im, bpm):
-    #     # Replace each pixel in bad pixel map by median of neighbours
-    #     for r, c in bpm:
-    #         im[r, c] = np.median(im[r - 1 : r + 2, c - 1 : c + 2].ravel())
-    #     return im

@@ -12,30 +12,34 @@ from kivy.properties import NumericProperty, BooleanProperty
 from kivy.clock import Clock
 
 from jocular.component import Component
-# from jocular.gradient import image_stats
 from jocular.utils import toast, percentile_clip
 from jocular.processing.starextraction import extract_stars
 
 capture_controls = {'devices', 'script_button', 'capturing', 'exposure_button', 'filter_button'}
+
 
 class Capture(Component):
 
     capturing = BooleanProperty(False)
     exposure = NumericProperty(0)
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self.gui = self.app.gui
+
 
     def on_new_object(self):
         self.reset()
         self.info('inactive')
         self.gui.enable(['capturing'])
 
+
     def on_previous_object(self):
         self.info('inactive')
         self.gui.disable(['capturing'])
+
 
     def reset(self, stop_capturing=True):
         logger.debug(f'stop capturing? {stop_capturing}')
@@ -44,6 +48,7 @@ class Capture(Component):
         self.last_faf = None
         if stop_capturing:
             self.stop_capture()
+
 
     def on_capturing(self, *args):
         # user (pressing camera button) or system changes capture state
@@ -73,6 +78,7 @@ class Capture(Component):
         except Exception as e:
             self.stop_capture(message=e)
 
+
     def stop_capture(self, message=None):
         # stops capture normally or abnormally
         logger.debug('stopping capture')
@@ -80,13 +86,13 @@ class Capture(Component):
         self.gui.set('capturing', False, update_property=True)
         self.gui.enable(capture_controls)
         self.gui.enable({'new_DSO', 'apply_ROI'})
-        # if Component.get('Stacker').is_empty():
         self.gui.enable({'load_previous'})
         if message is not None:
             Component.get('CaptureScript').reset_generator()
             logger.error(f'problem capturing ({message})')
             toast(f'Capture problem: {message}')
         self.info('stopped')
+
 
     def capture(self, *args):
         # generator yields next command to execute
@@ -167,8 +173,10 @@ class Capture(Component):
                 self.stop_capture()
                 Component.get('CaptureScript').reset_generator()
 
+
     def on_exposure(self, *args):
         Component.get('CaptureScript').exposure_changed(self.exposure)        
+
 
     def tick(self, *args):
         ''' count up to exposure time using status info line
@@ -177,6 +185,7 @@ class Capture(Component):
         if self.capturing:
             self.info(f'Exposing {dur:2.0f}s [{self.fps:.1f} fps]')
             Clock.schedule_once(self.tick, 1)
+
 
     def send_to_display(self, *args):
         # send short subs directly to display
@@ -187,17 +196,18 @@ class Capture(Component):
             self.last_faf = im
             fwhm = None
             if Component.get('CaptureScript').current_script == 'focus':
-                # compute and show FWHM
+                # compute and show FWHM if possible, else clear
                 try:
                     stars = extract_stars(im, star_method='photutils', target_stars=5)
                     fwhm = np.median(stars['fwhm'])
                     self.info(f'FWHM {fwhm:.1f}"/pix')
-                except Exception as e:
+                except:
                     self.info('')
             Component.get('Monochrome').display_sub(im, fwhm=fwhm)
             self.capture()
         except Exception as e:
             logger.exception(f'{e}')
+
 
     def save_capture(self, *args):
         ''' Called via camera when image is ready.
@@ -240,6 +250,7 @@ class Capture(Component):
 
         # ask for next capture immediately
         self.capture()
+
 
     def compute_ADU(self, expo):
         ''' Estimate ADU in central part of image given exposure

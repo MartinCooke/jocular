@@ -5,10 +5,8 @@ import time
 import array
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
-from functools import partial
 
 from loguru import logger
-from kivy.properties import BooleanProperty
 from kivy.clock import Clock
 
 from jocular.cameras.genericcamera import GenericCamera
@@ -48,7 +46,7 @@ class SXUltrastarCamera(GenericCamera):
 			if self.sxcamera is not None:
 				logger.info('found Ultrastar')
 		except Exception as e:
-			logger.trace('Cannot find Ultrastar')
+			logger.trace(f'Cannot find Ultrastar ({e})')
 
 		if self.sxcamera is None:
 			self.status = 'cannot find Ultrastar'
@@ -58,7 +56,7 @@ class SXUltrastarCamera(GenericCamera):
 		try:
 			self.sxcamera.get_active_configuration()
 		except Exception as e:
-			logger.exception('problem getting active configuration ({:})'.format(e))
+			logger.exception(f'problem getting active configuration ({e})')
 			self.status = 'cannot get active configuration'
 			self.clean_up()
 			return

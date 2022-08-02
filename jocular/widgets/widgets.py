@@ -19,7 +19,6 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
-from kivy.metrics import dp
 from kivy.graphics.transformation import Matrix
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.textfield import MDTextField
@@ -68,11 +67,14 @@ Builder.load_string(
     text_size: None, None  # forces size to be that of text
     padding: 2, 2
 
+
 <JIconButton>:
     text: self.myicon
 
+
 <JToggleButton>:
     color: app.theme_cls.accent_color if self.state == 'down' else app.lowlight_color
+
 
 <LabelR>:
     halign: 'right'
@@ -80,15 +82,18 @@ Builder.load_string(
     text_size: self.size
     padding: [dp(7), 0]
 
+
 <LabelL>:
     halign: 'left'
     valign: 'middle'
     text_size: self.size
     padding: [dp(7), 0]
 
+
 # vertically aligned text box
 <TextInputC>:
     padding: [5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 5, self.height / 2.0 - (self.line_height / 2.0) * len(self._lines)]
+
 
 # this works with the kivymd master
 <JTextField>:
@@ -106,6 +111,7 @@ Builder.load_string(
     mode: 'fill'
     spacing: dp(2)
 
+
 # I can't get KivyMD toggle behavior to work so this is my implementation
 <JMDToggleButton>:
     size_hint: 1, None 
@@ -114,6 +120,7 @@ Builder.load_string(
     md_bg_color: .25, .25, .25, 1
     theme_text_color: 'Custom'
     text_color: .6, .6, .6, 1
+
 
 <Pin>:
     size_hint: None, None
@@ -143,11 +150,11 @@ class Pin(MDFlatButton, TooltipBehavior):
             self.pos_hint = {'right': 1, 'bottom': 0}
         if 'left' in loc:
             self.open_text = f'[font=Jocular][size=18sp]>[/size][/font] {show_text}'
-            self.close_text = f'[font=Jocular][size=18sp]<[/size][/font]'
+            self.close_text = '[font=Jocular][size=18sp]<[/size][/font]'
             self.halign = 'left'
         else:
             self.open_text = f'{show_text} [font=Jocular][size=18sp]<[/size][/font]'
-            self.close_text = f'[font=Jocular][size=18sp]>[/size][/font]'
+            self.close_text = '[font=Jocular][size=18sp]>[/size][/font]'
             self.halign = 'right'
         self.size_hint = None, None
         self.bind(on_press=self.toggle)
@@ -217,10 +224,12 @@ class Rotatable(Widget, Polar):
         (4, False): 90,
     }
 
+
     def __init__(self, radial=False, **kwargs):
         super().__init__(**kwargs)
         self.radial = radial
         self.on_angle()
+
 
     def on_angle(self, *args):
         q = min(4, (self.angle // 90) + 1)
@@ -228,11 +237,14 @@ class Rotatable(Widget, Polar):
         self.rotangle = self.angle + self.deltas[(q, self.radial)]
         self.generate_inverse()
 
+
     def on_width(self, *args):
         self.generate_inverse()
 
+
     def on_height(self, *args):
         self.generate_inverse()
+
 
     def relocate(self, origin=None, radius=None):
         self.origin = origin
@@ -241,6 +253,7 @@ class Rotatable(Widget, Polar):
         self.x = self.origin[0] + self.radius * math.cos(ang) 
         self.y = self.origin[1] + self.radius * math.sin(ang)
         self.generate_inverse()
+
 
     def generate_inverse(self, *args):
         ''' done on width and height as well as init because when 
@@ -252,6 +265,7 @@ class Rotatable(Widget, Polar):
         t = Matrix().rotate(ang, 0, 0, 1).multiply(t)
         t = Matrix().translate(self.x, self.y, 0).multiply(t)
         self.inv = t.inverse()
+
 
     def collide_point(self, x, y):
         ''' transform touchpos using the inverse transform of the rotation;
@@ -293,6 +307,7 @@ class JIconButton(JButton, JRotWidget):
 
 class JMDIconButton(MDIconButton, Rotatable):
     pass
+
 
 class JSlider(MDSlider):
 

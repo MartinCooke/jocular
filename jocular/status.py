@@ -49,11 +49,14 @@ Builder.load_string('''
         color: app.hint_color
 ''')
 
+
 class StatusLabel(MDLabel):
    pass
 
+
 class StatusBox(MDBoxLayout):
     pass
+
 
 class Status(MDBoxLayout, Component):
 
@@ -61,6 +64,7 @@ class Status(MDBoxLayout, Component):
 
     show_status = BooleanProperty(False)
     comps = ['Capture', 'Calibrator', 'View', 'Aligner', 'Stacker', 'PlateSolver', 'Monochrome']
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

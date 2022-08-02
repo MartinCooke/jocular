@@ -5,7 +5,6 @@ import os
 import shutil
 import glob
 import json
-from functools import partial
 from loguru import logger
 
 from kivy.app import App
@@ -21,6 +20,7 @@ from jocular.exposurechooser import exp_to_str
 
 
 class Observations(Component):
+
 
     def __init__(self):
         super().__init__()
@@ -138,7 +138,6 @@ class Observations(Component):
             logger.exception(e)
 
 
-
     def rebuild_table(self, dt=None):
         self.observations_table.data = self.get_observations()         
         self.observations_table.update()
@@ -234,7 +233,6 @@ class Observations(Component):
                 del self.observations[s]
         logger.info(f'Deleted {len(self.observations_table.selected)} observations')
         self.observations_table.update()
-        # self.observations_table.show()
         self.save_observations()
 
 

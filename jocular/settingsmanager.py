@@ -30,6 +30,7 @@ Builder.load_string(
 
 class SettingsManager(Component, Panel):
 
+
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		self.app = App.get_running_app()
@@ -37,15 +38,18 @@ class SettingsManager(Component, Panel):
 		self.current_panel = 'Appearance'
 		self.app.gui.add_widget(self)
 
+
 	def register(self, settings, name=None):
 		''' keep a record of all setting instances
 		'''
 		self.instances[name] = settings
 		logger.debug(f'registered settings for {name}')
 
+
 	def on_hide(self, *args):
 		for cls in self.instances.values():
 			cls.apply_and_save_settings()
+
 
 	def on_show(self, panel=None):
 		''' Rebuild and display settings screen
@@ -114,11 +118,12 @@ class SettingsManager(Component, Panel):
 		return handled
 
 
+
 class SettingsBase():
 
-	# configurables = DictProperty({})
 	configurables = ListProperty([])
 	changed_settings = DictProperty({})
+
 
 	def __init__(self, **kwargs):
 		self.app = App.get_running_app()
@@ -147,6 +152,7 @@ class SettingsBase():
 					setattr(self, name, settings[name])
 				except Exception as e:
 					logger.debug(f'{e}')
+
 
 	@logger.catch
 	def apply_and_save_settings(self):
@@ -204,6 +210,7 @@ class SettingsBase():
 
 	def settings_have_changed(self, *args):
 		pass
+
 
 
 class JSettings(SettingsBase):

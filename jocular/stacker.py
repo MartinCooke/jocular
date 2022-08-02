@@ -39,12 +39,15 @@ Builder.load_string(
 
 date_time_format = '%d %b %y %H:%M:%S'
 
+
 def handleNAN(x):
     if type(x) == str:
         return x
     if x is None:
         return math.nan
     return math.nan if math.isnan(x) else x
+
+
 
 class Stacker(Component, JSettings):
 
@@ -593,7 +596,10 @@ class Stacker(Component, JSettings):
             return None
         pvals = {getattr(s, prop, None) for s in self.subs}
         if average:
-            return np.mean(list(pvals))
+            try:
+                return np.mean(list(pvals))
+            except:
+                return None
         if len(pvals) == 0 or None in pvals:
             return None
         if unique:
@@ -943,7 +949,7 @@ class Stacker(Component, JSettings):
                 hdu1.verify('silentfix')
                 hdr = hdu1[0].header
         except Exception as e:
-            logger.warning(f'cannot load FITs {sub.path}')
+            logger.warning(f'cannot load FITs {sub.path} ({e})')
             return
 
         self.single_sub = {}

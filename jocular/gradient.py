@@ -5,7 +5,7 @@ import math
 import numpy as np
 from numpy.polynomial import polynomial
 from loguru import logger
-# from jocular.utils import percentile_clip
+
 
 def estimate_background(im):
     # requires about .7ms for Lodestar image on MacBook Pro 2020

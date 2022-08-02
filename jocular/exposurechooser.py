@@ -25,6 +25,7 @@ def exp_to_str(e):
         return f'{e:.0f}s'
     return f'{e:.2f}s'
 
+
 def str_to_exp(s):
     s = str(s)
     s = s.lower().strip()
@@ -44,6 +45,7 @@ def str_to_exp(s):
 
 class ExposureChooser(Panel, Component):
 
+
     def __init__(self, **args):
         super().__init__(**args)
         self.app = App.get_running_app()
@@ -54,15 +56,18 @@ class ExposureChooser(Panel, Component):
             self.user_expos = []
         self.build()
 
+
     def save(self, dt=None):
         with open(self.app.get_path('user_exposures.json'), 'w') as f:
             json.dump(self.user_expos, f, indent=1)       
+
 
     def on_show(self):
         # ensure exposurechooser reflects current state
         e_str = exp_to_str(Component.get('CaptureScript').get_exposure())
         for e, but in self.expo_buttons.items():
             but.state = 'down' if e == e_str else 'normal'
+
 
     def _button(self, name, expo):
         return JMDToggleButton(
@@ -72,6 +77,7 @@ class ExposureChooser(Panel, Component):
                 font_size='18sp',
                 height=dp(24),
                 on_press=partial(self.exposure_selected, expo))
+
 
     def build(self, *args):
 
@@ -165,6 +171,7 @@ class ExposureChooser(Panel, Component):
 
         self.app.gui.add_widget(self)
 
+
     @logger.catch()
     def custom_exposure_added(self, tb):
         try:
@@ -180,11 +187,11 @@ class ExposureChooser(Panel, Component):
                 self.user_gl.add_widget(Label(size_hint=(.2, None), height=dp(30)))
             self.user_exposure_box.text = ''
             self.save()
-        except Exception as e:
+        except:
             pass
+
 
     def exposure_selected(self, expo, *args):
         # set exposure on GUI and on scripts panel
         Component.get('CaptureScript').exposure_changed(expo)
-        # self.hide()
 

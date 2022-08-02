@@ -26,12 +26,14 @@ from jocular.table import Table, CButton, TableLabel
 from jocular.calcs import local_sidereal_time, sun_altitude
 from jocular.utils import toast
 
+
 def ToHM(x):
     if math.isnan(x):
         return ''
     h = int(x)
     m = (x - h) * 60
     return f'{h:2.0f}h{m:02.0f}'.strip()
+
 
 def fmt_diam(d):
     if d < 1:
@@ -45,6 +47,7 @@ def fmt_diam(d):
         dg = int(d / 60)
         return f"{dg:.0f}\u00b0{(d - dg) / 60.0:2.0f}'"
 
+
 def quadrant(x):
     # terrestrial direction
     qmap = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
@@ -52,6 +55,7 @@ def quadrant(x):
     if quad == 8:
         quad = 0
     return qmap[quad]
+
 
 
 class ObservingList(Component, JSettings):
@@ -415,46 +419,3 @@ class ObservingList(Component, JSettings):
         self.table.update()
         self.table.deselect_all()
 
-
-    # def update_DSO(self, props):
-    #     ''' update or add new DSO into observing list and update table
-    #         new: needs field testing
-    #     '''
-
-    #     # convert props into a form we can use in the DSO table
-    #     nums = ['RA', 'Dec', 'Mag', 'Diam']
-    #     for k, v in props.items():
-    #         if k in nums:
-    #             try:
-    #                 props[k] = float(v)
-    #             except:
-    #                 props[k] = math.nan
-
-    #     nm = f"{props['Name']}/{props['OT']}".upper()
-    #     if nm in self.objects:
-    #         orig = self.objects[nm]
-    #         logger.debug(f'updating {nm} orig vals {orig}')
-    #         for k, v in props.items():
-    #             if k in orig:
-    #                 orig[k] = v
-    #     else:
-    #         logger.info(f'adding new object {nm} into DSO table')
-    #         self.objects[nm] = {
-    #             'Name': props['Name'],
-    #             'OT': props['OT'],
-    #             'Con': props['Con'],
-    #             'RA': props['RA'],
-    #             'Dec': props['Dec'],
-    #             'Mag': props['Mag'],
-    #             'Diam': props['Diam'],
-    #             'Obs': 1,
-    #             'Added': '',
-    #             'List': '',
-    #             'Other': props['Other'],
-    #             'Notes': ''
-    #         }
-
-    #     try:
-    #         self.compute_transits()
-    #     except Exception as e:
-    #         logger.exception(f'problem computing transits ({e})')

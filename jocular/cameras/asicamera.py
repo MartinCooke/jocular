@@ -22,8 +22,6 @@ class ASICamera(GenericCamera):
 	binning = StringProperty('1 x 1')
 	use_min_bandwidth = BooleanProperty(True)
 	polling_interval = NumericProperty(.2)  # in seconds
-	#ROI = StringProperty('full')
-	#square_sensor = BooleanProperty(True)
 
 	configurables = [
 		('gain', {'name': 'gain setting', 'float': (0, 1000, 10),
@@ -34,16 +32,6 @@ class ASICamera(GenericCamera):
 			'name': 'bin', 
 			'options': ['1 x 1', '2 x 2', '3 x 3'],
 			'help': ''}),
-		# ('ROI', {
-		# 	'name': 'ROI',
-		# 	'options': ['custom', 'full', 'three-quarters', 'two-thirds', 'half', 'third', 'quarter'],
-		# 	'help': 'region of interest relative to full frame'
-		# 	}),
-		# ('square_sensor', {
-		# 	'name': 'equalise aspect ratio',
-		# 	'switch': '',
-		# 	'help': 'make sensor width and height equal'
-		# 	}),
 		('polling_interval', {
 			'name': 'polling interval', 
 			'float': (.05, 1, .05),
@@ -54,8 +42,10 @@ class ASICamera(GenericCamera):
 			})
 	]
 
+
 	def _set_configurable(self, prop, vals):
 		self.configurables = [(k, vals if k==prop else v) for k, v in self.configurables]
+
 
 	def connect(self):
 
@@ -294,6 +284,7 @@ class ASICamera(GenericCamera):
 			toast('problem setting gain')
 			logger.exception('problem setting gain ({:})'.format(e))
 
+
 	def on_offset(self, *args):
 		if not self.connected:
 			return
@@ -333,8 +324,6 @@ class ASICamera(GenericCamera):
 			'gain': self.gain,
 			'offset': self.offset,
 			'binning': int(self.binning[0]),
-			#'ROI': self.ROI,
-			#'equal_aspect': self.square_sensor,
 			'temperature': self.get_sensor_temperature(),
 			'ROI_x': start_x,
 			'ROI_y': start_y,
@@ -344,17 +333,20 @@ class ASICamera(GenericCamera):
 			'pixel_height': self.camera_props['PixelSize']
 			}
 
+
 	def get_pixel_height(self):
 		try:
 			return self.camera_props['PixelSize'] * int(self.binning[0])
 		except:
 			return None
 
+
 	def get_sensor_temperature(self):
 		try:
 			return self.asicamera.get_control_value(asi.ASI_TEMPERATURE)[0] / 10
-		except Exception as e:
+		except:
 			return None
+
 
 	def check_exposure(self, *arg):
 		# if ready, get image, otherwise schedule next check 
@@ -368,6 +360,7 @@ class ASICamera(GenericCamera):
 			self.capture_event = Clock.schedule_once(
 				self.check_exposure, 
 				self.polling_interval)
+
 
 	def stop_capture(self):
 		# Cancel any pending reads

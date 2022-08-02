@@ -105,24 +105,30 @@ Builder.load_string('''
 
 date_time_format = '%d %b %y %H:%M'
 
+
 def datenow():
     return datetime.now().strftime(date_time_format)
 
+
 def hours_since_date(mydate):
     return (datetime.now() - datetime.strptime(mydate, date_time_format)).total_seconds()/3600
+
 
 # from http://unihedron.com/projects/darksky/NELM2BCalc.html
 def SQM_to_NELM(sqm):
     return 7.93 - 5 * math.log(10 ** (4.316-(sqm / 5)) + 1)
 
+
 def NELM_to_SQM(nelm):
     return 21.58 - 5 * math.log(10 ** (1.586 - nelm / 5) - 1)
+
 
 
 class SessionInfo(MDBoxLayout):
     def __init__(self, session, **kwargs):
         self.session = session
         super().__init__(**kwargs)
+
 
 
 class Session(Component, JSettings):
@@ -165,6 +171,7 @@ class Session(Component, JSettings):
     props = ['sky_brightness', 'temperature', 'seeing', 'transparency', 'session_notes', 
         'telescope', 'camera', 'session']
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
@@ -179,10 +186,10 @@ class Session(Component, JSettings):
             tooltip_text='toggle session information panel',
             show_text='Session'))
 
+
     def describe(self):
         ''' return information for Snapshotter
         '''
-
         return [
             self.session, 
             self.formatted_sky_brightness,
@@ -191,8 +198,10 @@ class Session(Component, JSettings):
             f'transp {self.transparency}' if self.transparency else None
             ]
 
+
     def theme_changed(self, *args):
         self.session_info.theme_changed()
+
 
     def temperature_changed(self, temp):
         ''' called when temperature field is altered; parse various formats
@@ -216,6 +225,7 @@ class Session(Component, JSettings):
         self.on_temperature()
         self.check_for_change() 
 
+
     def get_temperature(self):
         ''' return string temperature in C or F, or empty string if error
             in conversion or non-existent temperature
@@ -228,6 +238,7 @@ class Session(Component, JSettings):
             return f'{temp:.0f}\N{DEGREE SIGN}C'
         return f'{temp*1.8 + 32:.0f}\N{DEGREE SIGN}F'
 
+
     @logger.catch()
     def on_temperature(self, *args):
         ''' whenever temperature changes, ensure formatted temperature
@@ -236,11 +247,13 @@ class Session(Component, JSettings):
         self.formatted_temperature = 'xyz'  # forces an update
         self.formatted_temperature = self.get_temperature()
 
+
     def on_temperature_units(self, *args):
         ''' whenever user changes temperature preferences in config screen,
             ensure it is applied immediately
         '''
         self.formatted_temperature = self.get_temperature()
+
 
     ''' similar methods for sky brightness
     '''
@@ -259,10 +272,11 @@ class Session(Component, JSettings):
                     bright = bright[:-3].strip()
                 bright = float(bright)
                 self.sky_brightness = bright if units == 'SQM' else SQM_to_NELM(bright)
-        except Exception as e:
+        except:
             self.sky_brightness = None
         self.on_sky_brightness()
         self.check_for_change() 
+
 
     def get_sky_brightness(self):
         try:
@@ -273,12 +287,15 @@ class Session(Component, JSettings):
             return f'{bright:.2f} sqm'
         return f'{NELM_to_SQM(bright):.1f} nelm'
 
+
     def on_sky_brightness(self, *args):
         self.formatted_sky_brightness = 'xyz'
         self.formatted_sky_brightness = self.get_sky_brightness()
 
+
     def on_sky_brightness_units(self, *args):
         self.formatted_sky_brightness = self.get_sky_brightness()
+
 
     ''' remaining changes
     '''  
@@ -287,13 +304,16 @@ class Session(Component, JSettings):
         self.session_notes = session_notes
         self.check_for_change() 
 
+
     def seeing_changed(self, seeing):
         self.seeing = seeing
         self.check_for_change() 
 
+
     def transparency_changed(self, transparency):
         self.transparency = transparency
         self.check_for_change() 
+
 
     def telescope_changed(self, telescope):
         ''' Since we persist this between sessions, ensure we save
@@ -303,14 +323,17 @@ class Session(Component, JSettings):
         self.check_for_change()
         self.save_session()
 
+
     def camera_changed(self, camera):
         self.camera = camera
         self.check_for_change()
         self.save_session() 
 
+
     def session_changed(self, session):
         self.session = session
         self.check_for_change() 
+
 
     @logger.catch()
     def check_for_change(self):
@@ -336,6 +359,7 @@ class Session(Component, JSettings):
         self.load_session()
         self.initial_values = {p: getattr(self, p) for p in self.props}
 
+
     @logger.catch()
     def on_previous_object(self):
         ''' apply previous session settings, keeping a record so changes can be monitored
@@ -346,9 +370,11 @@ class Session(Component, JSettings):
         self.apply_session_settings(settings)
         self.initial_values = {p: getattr(self, p) for p in self.props}
 
+
     def cancel_session_clock(self):
         if hasattr(self, 'session_clock'):
             self.session_clock.cancel()
+
 
     def load_session(self):
         ''' Try to get information from last session and apply it, otherwise
@@ -374,6 +400,7 @@ class Session(Component, JSettings):
         self.session = datetime.now().strftime(date_time_format)
         self.session_clock = Clock.schedule_interval(self.update_time, 1.0)
 
+
     def create_empty_session(self):
         ''' set all properties except session to empty/None
         '''
@@ -382,12 +409,14 @@ class Session(Component, JSettings):
         for p in set(self.props) - {'session', 'temperature', 'sky_brightness'}:
             setattr(self, p, '')
 
+
     def get_session(self):
         # accessor method that strips off seconds if present
         if self.session.count(':') == 2:
             return self.session[:-3]
         else:
             return self.session
+
 
     def current_session_info(self):
         session = {}
@@ -397,6 +426,7 @@ class Session(Component, JSettings):
                 session[p] = v
         session['session'] = self.get_session()
         return session
+
 
     def apply_session_settings(self, settings):
         ''' apply 'settings', by clearing existing settings and
@@ -412,6 +442,7 @@ class Session(Component, JSettings):
         logger.debug('saving session')
         with open(self.app.get_path('last_session.json'), 'w') as f:
             json.dump(self.current_session_info(), f, indent=1)    
+
 
     @logger.catch()
     def on_save_object(self):

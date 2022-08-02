@@ -9,10 +9,12 @@ import numpy as np
 import math
 from skimage.measure import ransac
 from scipy.spatial.distance import cdist
-from skimage.transform import EuclideanTransform, matrix_transform, warp, estimate_transform
+from skimage.transform import EuclideanTransform, warp, estimate_transform
+
 
 class AlignerException(Exception):
     pass
+
 
 def align_ransac(im, keystars, centroids, min_stars=5, min_inliers=4, warp_model=None):
     ''' given a new image with centroids extracted, attempt to align

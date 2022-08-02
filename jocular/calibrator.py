@@ -3,7 +3,6 @@
 
 import os.path
 import numpy as np
-# from scipy.stats import trimboth
 from loguru import logger
 
 from kivy.app import App
@@ -23,8 +22,10 @@ from jocular.gradient import estimate_background
 
 date_time_format = '%d %b %y %H:%M'
 
+
 def none_to_empty(x):
     return '' if x is None else x
+
 
 def subregion(m, s):
     ''' Return x and y limits of master (m) that correspond 
@@ -64,6 +65,7 @@ def subregion(m, s):
 
     return None
 
+
 class Calibrator(Component, JSettings):
 
     save_settings = ['apply_dark', 'apply_flat']
@@ -71,7 +73,6 @@ class Calibrator(Component, JSettings):
     masters = DictProperty({})
     apply_flat = BooleanProperty(False)
     apply_dark = BooleanProperty(False)
-
     use_l_filter = BooleanProperty(True)
     remove_hot_pixels = BooleanProperty(True)
     fd_exposure_tol = NumericProperty(.1)
@@ -150,6 +151,7 @@ class Calibrator(Component, JSettings):
             self.info(f'{n_masters:d} masters')
         else:
             self.info('no masters')
+
 
     def add_to_library(self, m):
         ''' called on initialisation and when we save a new master
@@ -447,9 +449,11 @@ class Calibrator(Component, JSettings):
         # Retrieve image (NB loaded on demand, so effectively a cache)
         return self.masters[name].get_image()
 
+
     def _most_subs(self, cands):
         c = {k: cands[k]['nsubs'] for k in cands.keys()}
         return max(c, key=c.get)
+
 
     def calibrate_flat(self, sub):
         ''' Perform calibrations on flat which include subtracting 
@@ -498,7 +502,6 @@ class Calibrator(Component, JSettings):
         sub.image = .5 * im / robust_mean
 
 
-    
     def build_calibrations(self):
         ''' Contruct table from library
         '''
@@ -530,6 +533,7 @@ class Calibrator(Component, JSettings):
             on_hide_method=self.app.table_hiding
             )
 
+
     def show_calibration_table(self, *args):
         ''' Called when user clicks 'library' on GUI
         '''
@@ -543,6 +547,7 @@ class Calibrator(Component, JSettings):
             self.app.gui.add_widget(self.calibration_table, index=0)
 
         self.calibration_table.show()    
+
 
     def show_calibration_frame(self, row, col, value):
         self.calibration_table.hide()

@@ -128,6 +128,7 @@ def __sfloat_changed(name, spec, slabel, fmt, changed, slider, *args):
 	slabel.text = fmt.format(slider.value)
 	changed(name, slider.value, spec)
 
+
 def __dfloat_changed(name, spec, slabel, fmt, changed, slider1, slider2, *args):
 	val = slider1.value
 	if val < 0:
@@ -137,20 +138,25 @@ def __dfloat_changed(name, spec, slabel, fmt, changed, slider1, slider2, *args):
 	slabel.text = fmt.format(val)
 	changed(name, val, spec)
 
+
 def __option_changed(name, spec, changed, widget, value, *args):
 	changed(name, value, spec)
+
 
 def __boolean_changed(name, spec, changed, widget, value, *args):
 	changed(name, spec['boolean'][value], spec)
 
+
 def __switch_changed(name, spec, changed, widget, *args):
 	changed(name, widget.active, spec)
+
 
 def __action_pressed(name, spec, changed, widget, *args):
 	# call spec with widget also since we need to interact with it
 	# to signal success/failure/state
 	spec['widget'] = widget
 	changed(name, spec['action'], spec)
+
 
 def __filechooser_pressed(name, spec, changed, initpath, *args):
 	fm = MDFileManager(search='dirs')
@@ -161,7 +167,7 @@ def __filechooser_pressed(name, spec, changed, initpath, *args):
 		try:
 			with open(os.path.join(initpath, '.written'), 'w') as f:
 				f.write('can write')
-		except Exception as e:
+		except:
 			initpath = None
 	if initpath is None:
 		initpath = str(Path.home())
@@ -169,8 +175,10 @@ def __filechooser_pressed(name, spec, changed, initpath, *args):
 	# fm.show_disks()
 	fm.show(initpath)
 
+
 def exit_filemanager(widget, *args):
 	widget.close()
+
 
 def handle_selection(name, changed, spec, widget, path):
 	changed(name, path, spec)

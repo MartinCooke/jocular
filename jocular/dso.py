@@ -3,7 +3,6 @@
 
 import math
 from functools import partial
-
 from loguru import logger
 
 from kivy.app import App
@@ -16,7 +15,6 @@ from kivymd.uix.dialog import MDDialog
 from jocular.component import Component
 from jocular.RA_and_Dec import RA, Dec
 from jocular.widgets.widgets import Pin
-# from jocular.settingsmanager import JSettings
 
 Builder.load_string('''
 
@@ -116,6 +114,7 @@ def prop_to_str(prop, val):
     if prop == 'Diam':
         return arcmin_to_str(val)
 
+
 def float_to_str(x):
     ''' nans with return empty string
     '''
@@ -127,11 +126,13 @@ def float_to_str(x):
     except:
         return ''
 
+
 def str_to_float(s):
     try:
         return float(s)
     except:
         return math.nan
+
 
 def str_to_arcmin(diam):
     ''' convert string representation of diameter to float, taking
@@ -150,6 +151,7 @@ def str_to_arcmin(diam):
     if diam.endswith("'"):
         return float(diam[:-1])
     return float(diam)
+
 
 def arcmin_to_str(diam):
     ''' convert float representation of diam to a string with
@@ -223,6 +225,7 @@ class DSO(Component): # , JSettings):
     props = ['Name', 'Con', 'OT', 'RA', 'Dec', 'Mag', 'Diam', 'Other']
 
     show_DSO = BooleanProperty(False)
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -395,7 +398,6 @@ class DSO(Component): # , JSettings):
         self.changed = 'DSO properties changed' if orig != now else ''
         if orig != now:
             logger.trace(f'orig {orig}  now {now}')
-        # self.app.gui.has_changed('DSO', orig != now)
         return orig != now
  
 
@@ -437,9 +439,7 @@ class DSO(Component): # , JSettings):
         if props['Name'] and props['OT'] and props['RA'] is not None and props['Dec'] is not None:
             logger.trace('New or modified object and has Name/OT/RA/Dec so updating user catalogue')
             self.cats.update_user_object(props)
-            # Component.get('ObservingList').update_user_object(props)
  
-
 
     def current_object_coordinates(self):
         ''' Called by platesolver

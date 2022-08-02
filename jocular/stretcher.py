@@ -4,7 +4,10 @@
 import numpy as np
 from functools import partial
 
-from skimage.exposure import equalize_hist, equalize_adapthist, adjust_gamma, adjust_log, adjust_sigmoid
+from skimage.exposure import (
+    equalize_hist, equalize_adapthist, adjust_gamma, 
+    adjust_log, adjust_sigmoid
+    )
 from skimage.filters import rank
 from skimage.morphology import disk
 
@@ -23,6 +26,7 @@ class Stretcher(Panel, Component):
 
     stretch = StringProperty('asinh')
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
@@ -35,9 +39,11 @@ class Stretcher(Panel, Component):
         self.build()
         self.panel_opacity = 0
 
+
     def on_show(self):
         for c, but in self.buttons.items():
             but.state = 'down' if c == self.stretch else 'normal'
+
 
     def _button(self, name):
         return JMDToggleButton(
@@ -46,6 +52,7 @@ class Stretcher(Panel, Component):
                 group='stretch',
                 font_size='16sp',
                 on_press=partial(self.choose, name))
+
 
     def build(self, *args):
 

@@ -31,7 +31,6 @@ from jocular.panel import Panel
 
 
 class Snapshotter(Panel, Component, JSettings):
-#class Snapshotter(Component, JSettings):
 
     save_settings= ['style', 'annotation', 'save_format']
     
@@ -76,6 +75,7 @@ class Snapshotter(Panel, Component, JSettings):
             'fmt': '{:.0f} pixels'})
         ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
@@ -86,8 +86,6 @@ class Snapshotter(Panel, Component, JSettings):
         self.save_format = config.get('save_format', 'jpg')
 
 
-    # panel allowing choice of style etc
-
     def on_show(self):
         for c, but in self.style_buttons.items():
             but.state = 'down' if c == self.style else 'normal'
@@ -95,6 +93,7 @@ class Snapshotter(Panel, Component, JSettings):
             but.state = 'down' if c == self.annotation else 'normal'
         for c, but in self.save_format_buttons.items():
             but.state = 'down' if c == self.save_format else 'normal'
+
 
     def _button(self, name, group, fn, tooltip=None):
         if tooltip is None:
@@ -106,6 +105,7 @@ class Snapshotter(Panel, Component, JSettings):
                 font_size='16sp',
                 tooltip_text=tooltip,
                 on_press=partial(fn, name))
+
 
     def build(self, *args):
 
@@ -153,9 +153,11 @@ class Snapshotter(Panel, Component, JSettings):
         if style != self.style:
             self.style = style
 
+
     def choose_save_format(self, save_format, *args):
         if save_format != self.save_format:
             self.save_format = save_format
+
 
     def choose_annotation(self, annotation, *args):
         if annotation != self.annotation:
@@ -166,6 +168,7 @@ class Snapshotter(Panel, Component, JSettings):
         with mss.mss() as sct:
             im = sct.grab(bbox)
             return Image.frombytes('RGB', im.size, im.bgra, 'raw', 'BGRX').convert('RGBA')
+
 
     def large_font(self, w):
         f = max(18, int(w / 32))
@@ -273,12 +276,15 @@ class Snapshotter(Panel, Component, JSettings):
 
         return obj_details
 
+
     def kit_details(self):
         s = Component.get('Session')
         return [s.telescope, s.camera]
 
+
     def session_details(self):
         return Component.get('Session').describe()
+
 
     def processing_details(self):
 
@@ -387,6 +393,7 @@ class Snapshotter(Panel, Component, JSettings):
 
         self.save(im)
 
+
     @logger.catch
     def landscape_view(self):
 
@@ -471,10 +478,12 @@ class Snapshotter(Panel, Component, JSettings):
         draw.text((col, row), text, font=font, fill=self.grey())
         return row + rowsep
 
+
     def draw_block(self, block, draw, row, l, r, font, align='center', rowsep=20):
         for v in block:
             if v:
                 row = self.draw_aligned(draw, row, l, r, v, font, align=align, rowsep=rowsep)
+
 
     def save(self, im):
         # save, handling any format conversions

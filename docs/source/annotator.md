@@ -46,8 +46,7 @@ Labels can be clicked and dragged to reposition them, if necessary.
 Platesolving resets everything i.e. anything pinned or the positions of labels that you have moved will be lost. The same is true when you reload a previous capture.
 ```
 
-
-## Deep catalogues for annotation
+## Deep catalogues for annotation
 
 By default, image annotation uses the DSO catalogues supplied with Jocular. These are not very deep (only tens of thousands of objects), yet it is likely that your images contain far more interesting objects. To see them, you will need to download further catalogues and place the unzipped file (with `.npz extension`) in the `catalogues` subdirectory of your Jocular data directory
 

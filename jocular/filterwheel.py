@@ -19,7 +19,6 @@ class FilterWheel(Component, DeviceFamily):
 
     modes = {
         'Single': 'SingleFW',
-        #'Simulator': 'SimulatorFW',
         'Manual': 'ManualFW', 
         'SX EFW': 'SXFW',
         'ASCOM': 'ASCOMFW'
@@ -30,16 +29,19 @@ class FilterWheel(Component, DeviceFamily):
 
     current_filter = StringProperty('L')
 
+
     def get_state(self):
         return {
             'current_filter': self.current_filter,
             'filtermap': self.filtermap()}
+
 
     def filtermap(self):
         # create map from filtername to position e.g. {'L': 1, 'R': 2}
         if self.device is None:
             return {}
         return {getattr(self.device, f'f{p}'): p for p in range(1, 10)}
+
 
     def select_filter(self, name='L', changed_action=None, not_changed_action=None):
 
@@ -85,13 +87,16 @@ class FilterWheel(Component, DeviceFamily):
             # if we get here, we can go ahead
             self.change_filter(name)
 
+
     def confirmed_fw_changed(self, name, *args):
         self.dialog.dismiss()
         self.fw_changed(name)
 
+
     def confirmed_fw_not_changed(self, *args):
         self.dialog.dismiss()
         self.fw_not_changed()
+
 
     def change_filter(self, name, *args):
         try:
@@ -106,6 +111,7 @@ class FilterWheel(Component, DeviceFamily):
                 self.not_changed_action()
             return
 
+
     def fw_changed(self, name, dt=None):
         # change has been done
         self.current_filter = name
@@ -113,10 +119,12 @@ class FilterWheel(Component, DeviceFamily):
         if self.changed_action is not None:
             self.changed_action()
 
+
     def fw_not_changed(self):
         logger.debug('Filter not changed')
         if self.not_changed_action is not None:
             self.not_changed_action()
+
 
     def device_connected(self):
         # called by DeviceFamily when a device connects
@@ -173,9 +181,11 @@ class GenericFW(Device):
 
 class SingleFW(GenericFW):
 
+
     def connect(self):
         self.connected = True
         self.status = 'Single filter connected'
+
 
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         if success_action is not None:
@@ -199,6 +209,7 @@ class ManualFW(GenericFW):
         self.connected = True
         self.status = 'Manual filterwheel'
 
+
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         self.dialog = MDDialog(
             auto_dismiss=False,
@@ -215,12 +226,14 @@ class ManualFW(GenericFW):
         )
         self.dialog.open()
 
+
     def post_dialog(self, action, *args):
         ''' close dialog and perform action (i.e. success or failure to change)
         '''
         self.dialog.dismiss()
         if action is not None:
             action()
+
 
 class SXFW(GenericFW):
 
@@ -279,18 +292,16 @@ class SXFW(GenericFW):
             if failure_action is not None:
                 failure_action()
 
-    # def on_close(self):
-    #     if self.connected and self.efw:
-    #         self.efw.close()
-
 
 class ASCOMFW(GenericFW):
 
     driver = StringProperty(None)
 
+
     def disconnect(self):
         logger.debug('closing ASCOM filterwheel')
         self.fw.Connected = False
+
 
     def connect(self):
 
@@ -307,8 +318,11 @@ class ASCOMFW(GenericFW):
             if 'exception' in res:
                 self.status += " ({res['exception']})"
 
+
     def select_position(self, position=None, name=None, success_action=None, failure_action=None):
         try:
+            # possible 0-indexed?
+            position = position - 1
             # move filterwheel
             logger.debug(f'Moving ASCOM EFW to position {position}')
             self.fw.Position = position

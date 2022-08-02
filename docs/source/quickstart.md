@@ -15,6 +15,16 @@ Normally, you wouldn't go thru this procedure because Jocular organises all the 
 
 Jocular's eyepiece-like view contains most of the controls needed in an observing session. To explore the interface, **turn tooltips on** by clicking the ![config](images/configicon.png) icon to accesses Jocular's [settings system](config.md), choose `Appearance` from the dropdown at the top, and set `show tooltips` to `on`. Hovering over the various controls will now bring up a short description of what each control does.
 
+The letter in square brackets at the end of certain tooltips indicates a keyboard shortcut that can be used for fine control. Shortcuts work by combining the key with `ctrl` (to increase the value) and `option` (to decrease the value). For example, `ctrl-z` increases the zoom level while `option-z` decreases it.
+
+### Pan, zoom and rotate
+
+The image can be moved by selecting and dragging near the centre of the image, zoomed in/out using the Z slider on the right, or rotated by selecting and dragging near the edge of the image. 
+
+### Negative mode
+
+Sometimes it is easier to see faint details when the image intensities are inverted, as in a photographic negative. Double click the image to show the negative view (double click again to return to the normal view)
+
 ### Viewing individual subs or the stack
 
 The group of controls at the top of the eyepiece relate to **subs** and the **stack**. When Jocular loads a previous capture, it defaults to showing the individual subs as they come in. The number of the currently displayed sub is indicated at the top of the ring. To view the stack (i.e. the result of combining the individual subs after ensuring they are properly aligned), click on the sub/stack toggle ![stack](images/stackicon.png) just below the number. Clicking again will return to the sub view. Jocular provides access to all the subs that make up an observation. Step through these using the arrow icons. There is also an option to animate the sequence of subs (or the stack as it builds up) using the ![play](images/playicon.png) icon.
@@ -61,13 +71,9 @@ It is recommended to leave automatic blackpoint detection and use the bg slider 
 
 Just below the blackpoint control you'll find a slider that handles simple **background gradient subtraction**. Jocular estimates the best 2D planar fit to the background and when the gradient slider is in the middle of the range it subtracts that estimate from the image. At the upper end of the slider no gradient subtraction occurs, while at the lower end double the estimate is subtracted, and usually it is possible to find a setting within this range that removes most of the gradient. 
 
-### Pan, zoom and rotate
+The `tnr` slider applies **noise reduction** to the image ('TNR' stands for `Tony's Noise Reduction` -- see [thanks](thanks)). The `R` slider next to `tnr` controls one of the key parameters (radius) used in the noise reduction algorithm.
 
-The image can be moved by selecting and dragging near the centre of the image, zoomed in/out using the Z slider on the right, or rotated by selecting and dragging near the edge of the image. More precise zooming can also be done using keyboard shortcuts ctrl-z (zoom in) and option-z (zoom out).
-
-### Negative mode
-
-Sometimes it is easier to see faint details when the image intensities are inverted, as in a photographic negative. Double click the image to show the negative view (double click again to return to the normal view)
+The `sharp` slider applies **sharpening** to the image. Again, the `R` slider controls its own radius parameter.
 
 
 (snapshot)=
@@ -85,5 +91,13 @@ The [Arp 100](Arp100) image above is an example of an eyepiece view with a name 
 
 ![Abell 2151](images/Abell2151.png)
 
+
+## Recomputing the stack
+
+Jocular allows the stack to be recomputed following any change that could conceivably affect processing. For instance, if you make a change to some setting, it can be applied  immediately by clicking the ![recompute](images/recompute.png) icon in the upper left quadrant. There is also a `shuffle` option ![shuffle](images/shuffleicon.png) which differs from recompute in that it modifies the order of the subs prior to recomputation. Tip: If you runs into alignment issues, try clicking the `shuffle` icon (potentially several times) as this often solves the problem.
+
+:::{note}
+In fact, the order is not completely randomised; instead, a sub with low transmissibility is moved to the start of the stack. The reason for this approach is that Jocular computes a threshold for detecting a user-specified number of stars based on the first sub in the stack. If the first sub is a light sub, the threshold might be set too high for later subs that have a lower transmission (e.g. h-alpha subs). 
+:::
 
 

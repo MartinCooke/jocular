@@ -2,13 +2,12 @@
 '''
 
 from kivy.app import App
-from kivy.properties import StringProperty, BooleanProperty, ObjectProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.lang import Builder
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDIconButton
-from kivy.uix.button import Button
 from jocular.component import Component
 from jocular.widgets.widgets import Pin
+
 
 Builder.load_string('''
 <Notes>:
@@ -37,6 +36,7 @@ class Notes(MDBoxLayout, Component):
     show_notes = BooleanProperty(False)
     save_settings = ['show_notes']
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
@@ -50,14 +50,17 @@ class Notes(MDBoxLayout, Component):
             tooltip_text='toggle note-taking panel',
             show_text='Notes'))
 
+
     def on_new_object(self):
         self.notes = ''
         self.orig_notes = Component.get('Metadata').get('Notes', default='')
         self.observing_notes.text = self.orig_notes
         self.notes = self.observing_notes.text        
 
+
     def on_save_object(self):
         Component.get('Metadata').set('Notes', self.notes.strip())
+
 
     def notes_changed(self, *args):
         self.notes = self.observing_notes.text

@@ -5,7 +5,6 @@
 
 import os
 import json
-import shutil
 
 from functools import partial
 from collections import OrderedDict
@@ -171,20 +170,6 @@ class GUI(FloatLayout):
             self.config = {}
 
 
-    # def draw(self, dt=None):
-    #     # check if we have a data dir
-    #     try:
-    #         data_dir = get_datadir()
-    #         if data_dir is None:
-    #             self.make_splash()
-    #         else:
-    #             self.app.data_dir = data_dir
-    #             Clock.schedule_once(self._draw, 0)
-    #             logger.info('GUI drawn')
-    #     except Exception as e:
-    #         logger.exception(e)
-
-
     def draw(self, dt=None):
 
         # construct interface for the first time; we redraw in the order originally drawn
@@ -253,7 +238,6 @@ class GUI(FloatLayout):
         s.show()
 
 
-    #@logger.catch()
     def load_components(self, dt=None):
 
         for name, spec in self.gui.items():
@@ -306,7 +290,6 @@ class GUI(FloatLayout):
                     w.relocate(origin=origin, radius=Metrics.get(spec['location']))
 
 
-    # @logger.catch()
     def draw_element(self, wname, spec):
         ''' Draw element and add to gui dictionary for later redrawing
         '''
@@ -369,10 +352,6 @@ class GUI(FloatLayout):
 
         elif control_type == 'JLabel':
             w = JLabel(angle=angle, origin=orig, radius=rad, text=spec.get('text', ''))
-
-        # elif control_type == 'JMulti':
-        #     w = JMulti(angle=angle, origin=orig, radius=rad, values=spec['values'],
-        #         text=str(initial_value))
 
         elif control_type == 'JLever':
 
@@ -448,6 +427,7 @@ class GUI(FloatLayout):
         if hasattr(self, 'config'):
             return self.config.get(key, None)
         return None
+
 
     def set(self, name, value, update_property=False):
         ''' Called by any component that needs to access GUI element, usually
@@ -568,14 +548,8 @@ class GUI(FloatLayout):
         pass # actually done in Component now
 
 
-    # def is_changed(self, needs_save):
-    #   if needs_save:
-    #       self.enable(names=['save_DSO'])
-    #   else:
-    #       self.disable(names=['save_DSO'])
-
-
-    ''' uses plyer, but that is super-ugly on Windows, but keep code in case
+    ''' Leaving this here por si acaso
+        uses plyer, but that is super-ugly on Windows, but keep code in case
         kivymd filemanager breaks down....
     '''
 

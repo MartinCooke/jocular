@@ -124,39 +124,48 @@ class Appearance(Component, JSettings):
         ),
     ]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
 
+
     def on_ring_font_size(self, *args):
         self.app.ring_font_size = f"{self.ring_font_size:.0f}sp"
 
+
     def on_form_font_size(self, *args):
         self.app.form_font_size = f"{self.form_font_size:.0f}sp"
+
 
     def on_highlight_color(self, *args):
         self.app.theme_cls.accent_palette = self.highlight_color
         self.app.theme_cls.primary_palette = self.highlight_color
 
+
     def on_colour_saturation(self, *args):
         self.app.theme_cls.accent_hue = sat_to_hue(self.colour_saturation)
         self.app.theme_cls.primary_hue = sat_to_hue(self.colour_saturation)
+
 
     def on_lowlight_color(self, *args):
         lg = max(20, min(int(self.lowlight_color), 100)) / 100
         self.app.lowlight_color = [lg, lg, lg, 1]
 
+
     def on_lever_color(self, *args):
         lg = max(20, min(int(self.lever_color), 100)) / 100
         self.app.lever_color = [lg, lg, lg, 1]
+
 
     def on_hint_color(self, *args):
         lg = max(0, min(int(self.hint_color), 100)) / 100
         self.app.hint_color = [lg, lg, lg, 1]
 
+
     def on_transparency(self, *args):
         self.app.transparency = self.transparency / 100
 
+
     def on_show_tooltips(self, *args):
         Component.get('Help').show_tooltips = self.show_tooltips
-        # self.app.tooltip_delay = self.tooltip_delay

@@ -33,6 +33,7 @@ class DeviceFamily:
 	modes = DictProperty({})
 	default_mode = StringProperty('')
 
+
 	def __init__(self, **kwargs):
 		self.app = App.get_running_app()
 		try:
@@ -42,13 +43,16 @@ class DeviceFamily:
 			self.settings = {}
 		Clock.schedule_once(self.post_init, 0)
 
+
 	def post_init(self, dt):
 		self.set_mode(self.settings.get('current_mode', self.default_mode))
 		self.connect()
 
+
 	def save(self):
 		with open(self.app.get_path(f'{self.family}.json'), 'w') as f:
 			json.dump(self.settings, f, indent=1)       
+
 
 	def set_mode(self, mode):
 		''' finds and imports class representing chosen mode
@@ -67,14 +71,17 @@ class DeviceFamily:
 		except Exception as e:
 			logger.exception(e)
 
+
 	def get_configurables(self):
 		if self.device is not None:
 			return self.device.configurables
+
 
 	def configure(self):
 		if self.device is not None:
 			logger.debug(f"family {self.family} settings {self.settings['current_mode']}")
 			self.device.configure()
+
 
 	def connect(self):
 		logger.debug(f"Connecting {self.family} (current mode: {self.settings['current_mode']})")
@@ -86,12 +93,14 @@ class DeviceFamily:
 				self.device_connected()
 				self.device.on_new_object()
 
+
 	def disconnect(self):
 		if self.device is None:
 			return
 		if self.connected():
 			self.device.disconnect()
 			self.device_disconnected()
+
 
 	def connected(self):
 		if not hasattr(self, 'device'):
@@ -100,15 +109,19 @@ class DeviceFamily:
 			return False
 		return self.device.connected
 
+
 	def device_connected(self):
 		pass
+
 
 	def device_disconnected(self):
 		pass
 
+
 	def on_close(self, *args):
 		if self.connected():
 			self.disconnect()
+
 
 	def choose(self, *args):
 		if self.device is not None:
@@ -124,6 +137,7 @@ class Device(EventDispatcher, SettingsBase):
 	status = StringProperty('')
 	family = StringProperty('')
 
+
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		''' register this device with the device manager e.g. so that it
@@ -132,34 +146,44 @@ class Device(EventDispatcher, SettingsBase):
 		if self.family:
 			Component.get('DeviceManager').register(self, name=self.family)
 
+
 	def on_close(self):
 		pass
+
 
 	def on_new_object(self):
 		pass
 
+
 	def on_previous_object(self):
 		pass
+
 
 	def connect(self):
 		self.status = f'Not implemented for this {self.family}'
 		self.connected = False
 
+
 	def disconnect(self):
 		self.status = 'not connected'
 		self.connected = False
 
+
 	def on_connected(self, *args):
 		Component.get('DeviceManager').connection_changed(self.family, self.connected)
+
 
 	def on_status(self, *args):
 		Component.get('DeviceManager').status_changed(self.family, self.status)
 
+
 	def select(self, f):
 		return None
 
+
 	def choose(self):
 		pass
+
 
 	def handle_failure(self, message='problem'):
 		logger.error(f'{self.family}: failure {message}')
