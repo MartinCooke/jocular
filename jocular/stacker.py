@@ -192,8 +192,9 @@ class Stacker(Component, JSettings):
 
 
     def describe(self):
-        # return info useful to snapshotter (for the moment)
+        # return info useful to snapshotter and status update
 
+        # viewing single sub
         if len(self.subs) > 0 and not self.viewing_stack:
             s = self.subs[self.selected_sub]
             return {
@@ -207,9 +208,16 @@ class Stacker(Component, JSettings):
                 'bias': 'bias' in s.calibrations,
                 'filters': f'filter: {s.filter}'}
 
+        # remove any not selected
         subs = [s for s in self.subs[:self.selected_sub+1] if s.status == 'select']
         if len(subs) == 0:
             return None
+
+        # check with multispectral which filters are actually being displayed
+        filters_being_displayed = Component.get('MultiSpectral').filters_being_displayed()
+
+        # restrict to these filters
+        subs = [s for s in subs if s.filter in filters_being_displayed]
 
         expos = [s.exposure if s.exposure else 0 for s in subs]
         filts = [s.filter for s in subs]
@@ -217,7 +225,8 @@ class Stacker(Component, JSettings):
 
         gains = [s.gain if s.gain else 0 for s in subs]
 
-        ftypes = Component.get('FilterChooser').get_filter_types()
+        # ftypes = Component.get('FilterChooser').get_filter_types()
+        ftypes = set(filts)
 
         for f in ftypes:
             if filts.count(f) > 0:
@@ -761,17 +770,17 @@ class Stacker(Component, JSettings):
         '''
 
         cols={
-            'stack_num': {'w': 50, 'label': 'Num', 'type':int}, 
-            'status': {'w': 70, 'label': 'Status'},
+            'stack_num': {'w': 45, 'label': 'N', 'type':int}, 
+            'status': {'w': 65, 'label': 'Status'},
             'aligned': {'w': 70, 'label': 'Aligned'},
             'name': {'w': 200, 'align': 'left', 'label': 'Name', 'action': self.view_single_sub}, 
             'pp_create_time': {'w': 140, 'align': 'left', 'label': 'Date', 'sort': {'DateFormat': date_time_format}}, 
             'exposure': {'w': 60, 'label': 'Expo', 'type': float},
             'temperature': {'w': 60, 'label': 'Temp', 'type': float, 'display_fn': lambda x: f'{x:.1f}'},
             'gain': {'w': 60, 'label': 'Gain', 'type': float, 'display_fn': lambda x: f'{x:.0f}'},
-            'offset': {'w': 60, 'label': 'Offset', 'type': float, 'display_fn': lambda x: f'{x:.0f}'},
+            'offset': {'w': 55, 'label': 'Offset', 'type': float, 'display_fn': lambda x: f'{x:.0f}'},
             'binning': {'w': 40, 'label': 'Bin'},
-            'filter': {'w': 50, 'label': 'Filt'},
+            'filter': {'w': 40, 'label': 'Filt'},
             'fwhm': {'w': 80, 'label': 'FWHM', 'type': float, 'display_fn': lambda x: f'{x:.1f} px'},
             'minval': {'w': 70, 'label': 'Min', 'type': float, 'display_fn': lambda x: f'{x:.1f}%'},
             'maxval': {'w': 70, 'label': 'Max', 'type': float, 'display_fn': lambda x: f'{x:.1f}%'},

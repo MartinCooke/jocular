@@ -250,7 +250,7 @@ class GUI(FloatLayout):
             'Capture', 'CaptureScript', 'Observations', 'ObservingList', 
             'Monochrome', 'MultiSpectral', 'ObjectIO', 'Aligner',
             'DeviceManager', 'Camera', 'FilterWheel', 
-            'ExposureChooser',  'FilterChooser', 'Experimental',
+            'ExposureChooser',  'FilterChooser', 
             'SettingsManager', 'Stretcher', 'StackCombiner',
             'BadPixelMap', 'Calibrator', 'Snapshotter', 'PlateSolver', 
             'Annotator', 'Help']:
@@ -318,6 +318,16 @@ class GUI(FloatLayout):
             initial_value = spec['values'][0]
         else:
             initial_value = 0
+
+        # ensure that initial value is within range
+        if 'values' in spec:
+            if initial_value > spec['values'][1]:
+                initial_value = spec['values'][1]
+                logger.debug(f'resetting initial_value of {wname} to {initial_value}')
+            elif initial_value < spec['values'][0]:
+                initial_value = spec['values'][0]
+                logger.debug(f'resetting initial_value of {wname} to {initial_value}')
+            # print(f'checking {initial_value} is in {spec["values"]}')
 
         rad = Metrics.get(location)
         orig = Metrics.get('origin')

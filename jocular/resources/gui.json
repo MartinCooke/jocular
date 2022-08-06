@@ -41,7 +41,7 @@
 	},
 	"Stretcher": {
 		"stretch": {
-			"angle": 159,
+			"angle": 135,
 			"location": "inner_ring",
 			"tooltip": "stretch chooser",
 			"control_type": "JButton",
@@ -52,7 +52,7 @@
 	},
 	"StackCombiner": {
 		"combine_method": {
-			"angle": 118,
+			"angle": 116,
 			"location": "inner_ring",
 			"control_type": "JButton",
 			"text": "mean",
@@ -211,7 +211,7 @@
 	},
 	"Calibrator": {
 		"apply_dark": {
-			"angle": 338,
+			"angle": 348,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -221,7 +221,7 @@
 			"initial": true
 		},
 		"apply_flat": {
-			"angle": 332,
+			"angle": 342,
 			"location": "inner_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
@@ -231,7 +231,7 @@
 			"initial": false
 		},
 		"open_calibration": {
-			"angle": 335,
+			"angle": 345,
 			"location": "outer_ring",
 			"control_type": "JButton",
 			"tooltip": "display table of calibration masters",
@@ -239,20 +239,9 @@
 			"action": "show_calibration_table"
 		}
 	},
-	"Experimental": {
-		"fracbin": {
-			"angle": 255,
-			"location": "outer_ring",
-			"tooltip": "access various experimental processes",
-			"control_type": "JButton",
-			"icon": "experimental",
-			"action": "show",
-			"radial": false
-		}
-	},
 	"MultiSpectral": {
 		"spectral_mode": {
-			"angle": 310,
+			"angle": 320,
 			"location": "inner_ring",
 			"tooltip": "channel chooser",
 			"control_type": "JButton",
@@ -261,7 +250,7 @@
 			"radial": false
 		},
 		"saturation": {
-			"angle": [300, 320],
+			"angle": [305, 330],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -274,7 +263,7 @@
             "sc_inc": 0.2
 		},
 		"colour_stretch": {
-			"angle": [300, 320],
+			"angle": [305, 330],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0.1, 0.5],
@@ -294,20 +283,22 @@
 			"values": [0, 200],
 			"major": {"-": 0, "grad": 100, "+": 200},
 			"groove": true,
-			"tooltip": "subtract linear gradient estimate (mid-position is usually optimal)",
+			"tooltip": "subtract linear gradient estimate (mid-position is usually optimal) [g]",
 			"initial": 100,
-			"radial": false
+			"radial": false,
+            "shortcut": "g",
+            "sc_inc": 0.2
 		},
 		"lift": {
-			"angle": [180, 200],
-			"location": "outside_ring",
+			"angle": [180, 140],
+			"location": "inner_ring",
 			"control_type": "JLever",
-			"values": [-1, 20],
-			"radial": true,
-			"text": "bg",
-			"tooltip": "bring in more of the background [b]",
+			"values": [-1, 15],
+			"radial": false,
+			"text": "F",
+			"tooltip": "fine control of the black point [f]",
 			"initial": 0.0,
-            "shortcut": "b",
+            "shortcut": "f",
             "sc_inc": 0.2
 		},
 		"TNR_amount": {
@@ -318,20 +309,22 @@
 			"groove": true,
 			"radial": false,
 			"major": {"-": -1, "tnr": 2.5, "+": 5},
-			"tooltip": "Tony's noise reduction [d]",
+			"tooltip": "Tony's noise reduction [n]",
 			"initial": 0.3,
-            "shortcut": "d",
+            "shortcut": "n",
             "sc_inc": 0.2
 		},
 		"TNR_kernel_size": {
 			"angle": [210, 222],
-			"location": "outside_ring",
+			"location": "inner_ring",
 			"control_type": "JLever",
 			"values": [3, 30],
 			"radial": false,
-			"text": "R",
-			"tooltip": "TNR kernel size",
-			"initial": 10
+			"text": "K",
+			"tooltip": "TNR kernel size [k]",
+			"initial": 10,
+            "shortcut": "k",
+            "sc_inc": 0.2
 		},
 		"unsharp_amount": {
 			"angle": [229, 241],
@@ -348,7 +341,7 @@
 		},
 		"unsharp_radius": {
 			"angle": [229, 241],
-			"location": "outside_ring",
+			"location": "inner_ring",
 			"control_type": "JLever",
 			"values": [0, 10],
 			"groove": false,
@@ -360,33 +353,33 @@
             "sc_inc": 0.2
 		},
 		"black": {
-			"angle": [180, 138],
+			"angle": [180, 136],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"groove": true,
 			"radial": true,
 			"initial": 0.1,
-			"tooltip": "set black point [k]",
+			"tooltip": "modify black point [b]",
 			"text": "B",
 			"save": false,
-            "shortcut": "k",
-            "sc_inc": 0.1
+            "shortcut": "b",
+            "sc_inc": 0.01
 		},
 		"white": {
-			"angle": [180, 138],
+			"angle": [180, 136],
 			"location": "outer_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
 			"radial": true,
-			"tooltip": "set white point [w]",
+			"tooltip": "modify white point [w]",
 			"initial": 0.9,
 			"text": "W",
             "shortcut": "w",
-            "sc_inc": 1.0
+            "sc_inc": 0.5
 		},
 		"p1": {
-			"angle": [179, 135],
+			"angle": [182, 133],
 			"location": "outside_ring",
 			"control_type": "JLever",
 			"values": [0, 1],
@@ -395,7 +388,7 @@
 			"text": "S",
 			"initial": 0.65,
             "shortcut": "s",
-            "sc_inc": -1.0
+            "sc_inc": 0.5
 		},
 		"autoblack": {
 			"angle": 183,
@@ -407,18 +400,32 @@
 			"initial": 1
 		},
 		"autowhite": {
-			"angle": 135,
+			"angle": 133,
 			"location": "outer_ring",
 			"control_type": "JToggleButton",
 			"radial": false,
 			"tooltip": "estimate white point automatically",
 			"icon": "next_sub",
 			"initial": 0
+		},
+		"fracbin": {
+			"angle": [247, 257],
+			"location": "outer_ring",
+			"control_type": "JLever",
+			"values": [0.8, 3.2],
+			"radial": false,
+			"save": false,
+			"groove": true,
+			"tooltip": "fractional binning (experimental) [x]",
+			"initial": 1.0,
+            "shortcut": "x",
+            "major": {"1": 1, "bin": 2, "3": 3},
+            "sc_inc": 0.2
 		}
 	},
 	"Stacker": {
 		"show_subs": {
-			"angle": 123,
+			"angle": 121,
 			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "show_subs",
@@ -426,7 +433,7 @@
 			"action": "show_subs_table"
 		},
 		"recompute": {
-			"angle": 118,
+			"angle": 116,
 			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "redo",
@@ -434,7 +441,7 @@
 			"action": "recompute"
 		},
 		"realign": {
-			"angle": 113,
+			"angle": 111,
 			"location": "outer_ring",
 			"control_type": "JIconButton",
 			"icon": "realign",

@@ -117,9 +117,13 @@ Builder.load_string(
     size_hint: 1, None 
     shift_y: dp(40)
     height: dp(16)
+    #width: dp(50)
     md_bg_color: .25, .25, .25, 1
     theme_text_color: 'Custom'
     text_color: .6, .6, .6, 1
+    #font_size: '12sp'
+    #border: dp(2), dp(2), dp(2), dp(2)
+    #padding_x: dp(1)
 
 
 <Pin>:

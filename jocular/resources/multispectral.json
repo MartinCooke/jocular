@@ -2,7 +2,7 @@
     "mono": {
         "needs": []
         },
-    "LRGB": {
+    "RGB": {
         "needs": ["R", "G", "B"]
         },
     "L": {
@@ -26,13 +26,13 @@
     "S": {
         "needs": ["S"]
         },
-    "LSHO": {
+    "SHO": {
         "needs": ["S", "H", "O"]
         },
-    "LHOS": {
+    "HOS": {
         "needs": ["H", "O", "S"]
         },
-    "LHOO": {
+    "HOO": {
         "needs": ["H", "O"]
         },
     "L+H": {
@@ -43,8 +43,5 @@
         },
     "L+S": {
         "needs": ["L", "S"]
-        },
-    "HRGB": {
-        "needs": ["H", "R", "G", "B"]
         }
 }

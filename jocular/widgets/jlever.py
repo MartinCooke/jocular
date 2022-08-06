@@ -17,7 +17,7 @@ from jocular.widgets.widgets import JRotWidget
 Builder.load_string('''
 <JLever>:
     color: app.lever_color
-    font_size: '18sp'
+    font_size: '17sp'
 ''')
 
 

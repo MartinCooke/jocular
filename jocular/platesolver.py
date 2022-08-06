@@ -69,6 +69,12 @@ class PlateSolver(Component, JSettings):
 
     def on_new_object(self):
         self.info('')
+        self.fov = None
+        self.fwhm = None
+
+
+    def describe(self):
+        return {'fov': self.fov, 'fwhm': self.fwhm}
 
 
     def solve(self):
@@ -126,8 +132,12 @@ class PlateSolver(Component, JSettings):
 
         logger.info(desc)
 
+        fwhm = soln['fwhm'] * dpp * 3600.
+        self.fwhm = fwhm
+        self.fov = f"{soln['fov_w']:.2f}\u00b0 x {soln['fov_h']:.2f}\u00b0"
+
         self.info('fwhm: {:.1f}" | fov: {:.2f}\u00b0 x {:.2f}\u00b0'.format(
-            soln['fwhm'] * dpp * 3600.,
+            fwhm,
             soln['fov_w'], 
             soln['fov_h']))
 

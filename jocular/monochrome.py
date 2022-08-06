@@ -53,6 +53,12 @@ def fractional_bin(im, binfac=1, original_size=True):
     ''' Experimental binning with non-integer factor (binfac)
         By default, binned image is resized to original size
     '''
+    if binfac < 1:
+        return im
+
+    if binfac > 3:
+        binfac = 3
+
     binned = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
     if original_size:
         return resize(binned, im.shape, anti_aliasing=False, mode='constant')
@@ -105,8 +111,8 @@ class Monochrome(Component, JSettings):
             'help': 'display min/max/mean in status line using these units'}),
         ('background_method', {
             'name': 'gradient removal', 
-            'options': ['2D planar', 'Astropy'],
-            'help': 'experimental'}),
+            'options': ['2D planar', 'regional'],
+            'help': '2D planar is less flexible but more robust; regional can produce artefacts'}),
         ('TNR_method', {
             'name': 'noise reduction kernel', 
             'options': ['gaussian', 'median'],
@@ -163,6 +169,10 @@ class Monochrome(Component, JSettings):
 
 
     def on_fracbin(self, *args):
+        if self.fracbin < 1:
+            return
+        if self.fracbin > 3:
+            return
         self.adjust_lum()
 
 

@@ -46,6 +46,7 @@ For example, in the image above, the table is restricted to showing members of t
 	* If you want to match a suffix, use an asterisk *wildcard* character \* e.g. \*100 matches any DSO whose name ends in '100'. 
 	* To match within a name, use two asterisks e.g. \*ring galax\* in the `Other` column matches notes that contain the phrase 'ring galaxy' or 'ring galaxies'.
 	* To specify an **exact match** (rather than matching all prefixes) place an `=` symbol at the start of the term e.g. `=ngc 5` matches only `ngc 5` and not also `ngc 51`, `ngc 514` etc
+	* To negate a match, precede the expression with an exclamation mark; currently this only works for exact matches e.g. '!L' matches all but 'L' rather than matching anything that starts with 'L'.
 
 * For **numeric columns**, DSOs are selected that match the value provided, but although a single value could be used, it is more common to use a value along with an operator such as '>' or '<', to select values that are greater or less than that value (in fact, the operator also includes equality).
 	* to specify a range, separate two values with a comma viz. 10, 12 in the `RA` column restricts to DSOs with right ascensions between 10h and 12h (inclusive)

@@ -63,7 +63,9 @@ class Status(MDBoxLayout, Component):
     save_settings = ['show_status']
 
     show_status = BooleanProperty(False)
-    comps = ['Capture', 'Calibrator', 'View', 'Aligner', 'Stacker', 'PlateSolver', 'Monochrome']
+    comps = [
+        'Capture', 'Calibrator', 'View', 'Aligner', 
+        'PlateSolver', 'Monochrome', 'MultiSpectral', 'Stacker']
 
 
     def __init__(self, **kwargs):

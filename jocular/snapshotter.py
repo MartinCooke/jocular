@@ -279,11 +279,23 @@ class Snapshotter(Panel, Component, JSettings):
 
     def kit_details(self):
         s = Component.get('Session')
-        return [s.telescope, s.camera]
+        kit = [s.telescope, s.camera]
+        ps = Component.get('PlateSolver').describe()
+
+        fov = ps['fov']
+        if fov is not None:
+            kit += [fov]
+
+        return kit
 
 
     def session_details(self):
-        return Component.get('Session').describe()
+        sesh = Component.get('Session').describe()
+        ps = Component.get('PlateSolver').describe()
+        fwhm = ps['fwhm']
+        if fwhm is not None:
+            sesh += [f'fwhm: {fwhm:.1f}"']
+        return sesh
 
 
     def processing_details(self):
@@ -306,6 +318,9 @@ class Snapshotter(Panel, Component, JSettings):
 
         if not d['filters'].endswith('L'):
             block += [d['filters']]
+
+        smode = Component.get('MultiSpectral').describe_mode()
+        block += [f'mode {smode}']
 
         if 'total_exposure' in d:
             composition = 'varied expos' if d['multiple_exposures'] else f"{d['nsubs']} x {s_to_minsec(d['sub_exposure'])}"
@@ -425,7 +440,7 @@ class Snapshotter(Panel, Component, JSettings):
         if self.annotation != 'plain':
             total_height = int(total_height + 2 * rowgap + large_text_height)
         if self.annotation == 'full':
-            total_height = int(total_height + max_rows * small_text_height + (max_rows - 1) * rowgap)
+            total_height = int(total_height + max_rows * small_text_height + (max_rows) * rowgap + 5)
 
         fw = int(self.framewidth)
         im = Image.new('RGBA', (w + 2 * fw, total_height + 2 * fw), 
@@ -447,7 +462,7 @@ class Snapshotter(Panel, Component, JSettings):
         if self.annotation == 'full':
             row += rowgap
             draw.line((5, row, w - 5, row), fill=self.grey(), width=1)
-            row += (rowgap + small_text_height)
+            row += (rowgap + small_text_height - 10)
             cols = [int(x) for x in orig_im.size[0] * np.linspace(0, 1, 4)]
             self.draw_block(sesh_details, draw, row,
                 cols[0], cols[1], sf, align='left', rowsep=small_text_height + rowgap)

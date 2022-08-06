@@ -60,7 +60,7 @@ Builder.load_string(
 			id: _contents
 			orientation: 'vertical'
 			size_hint: None, 1
-			width: dp(520)
+			width: dp(480)
 		Label:
 			size_hint: 1, 1
 

@@ -61,20 +61,23 @@ The controls for modifying how the intensities are displayed are grouped in the 
 
 * **blackpoint** (B) and **whitepoint** (W) sliders
 * a choice of [stretch functions](stretch.md) along with a slider (S) that controls the **degree of stretch**
-* a control that allows more or less of the **background** (bg) to be displayed
+* **fine control** (f) of the blackpoint
 
-Black and whitepoints can also be estimated automatically by clicking the arrows at the end of the groove where the B and W sliders reside.
+Black and whitepoints can also be estimated automatically by clicking the arrows at the end of the groove where the B and W sliders reside. When these are on, any change you make to the `B` and `W` sliders has no effect.
 
 :::{note}
-It is recommended to leave automatic blackpoint detection and use the bg slider to fine-tune the blackpoint.
+It is recommended to leave automatic blackpoint detection on and use the `f` slider to fine-tune the blackpoint.
 :::
 
-Just below the blackpoint control you'll find a slider that handles simple **background gradient subtraction**. Jocular estimates the best 2D planar fit to the background and when the gradient slider is in the middle of the range it subtracts that estimate from the image. At the upper end of the slider no gradient subtraction occurs, while at the lower end double the estimate is subtracted, and usually it is possible to find a setting within this range that removes most of the gradient. 
+Just below the blackpoint control you'll find a slider that handles simple **background gradient subtraction** (`grad`). Jocular estimates the best 2D planar fit to the background and when the gradient slider is in the middle of the range it subtracts that estimate from the image. At the upper end of the slider no gradient subtraction occurs, while at the lower end double the estimate is subtracted, and usually it is possible to find a setting within this range that removes most of the gradient. 
 
 The `tnr` slider applies **noise reduction** to the image ('TNR' stands for `Tony's Noise Reduction` -- see [thanks](thanks)). The `R` slider next to `tnr` controls one of the key parameters (radius) used in the noise reduction algorithm.
 
 The `sharp` slider applies **sharpening** to the image. Again, the `R` slider controls its own radius parameter.
 
+:::{note}
+There is also an experimental `bin` control that performs *fractional binning* on the displayed image. This might be useful if you have an oversampled image and wish to increase its signal-to-noise ratio. The way to use this control is to increase binning (perhaps most easily done via its shortcut, `ctrl-x`) until you start to see a loss in resolution.
+:::
 
 (snapshot)=
 ### Taking a snapshot

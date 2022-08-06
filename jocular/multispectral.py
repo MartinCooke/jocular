@@ -17,7 +17,9 @@ from kivy.properties import NumericProperty, StringProperty
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.label import Label
 
 from jocular.gradient import estimate_gradient, estimate_background
 from jocular.component import Component
@@ -69,10 +71,10 @@ def modify_hue(x, shift):
     return x
 
 
-def synthetic_luminance(R, G, B):
-    # I wonder if this needs to be normalised differently
-    L = .2125*R  + .7154*G + .0721*B
-    return L / np.percentile(L.ravel(), 99.99)
+def limitto01(im):
+    im[im < 0] = 0
+    im[im > 1] = 1
+    return im
 
 
 
@@ -83,6 +85,7 @@ class MultiSpectral(Panel, Component, JSettings):
         'colour_stretch', 
         'redgreen', 
         'yellowblue',
+        'synth_lum_weights'
         ]
 
     tab_name = 'Colour'
@@ -101,16 +104,41 @@ class MultiSpectral(Panel, Component, JSettings):
             'float': (99.9, 100.0, .001),
             'help': 'values to include when computing max feature value in colour channel (factory: 99.99)'
             }),
+        ('synth_lum_weights', {
+            'name': 'syn lum weights',
+            'options': ['equal', '30/59/11', '21/72/07'],
+            'help': 'weighting of RGB to create synthetic luminance'
+            }),
+        ('r_weight', {
+            'name': 'weight for R channel',
+            'float': (.8, 1.2, .01),
+            'help': 'multiply R channel by this prior to forming LAB colour'
+            }),
+        ('g_weight', {
+            'name': 'weight for G channel',
+            'float': (.8, 1.2, .01),
+            'help': 'multiply G channel by this prior to forming LAB colour'
+            }),
+        ('b_weight', {
+            'name': 'weight for b channel',
+            'float': (.8, 1.2, .01),
+            'help': 'multiply B channel by this prior to forming LAB colour'
+            }),
         ]
 
     spectral_mode = StringProperty('mono')
+    luminance_mode = StringProperty('L')
     bin_colour = StringProperty('2x2')
+    synth_lum_weights = StringProperty('equal')
     compensation = StringProperty('subtract gradients')
     colour_percentile = NumericProperty(99.99)
     saturation = NumericProperty(0)
     colour_stretch = NumericProperty(.5)
     redgreen = NumericProperty(0)
     yellowblue = NumericProperty(0)
+    r_weight = NumericProperty(1)
+    g_weight = NumericProperty(1)
+    b_weight = NumericProperty(1)
 
 
     def __init__(self, **kwargs):
@@ -123,9 +151,16 @@ class MultiSpectral(Panel, Component, JSettings):
                 self.chans = json.load(f)
         except:
             self.chans = {}
+
+        self.lum_chans = ['L', 'synL', 'L+synL', 'H', 'O', 'S']
+
         self.build()
         self.panel_opacity = 0
         self.set_spectral_mode('mono')
+
+        # these represent what is possible as opposed to what user wants
+        self.actual_luminance_mode = 'L'
+        self.actual_spectral_mode = 'mono'
 
 
     def on_new_object(self):
@@ -147,16 +182,34 @@ class MultiSpectral(Panel, Component, JSettings):
         self.RGB = None
         self.layer = None
         self.layer_stretched = None
+        self.r_weight = 1
+        self.g_weight = 1
+        self.b_weight = 1
+
+
+    def update_info(self):
+        if self.actual_luminance_mode:
+            self.info(f'{self.actual_luminance_mode}, {self.actual_spectral_mode}')
+        else:
+            self.info(self.actual_spectral_mode)
+
+
+    def describe_mode(self):
+        if self.actual_spectral_mode == 'mono':
+            return 'mono'
+        return f'{self.actual_luminance_mode}, {self.actual_spectral_mode}'
 
 
     ''' chooser stuff
     '''
 
     def on_show(self):
+
         # ensure chooser reflects current state
         filts = self.stacker.get_filters()
         if filts is None:
             filts = {'mono'}
+
         for c, but in self.chan_buttons.items():
             chan = self.chans[c]
             needs = set(chan['needs'])
@@ -165,26 +218,61 @@ class MultiSpectral(Panel, Component, JSettings):
             but.disabled = not avail
             but.state = 'down' if c == self.spectral_mode else 'normal'
 
+        for c, but in self.lum_buttons.items():
+            if 'L' in c:
+                avail = True
+            else:
+                avail = c in filts
+            but.color = (0, 1, 0, .5) if avail else (1, 0, 0, .3)
+            but.disabled = not avail
+            but.state = 'down' if c == self.luminance_mode else 'normal'
 
-    def _button(self, name):
+
+    def _mode_button(self, name):
         return JMDToggleButton(
                 text=name, 
                 group='channels',
                 font_size='16sp',
-                height=dp(20),
+                #height=dp(12),
                 on_press=partial(self.chan_selected, name))
+
+
+    def _lum_button(self, name):
+        return JMDToggleButton(
+                text=name, 
+                group='lumin',
+                font_size='16sp',
+                #height=dp(20),
+                # width=dp(30),
+                #size_hint=(1/9, None),
+                on_press=partial(self.lum_selected, name))
 
 
     def build(self, *args):
 
         content = self.contents
-        self.chan_buttons = {c: self._button(c) for c in self.chans}
-        layout = AnchorLayout(anchor_x='center', anchor_y='bottom', size_hint=(1, 1))
-        content.add_widget(layout)
-        gl = GridLayout(size_hint=(1, None), cols=5, height=dp(180), spacing=(dp(5), dp(5)))
+        self.chan_buttons = {c: self._mode_button(c) for c in self.chans}
+        #anchor_layout = AnchorLayout(anchor_x='center', anchor_y='bottom', size_hint=(1, 1))
+        #content.add_widget(anchor_layout)
+        #mainbox = BoxLayout(size_hint=(1, None), height=dp(180))
+
+        content.add_widget(Label(text='', size_hint=(1, 1)))
+
+        gl = GridLayout(size_hint=(1, None), cols=6, height=dp(120), spacing=(dp(5), dp(5)))
         for b in self.chan_buttons.values():
             gl.add_widget(b)
-        layout.add_widget(gl)
+        content.add_widget(gl)
+
+        # # spacer
+        content.add_widget(Label(text='', size_hint=(1, None), height=dp(15)))
+
+        self.lum_buttons = {c: self._lum_button(c) for c in self.lum_chans}
+        bl = GridLayout(size_hint=(1, None), cols=6, height=dp(40), spacing=(dp(5), dp(5)))
+        for b in self.lum_buttons.values():
+            bl.add_widget(b)
+        content.add_widget(bl)
+
+        # anchor_layout.add_widget(mainbox)
         self.app.gui.add_widget(self)
 
 
@@ -192,15 +280,42 @@ class MultiSpectral(Panel, Component, JSettings):
         if chan != self.spectral_mode:
             self.set_spectral_mode(chan)
  
+
+    def lum_selected(self, lum, *args):
+        if lum != self.luminance_mode:
+            self.luminance_mode = lum
+            # i.e. do update
+            self.set_spectral_mode()
+
+
     ''' end of chooser stuff
     '''
+
+    def syn_lum(self, R, G, B):
+        if self.synth_lum_weights == 'equal':
+            L = (R + G + B) / 3
+        elif self.synth_lum_weights == '30/59/11':
+            L = .299*R  + .587*G + .114*B
+        elif self.synth_lum_weights == '21/72/07':
+            L = .2125*R  + .7154*G + .0721*B
+        return L / np.percentile(L.ravel(), 99.99)
 
 
     def on_saturation(self, *args):
         self.adjust_saturation()
 
+
     def on_colour_stretch(self, *args):
         self.adjust_colour_stretch()
+
+    def on_r_weight(self, *args):
+        self.create_LAB()
+
+    def on_g_weight(self, *args):
+        self.create_LAB()
+
+    def on_b_weight(self, *args):
+        self.create_LAB()
 
 
     # not currently used
@@ -220,50 +335,111 @@ class MultiSpectral(Panel, Component, JSettings):
         self.create_LAB()
 
 
-    def set_spectral_mode(self, mode):
+    def filters_being_displayed(self):
+        ''' return set of filters being used in currently displayed image
+        '''
+        lum = self.actual_luminance_mode
+        spect = self.actual_spectral_mode
+
+        # if mono, we're using all the filters
+        if spect == 'mono':
+            return {'L', 'R', 'G', 'B', 'H', 'O', 'S'}
+
+        # create set from spect
+        f = {s for s in spect.replace('+', '')}
+
+        # check if using 'L'
+        if lum in {'L', 'L+synL'}:
+            f.add('L')
+
+        # if not using synL, add whatever filter is being used
+        elif lum != 'synL':
+            f.add(lum)
+
+        return f
+
+
+
+    def get_lum_stack(self, R, G, B):
+        ''' interpret user's luminance stack preference and record
+            what was actually possible in the absence of certain
+            channels in the stack
+        '''
+
+        if self.luminance_mode == 'L':
+            l = self.stacker.get_stack('L')
+            if l is None:
+                self.actual_luminance_mode = 'synL'
+                return self.syn_lum(R, G, B)
+            self.actual_luminance_mode = 'L'
+            return l
+
+        if self.luminance_mode == 'synL':
+            self.actual_luminance_mode = 'synL'
+            return self.syn_lum(R, G, B)
+
+        if self.luminance_mode == 'L+synL':
+            l = self.stacker.get_stack('L')
+            if l is None:
+                self.actual_luminance_mode = 'synL'
+                return self.syn_lum(R, G, B)
+            else:
+                self.actual_luminance_mode = 'L+synL'
+                return (l + self.syn_lum(R, G, B)) / 2
+
+        # otherwise return channel, or create synthetic lum
+        c = self.stacker.get_stack(self.luminance_mode)
+
+        if c is None:
+            self.actual_luminance_mode = 'synL'
+            return self.syn_lum(R, G, B)
+
+        self.actual_luminance_mode = self.luminance_mode
+        return c
+
+
+
+    def set_spectral_mode(self, mode=None):
         ''' User selects one of many available spectral
             modes for which there are appropriate
             stacks
         '''
 
+        # might not be updating spectral mode but responding to lum mode change
+        if mode is None:
+            mode = self.spectral_mode 
+        
         self.spectral_mode = mode
+        self.actual_spectral_mode = mode
 
         if not self.stacker.viewing_stack:
             self.app.gui.set('spectral_mode', mode)
             return
 
         self.reset()
-        # props = Component.get('ChannelChooser').chans[mode]
         props = self.chans[mode]
 
         # get required channels
         stacks = {c: self.stacker.get_stack(c) for c in props['needs']}
 
-        # rider
-        rider = ''
-
         # if any chans not available, do mono
         notavail = np.any([v is None for v in stacks.values()])
         if notavail:
             self.luminance_only()
-            rider = ' [mono]'
+            self.actual_spectral_mode = 'mono'
 
         # LRGB-style manipulation
-        elif mode in {'LRGB', 'LHOO', 'LSHO', 'LHOS', 'HRGB'}:
-            self.R = stacks[mode[1]]
-            self.G = stacks[mode[2]]
-            self.B = stacks[mode[3]]
-            # we get L or H here if available, otherwise use synthetic lum
-            stacks['L'] = self.stacker.get_stack(mode[0])
-            if stacks['L'] is None:
-                # form synthetic lum
-                stacks['L'] = synthetic_luminance(self.R, self.G, self.B)
-                rider = ' [synL]'
-            self.lum = Component.get('Monochrome').update_lum(stacks['L'])
+        elif mode in {'RGB', 'HOO', 'SHO', 'HOS'}:
+            self.R = stacks[mode[0]]
+            self.G = stacks[mode[1]]
+            self.B = stacks[mode[2]]
+            l = self.get_lum_stack(self.R, self.G, self.B)
+            self.lum = Component.get('Monochrome').update_lum(l)
             self.create_LAB()
 
         # view single filter
         elif mode in {'L', 'H', 'O', 'S', 'R', 'G', 'B'}:
+            self.actual_luminance_mode = ''
             Component.get('Monochrome').L_changed(stacks[mode])
 
         # luminance + narrowband layer
@@ -281,7 +457,10 @@ class MultiSpectral(Panel, Component, JSettings):
             self.luminance_only()
 
         # update GUI
-        self.app.gui.set('spectral_mode', self.spectral_mode + rider)
+        self.app.gui.set('spectral_mode', self.spectral_mode)
+
+        self.stacker.update_status()
+        self.update_info()
 
 
     def stack_changed(self):
@@ -354,10 +533,6 @@ class MultiSpectral(Panel, Component, JSettings):
     def create_LAB(self):
         # Initial stage of LAB image creation from RGB stacks
 
-        def _limit(im):
-            im[im < 0] = 0
-            im[im > 1] = 1
-            return im
 
         if not self.avail(['R', 'G', 'B']):
             return
@@ -368,7 +543,9 @@ class MultiSpectral(Panel, Component, JSettings):
         # Component.get('View').display_image(lupton / 255)
         # return
 
-        ims = [self.R, self.G, self.B]
+        # include color normalisation
+
+        ims = [self.r_weight*self.R, self.g_weight*self.G, self.b_weight*self.B]
 
         # binning ~ 70 ms
         binfac = int(self.bin_colour[0])
@@ -380,9 +557,6 @@ class MultiSpectral(Panel, Component, JSettings):
             ims = [im - estimate_gradient(im) for im in ims]
         elif self.compensation == 'subtract background':
             ims = [im - estimate_background(im)[0] for im in ims]
-
-        # this is the place to do any colour normalisation I think
-        # to do
 
         ''' the percentile is absolutely critical: setting too low
             leads to saturated stars; too high leads to a washed-out
@@ -408,7 +582,7 @@ class MultiSpectral(Panel, Component, JSettings):
             max feature, there may be some brighter hot pixels 
             above unity)
         '''
-        self.normed_RGB = [_limit(im) for im in ims]
+        self.normed_RGB = [limitto01(im) for im in ims]
 
         # rest of process
         self.adjust_colour_stretch()

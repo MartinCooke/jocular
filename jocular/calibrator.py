@@ -203,10 +203,15 @@ class Calibrator(Component, JSettings):
         '''
 
         # possibly shouldn't do this for dark/bias frames
-        if sub_type == 'flat':
-            master = Component.get('BadPixelMap').remove_hotpix(
-                master, 
-                apply_BPM=self.remove_hot_pixels)
+        ''' to do: figure out how best to handle bad pixel mapping for
+            calibration frames now that I'm not saving BPM from
+            one capture to the next
+        '''
+        # if sub_type == 'flat':
+        #     master = Component.get('BadPixelMap').remove_hotpix(
+        #         master, 
+        #         apply_BPM=self.remove_hot_pixels)
+
 
         ''' Flats were divided thru by their robust mean to account for 
             level differences but then scaled to 50% to enable B/W controls; 
