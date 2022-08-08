@@ -234,7 +234,7 @@ class Capture(Component):
         filt = Component.get('FilterWheel').current_filter
         # map 'C' filter to 'L' at the point of capture
         capture_props['filter'] = 'L' if filt == 'C' else filt
-        if capture_props['temperature'] is None:
+        if capture_props.get('temperature', None) is None:
             capture_props['temperature'] = Component.get('Session').temperature
         sub_type = Component.get('CaptureScript').get_sub_type()
         capture_props['sub_type'] = sub_type
