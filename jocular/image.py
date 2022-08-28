@@ -76,6 +76,7 @@ filter_map = {'r': 'R', 'g': 'G', 'b': 'B', 'red': 'R', 'green': 'G',
     'oiii': 'O', 'o': 'O',
     'spect': 'spec', 'l': 'L', 'lum': 'L', 'no': 'L', 'none': 'L'}
 
+
 # this should be moved to a fits module
 def update_wcs(im=None, path=None, w=None, h=None, fov_w=None, fov_h=None, ra0=None, dec0=None, north=None):
     ''' add or update FITs at path with WCS keys

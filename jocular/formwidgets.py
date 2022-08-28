@@ -73,7 +73,8 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 		widget = MDSlider(size_hint=(None, 1), width=1.5*widgetwidth, 
 			step=step, min=smin, max=smax, value=float(initval))
 		widget.hint_bg_color=(.6, .6, .6, 1)
-		widget._set_colors()
+		# no need for this in kivymd 1.0.2
+		# widget._set_colors()
 		widget.bind(value=partial(__sfloat_changed, name, spec, slabel, fmt, changed))
 		bh.add_widget(widget)
 

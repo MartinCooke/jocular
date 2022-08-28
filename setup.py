@@ -31,11 +31,11 @@ setup(
         'numpy>=1.20.1',
         'scikit-image>=0.19.1',  # numerous image ops
         'kivy>=2.0.0',  # main GUI framework
-        'kivymd>=0.104.2', # kivy material design widgets
+        'kivymd>=1.0.2', # kivy material design widgets
         'astropy>=4.2',  # fits etc
         'mss>=6.1.0',  # snapshots
         'pyusb>=1.1.1',  # camera
-        'photutils==1.4.0',
+        'photutils==1.3.0',
         'hidapi>=0.10.1',  # filterwheel
         'colour-demosaicing>=0.1.6', # debayering,
         'zwoasi>=0.0.22', # wrapper for ZWO cameras 

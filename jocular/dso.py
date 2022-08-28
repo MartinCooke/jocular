@@ -25,7 +25,7 @@ Builder.load_string('''
 <DSO_panel>:
     name_field: _name
     ot_field: _ot
-    padding: '10dp'
+    padding: '2dp' # '10dp'
     adaptive_height: True
     pos_hint: {'top': .99, 'x': 0} if root.dso.show_DSO else {'top': .99, 'right': -1000} 
     size_hint: None, None
