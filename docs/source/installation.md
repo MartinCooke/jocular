@@ -36,19 +36,11 @@ This takes a few minutes as various dependencies are downloaded.
 If you are an existing Python user/developer, you might prefer to install Jocular in a [virtual environment](https://docs.python.org/3/tutorial/venv.html)
 ```
 
-## Step 3. Update the user-interface widgets
-
-To benefit from improved user interface widgets, it is recommended that you carry out this additional step which is temporarily necessary because the changes have not yet been integrated into the latest release of the widgets toolkit:
-
-```
-pip install https://github.com/kivymd/KivyMD/archive/1cb82f7.zip
-```
-
-## Step 4. Create a data directory
+## Step 3. Create a data directory
 
 If you are using Jocular for the first time, before running the program you should create a directory where Jocular can store your captures and other files such as calibration files and catalogues. You can call this directory whatever you like, but ```joculardata``` makes a lot of sense; indeed, in other parts of this document we'll refer to this as your ```joculardata``` directory. 
 
-## Step 5. Run Jocular
+## Step 4. Run Jocular
 
 To run jocular, simply type
 
