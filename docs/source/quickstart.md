@@ -71,7 +71,7 @@ It is recommended to leave automatic blackpoint detection on and use the `f` sli
 
 Just below the blackpoint control you'll find a slider that handles simple **background gradient subtraction** (`grad`). Jocular estimates the best 2D planar fit to the background and when the gradient slider is in the middle of the range it subtracts that estimate from the image. At the upper end of the slider no gradient subtraction occurs, while at the lower end double the estimate is subtracted, and usually it is possible to find a setting within this range that removes most of the gradient. 
 
-The `tnr` slider applies **noise reduction** to the image ('TNR' stands for `Tony's Noise Reduction` -- see [thanks](thanks)). The `R` slider next to `tnr` controls one of the key parameters (radius) used in the noise reduction algorithm.
+The `tnr` slider applies **noise reduction** to the image ('TNR' stands for `Tony's Noise Reduction` -- see [thanks](thanks)). The `K` slider next to `tnr` controls one of the key parameters (kernel size) used in the noise reduction algorithm.
 
 The `sharp` slider applies **sharpening** to the image. Again, the `R` slider controls its own radius parameter.
 
