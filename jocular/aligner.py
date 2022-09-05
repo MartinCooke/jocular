@@ -23,6 +23,7 @@ class Aligner(Component, JSettings):
     min_stars = NumericProperty(5)
     binfac = NumericProperty(1)
     star_method = StringProperty("DoG")
+    extraction_region = StringProperty('whole image')
     centroid_method = StringProperty("simple")
     do_warp = BooleanProperty(True)
 
@@ -33,6 +34,14 @@ class Aligner(Component, JSettings):
                 "name": "align?",
                 "switch": "",
                 "help": "Switching align off can help diagnose tracking issues",
+            },
+        ),
+        (
+            "extraction_region",
+            {
+                "name": "extract stars from",
+                "options": ["whole image", "central 50%", "central 33%"],
+                "help": "",
             },
         ),
         (
@@ -111,9 +120,21 @@ class Aligner(Component, JSettings):
         if not self.do_align:
             return
 
+        im = sub.get_image()
+        w, h = im.shape
+
+        # new
+        if self.extraction_region == 'central 33%':
+            ww, hh = w // 3, h // 3
+            im = im[ww: w-ww, hh: h - hh]
+        elif self.extraction_region == 'central 50%':
+            ww, hh = w // 4, h // 4
+            im = im[ww: w-ww, hh: h - hh]
+
         # extract stars & compute centroids
         stars = extract_stars(
-            sub.get_image(),
+            #sub.get_image(),
+            im,
             star_method=self.star_method,
             centroid_method=self.centroid_method,
             binfac=self.binfac,
