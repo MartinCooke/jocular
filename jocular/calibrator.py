@@ -120,7 +120,7 @@ class Calibrator(Component, JSettings):
         ('remove_hot_pixels', {
             'name': 'remove hot pixels?', 
             'switch': '',
-            'help': 'Note that this is only done when creating calibration masters'
+            'help': 'Remove hot pixels when creating calibration masters'
             })
     ]
 
@@ -199,18 +199,8 @@ class Calibrator(Component, JSettings):
         master = stacker.get_stack(capture_props['filter'], calibration=True)
         capture_props['nsubs'] = stacker.get_selected_sub_count()
 
-        ''' Remove hot pixels from calibration frame
-        '''
-
-        # possibly shouldn't do this for dark/bias frames
-        ''' to do: figure out how best to handle bad pixel mapping for
-            calibration frames now that I'm not saving BPM from
-            one capture to the next
-        '''
-        # if sub_type == 'flat':
-        #     master = Component.get('BadPixelMap').remove_hotpix(
-        #         master, 
-        #         apply_BPM=self.remove_hot_pixels)
+        # ''' Remove hot pixels from calibration frame
+        # '''
 
 
         ''' Flats were divided thru by their robust mean to account for 
@@ -237,6 +227,10 @@ class Calibrator(Component, JSettings):
 
         name = f'master{capture_props["sub_type"]}.fit'
         path = make_unique_filename(os.path.join(self.calibration_dir, name))
+
+        if self.remove_hot_pixels:
+            data = Component.get('BadPixelMap').remove_hot_pixels(data)
+
         save_image(data=data, path=path, capture_props=capture_props)
         self.add_to_library(Image(path))
 
@@ -560,7 +554,7 @@ class Calibrator(Component, JSettings):
         # get image from path
         try:
             path = os.path.join(self.calibration_dir, str(row.key))
-            im = Image(path)
+            im = Image(path, check_image_data=True)
             if im.sub_type == 'flat':
                 im.image /= 2
             Component.get('Monochrome').display_sub(im.image)

@@ -135,4 +135,16 @@ class BadPixelMap(Component, JSettings):
             self.bplist.append(bpm)
         self.frame_count += 1
         self.compute_bpm()
+        
+
+    def remove_hot_pixels(self, im):
+        ''' Compute BPM and remove hot pixels in one operation, 
+            without updating BPM. Used by calibrator
+        '''
+        hps = self.find_hot_pixels(im)
+        im = im.copy()
+        for r, c in hps:
+            im[r, c] = np.median(im[r-1:r+2, c-1:c+2].ravel())
+        return im
+
 
