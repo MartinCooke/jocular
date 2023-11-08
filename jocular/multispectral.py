@@ -38,8 +38,10 @@ def bin_image(im, binfac=2, rescale_to_orig=True):
         return im
     if binfac < 1:
         return im
+    # im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', 
+    #     preserve_range=True, multichannel=False)
     im2 = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', 
-        preserve_range=True, multichannel=False)
+        preserve_range=True)
     if rescale_to_orig:
         return resize(im2, im.shape, anti_aliasing=False, mode='constant',
             preserve_range=True)
@@ -343,7 +345,7 @@ class MultiSpectral(Panel, Component, JSettings):
 
         # if mono, we're using all the filters
         if spect == 'mono':
-            return {'L', 'R', 'G', 'B', 'H', 'O', 'S'}
+            return {'L', 'R', 'G', 'B', 'H', 'O', 'S', 'dark'}
 
         # create set from spect
         f = {s for s in spect.replace('+', '')}
