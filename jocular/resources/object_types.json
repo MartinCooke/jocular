@@ -25,6 +25,6 @@
 "BQ": {"name": "bright quasar", "col": [255, 165, 0], "text": " ", "mag": 20},
 "DQ": {"name": "high redshift quasar", "col": [255, 105, 0], "text": " ", "mag": 20},
 "SN": {"name": "supernova remnant", "col": [188, 143, 143]},
-"ME": {"name": "member", "col": [255, 100, 100], "text": "¤", "mag": 24}
+"ME": {"name": "member", "col": [255, 100, 100], "text": " ", "mag": 24}
 }
 
