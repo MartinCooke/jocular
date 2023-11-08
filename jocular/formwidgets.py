@@ -28,7 +28,7 @@ def configurable_to_widget(text=None, name=None, spec=None, initval=None,
 	if widgetwidth is None:
 		widgetwidth = dp(140) # was 150
 
-	font_size = '15sp'
+	font_size = '14sp'
 	help_font_size = '13sp'
 	color = App.get_running_app().theme_cls.accent_color
 
