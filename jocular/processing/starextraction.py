@@ -24,6 +24,7 @@ def extract_stars(
     radius=8,
     binfac=1,
     reset_threshold=False, # for dog
+    boundary_pixels=0,
     fwhm_method='count'):
     ''' Find stellar sources using specified method, aiming to find
         target_stars stars. Apply centroid processing within specified
@@ -33,6 +34,7 @@ def extract_stars(
     '''
 
     im2 = im.copy()
+    w, h = im2.shape
 
     if binfac > 1:
         im2 = downscale_local_mean(im2, (binfac, binfac))
@@ -54,11 +56,21 @@ def extract_stars(
     if binfac > 1:
         stars[:, :2] *= binfac
 
+    # remove boundary pixels
+    x, y = stars[:, 0], stars[:, 1]
+    orig_n = stars.shape[0]
+    bp = boundary_pixels
+    stars = stars[(x > bp-1) & (x < (h-bp)) & (y > bp-1) & (y < (w-bp)), :]
+
+    if len(stars) == 0:
+        return {'nstars': 0}
+
     # compute centroids, better flux and fwhm estimates
     if centroid_method == 'simple':
         stardata = simple_starprops(im, stars[:, :2], radius=radius)
     else:
         stardata = starprops(im, stars[:, :2], radius=radius)
+
 
     # stardata is N x 4 array of x, y, flux, fwhm
     # re-sort by flux here since it will have been improved 
