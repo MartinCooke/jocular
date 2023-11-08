@@ -258,6 +258,7 @@ class WatchedCamera(GenericCamera):
 				capture_props['pixel_height'] *= binfac
 			if capture_props['pixel_width'] is not None:
 				capture_props['pixel_width'] *= binfac
+			capture_props['binning'] = binfac
 
 
 		capture_props['exposure'] = {
