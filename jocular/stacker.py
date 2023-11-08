@@ -60,6 +60,7 @@ class Stacker(Component, JSettings):
     speed = NumericProperty(2)
     confirm_before_deleting_stack = BooleanProperty(True)
     reload_rejected = BooleanProperty(False)
+    calibrate_first = BooleanProperty(False)
 
     configurables = [
         ('confirm_before_deleting_stack', {
@@ -68,7 +69,12 @@ class Stacker(Component, JSettings):
             'help': 'Clearing deletes all the current subs in the stack'}),
         ('reload_rejected', {'name': 'reload rejected subs?', 
             'switch': '',
-            'help': 'include subs that were previously marked as rejected'})
+            'help': 'include subs that were previously marked as rejected'}),
+        ('calibrate_first', {
+            'name': 'calibrate before bad pixel removal',
+            'switch': '',
+            'help': 'original approach is to do bad pixel removal first'
+            })
         ]
 
 
@@ -682,19 +688,23 @@ class Stacker(Component, JSettings):
     def realign(self, *args):
         self.recompute(realign=True)
 
-
+    # version with Steve's mod
     def recompute(self, widgy=None, realign=False):
         # initial load, recompute or realign
         Component.get('Aligner').reset()
         Component.get('StackCombiner').reset()
         # self.stack_cache = {}
-        initial_filters = {'B', 'H', 'S', 'O'}
+        initial_filters = {'H', 'S', 'O'}
         # shuffle-based realign
         if realign:
             np.random.shuffle(self.subs)
-            # if we have a B or Ha, keep shuffling until we start with that
+            # if we have narrowband data, keep shuffling until we start with one
             if len([s for s in self.subs if s.filter in initial_filters]) > 0:
                 while self.subs[0].filter not in initial_filters:
+                    np.random.shuffle(self.subs)
+            # if we have blue data, keep shuffling until we start with one
+            elif 'B' in [s.filter for s in self.subs]:
+                while not self.subs[0].filter == 'B':
                     np.random.shuffle(self.subs)
 
             # Renumber the subs
@@ -703,6 +713,28 @@ class Stacker(Component, JSettings):
 
         self.selected_sub = -1
         self.reprocess_event = Clock.schedule_once(self._reprocess_sub, 0)
+
+    # original version
+    # def recompute(self, widgy=None, realign=False):
+    #     # initial load, recompute or realign
+    #     Component.get('Aligner').reset()
+    #     Component.get('StackCombiner').reset()
+    #     # self.stack_cache = {}
+    #     initial_filters = {'B', 'H', 'S', 'O'}
+    #     # shuffle-based realign
+    #     if realign:
+    #         np.random.shuffle(self.subs)
+    #         # if we have a B or Ha, keep shuffling until we start with that
+    #         if len([s for s in self.subs if s.filter in initial_filters]) > 0:
+    #             while self.subs[0].filter not in initial_filters:
+    #                 np.random.shuffle(self.subs)
+
+    #         # Renumber the subs
+    #         for num, sub in enumerate(self.subs):
+    #             sub.stack_num = num + 1
+
+    #     self.selected_sub = -1
+    #     self.reprocess_event = Clock.schedule_once(self._reprocess_sub, 0)
 
 
     def _reprocess_sub(self, dt):
@@ -724,10 +756,12 @@ class Stacker(Component, JSettings):
         # Process sub on recompute/realign
 
         sub.image = None  # force reload
-        # sub.image = Component.get('BadPixelMap').remove_hotpix(sub.get_image())
-        Component.get('BadPixelMap').process_bpm(sub)
+        if not self.calibrate_first:
+            Component.get('BadPixelMap').process_bpm(sub)
         if sub.sub_type == 'light':
             Component.get('Calibrator').calibrate(sub)
+            if self.calibrate_first:
+                Component.get('BadPixelMap').process_bpm(sub)
             Component.get('Aligner').align(sub)
         elif sub.sub_type == 'flat':
             Component.get('Calibrator').calibrate_flat(sub)
@@ -830,6 +864,8 @@ class Stacker(Component, JSettings):
         self.subs_table_records = {}
         for s in self.subs:
             props = {p: handleNAN(getattr(s, p) if hasattr(s, p) else 0) for p in props}
+            # convert bool to Y/N
+            props['aligned'] = 'Y' if props['aligned'] else 'N'
             self.subs_table_records[s.name] = props
 
 
