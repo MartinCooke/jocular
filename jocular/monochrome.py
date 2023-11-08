@@ -59,7 +59,9 @@ def fractional_bin(im, binfac=1, original_size=True):
     if binfac > 3:
         binfac = 3
 
-    binned = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
+    # binned = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant', multichannel=False)
+    # updated for latest scikit-image
+    binned = rescale(im, 1 / binfac, anti_aliasing=True, mode='constant')
     if original_size:
         return resize(binned, im.shape, anti_aliasing=False, mode='constant')
     else:
