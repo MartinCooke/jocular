@@ -483,7 +483,8 @@ class Snapshotter(Panel, Component, JSettings):
     def draw_aligned(self, draw, row, l, r, text, font=None, margin=15, rowsep=20, align='center'):
         # helper to draw pixel text aligned; return new row position
         # alignment is within range of cols, a pair (l, r)
-        textwidth, textheight = draw.textsize(text, font)
+        # textwidth, textheight = draw.textsize(text, font)
+        textwidth = draw.textlength(text, font)
         if align == 'left':
             col = l + margin
         elif align == 'right':
