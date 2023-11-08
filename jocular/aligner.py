@@ -22,8 +22,9 @@ class Aligner(Component, JSettings):
     ideal_star_count = NumericProperty(30)
     min_stars = NumericProperty(5)
     binfac = NumericProperty(1)
+    boundary_pixels = NumericProperty(0)
     star_method = StringProperty("DoG")
-    extraction_region = StringProperty('whole image')
+    extraction_region = StringProperty('all')
     centroid_method = StringProperty("simple")
     do_warp = BooleanProperty(True)
 
@@ -40,8 +41,17 @@ class Aligner(Component, JSettings):
             "extraction_region",
             {
                 "name": "extract stars from",
-                "options": ["whole image", "central 50%", "central 33%"],
-                "help": "",
+                "options": ["all", "50%", "40%", "30%", "20%", "10%"],
+                "help": "proportion of pixels used for star extraction, as a centred block",
+            },
+        ),
+        (
+            "boundary_pixels",
+            {
+                "name": "avoid boundary stars",
+                "float": (0, 100, 5),
+                "help": "don't use stars close to boundary",
+                "fmt": "{:.0f} pixels",
             },
         ),
         (
@@ -123,13 +133,12 @@ class Aligner(Component, JSettings):
         im = sub.get_image()
         w, h = im.shape
 
-        # new
-        if self.extraction_region == 'central 33%':
-            ww, hh = w // 3, h // 3
-            im = im[ww: w-ww, hh: h - hh]
-        elif self.extraction_region == 'central 50%':
-            ww, hh = w // 4, h // 4
-            im = im[ww: w-ww, hh: h - hh]
+        # select proportion of image to analyse
+        frac = {"all": 1, "50%": .5, "40%": .4, "30%": .3, "20%": .2, "10%": .1}[self.extraction_region]
+        f1, f2 = (1 - frac**.5) / 2, (1 + frac**.5) / 2
+        w1, w2 = int(w * f1), int(w * f2)
+        h1, h2 = int(h * f1), int(h * f2)
+        im = im[w1: w2, h1: h2]
 
         # extract stars & compute centroids
         stars = extract_stars(
@@ -141,6 +150,7 @@ class Aligner(Component, JSettings):
             target_stars=self.ideal_star_count,
             nstars=None,
             reset_threshold=self.keystars is None,
+            boundary_pixels=self.boundary_pixels
         )
 
         nstars = stars["nstars"]
